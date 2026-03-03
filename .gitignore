@@ -1,0 +1,13 @@
+.env
+__pycache__/
+.agent/
+.agents/
+.claude/
+*.pyc
+.DS_Store
+venv/
+env/
+skills-lock.json
+node_modules/
+dist/
+build/
