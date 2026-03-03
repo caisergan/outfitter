@@ -1,0 +1,43 @@
+from datetime import datetime
+from pydantic import BaseModel, Field
+
+
+class WardrobeItemCreate(BaseModel):
+    category: str
+    subtype: str | None = None
+    color: list[str] | None = None
+    pattern: str | None = None
+    fit: str | None = None
+    style_tags: list[str] | None = None
+    image_url: str
+
+
+class WardrobeTagResponse(BaseModel):
+    category: str
+    subtype: str | None = None
+    color: list[str] | None = None
+    pattern: str | None = None
+    fit: str | None = None
+    style_tags: list[str] | None = None
+    confidence: float
+
+
+class WardrobeItemResponse(BaseModel):
+    id: str
+    user_id: str
+    category: str
+    subtype: str | None
+    color: list[str] | None
+    pattern: str | None
+    fit: str | None
+    style_tags: list[str] | None
+    image_url: str
+    times_used: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class WardrobeListResponse(BaseModel):
+    items: list[WardrobeItemResponse]
+    total: int
