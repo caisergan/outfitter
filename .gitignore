@@ -1,4 +1,5 @@
 .env
+.env.local
 __pycache__/
 .agent/
 .agents/
@@ -15,3 +16,4 @@ dist/
 build/
 *.bak
 *.swp
+.vscode/
