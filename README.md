@@ -1,24 +1,26 @@
 # Outfitter
 
-Outfitter is a personal fashion and wardrobe management application.
+Outfitter is a personal fashion and wardrobe management application with an AI-powered try-on feature, semantic wardrobe search, and outfit suggestions.
 
 ## Project Structure
 
-- `backend/`: FastAPI application with PostgreSQL (pgvector) and Redis.
-- `docs/`: Project documentation and tasks.
+```text
+outfitter/
+├── backend/   # FastAPI API server with PostgreSQL (pgvector) and Redis
+├── admin/     # Next.js admin panel for managing the backend
+└── docs/      # Project documentation
+```
 
-## Getting Started
+## Backend
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Docker and Docker Compose (recommended)
-- PostgreSQL (if running manually)
-- Redis (if running manually)
+- PostgreSQL with pgvector extension
+- Redis
 
 ### Running with Docker (Recommended)
-
-The easiest way to get started is using Docker Compose, which sets up the API, PostgreSQL (with pgvector), and Redis.
 
 1. Navigate to the backend directory:
 
@@ -32,7 +34,7 @@ The easiest way to get started is using Docker Compose, which sets up the API, P
    cp .env.example .env
    ```
 
-3. Start the services:
+3. Start all services (API, PostgreSQL, Redis):
 
    ```bash
    docker-compose up --build
@@ -42,54 +44,116 @@ The API will be available at `http://localhost:8000`.
 
 ### Running Manually
 
-If you prefer to run the backend manually:
-
-1. Navigate to the backend directory:
+1. Navigate to the backend directory and create a virtual environment:
 
    ```bash
    cd backend
-   ```
-
-2. Create and activate a virtual environment:
-
-   ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
-3. Install dependencies:
+2. Install dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Set up your environment variables in a `.env` file.
+3. Configure environment variables in a `.env` file.
 
-5. Run database migrations:
+4. Run database migrations:
 
    ```bash
    alembic upgrade head
    ```
 
-6. Start the FastAPI server:
+5. Start the server:
 
    ```bash
    uvicorn app.main:app --reload
    ```
 
-## API Documentation
+### API Documentation
 
-Once the server is running, you can access the interactive API documentation at:
+With the server running, interactive docs are available at:
 
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
+---
+
+## Admin Panel
+
+A Next.js admin interface for browsing and managing all backend resources — catalog items, wardrobe, outfits, and try-on jobs.
+
+### Requirements
+
+- Node.js 18+
+- npm (bundled with Node.js)
+- A running backend instance (see above)
+
+### Setup
+
+1. Navigate to the admin directory:
+
+   ```bash
+   cd admin
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Create a local environment file:
+
+   ```bash
+   cp .env.local.example .env.local   # or create .env.local manually
+   ```
+
+   Set the backend URL (defaults to `http://localhost:8000` if not set):
+
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
+
+4. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+The admin panel will be available at `http://localhost:3000`.
+
+### Building for Production
+
+```bash
+npm run build
+npm start
+```
+
+### Pages
+
+| Route | Description |
+| ------- | ----------- |
+| `/login` | JWT authentication |
+| `/` | Dashboard overview |
+| `/catalog` | Browse and search catalog items |
+| `/wardrobe` | Manage user wardrobe items |
+| `/outfits` | View and manage saved outfits |
+| `/tryon` | Manage AI try-on jobs |
+
+---
+
 ## Development Workflow
 
-### Committing Changes
+This project follows [Conventional Commits](https://www.conventionalcommits.org/):
 
-This project uses a chunked commit workflow. When adding new features:
-
-1. Stage your changes: `git add .`
-2. Commit with a descriptive message: `git commit -m "Feature: Description"`
-3. Push to GitHub: `git push origin main`
+```text
+feat:     New feature
+fix:      Bug fix
+refactor: Code change that neither fixes a bug nor adds a feature
+chore:    Tooling, dependencies, configuration
+test:     Adding or updating tests
+docs:     Documentation changes
+```
