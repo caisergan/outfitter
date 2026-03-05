@@ -1,16 +1,19 @@
+from __future__ import annotations
+import uuid
 from sqlalchemy import String, Text, ARRAY
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 
 from app.database import Base
-from app.models.base import TimestampMixin, generate_uuid
+from app.models.base import TimestampMixin
 
 
 class CatalogItem(Base, TimestampMixin):
     __tablename__ = "catalog_items"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=generate_uuid
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     brand: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)

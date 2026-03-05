@@ -34,6 +34,7 @@ class WardrobeItemResponse(BaseModel):
     image_url: str
     times_used: int
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
