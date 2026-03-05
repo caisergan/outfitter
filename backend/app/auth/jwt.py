@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
+import uuid
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -20,6 +21,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         expires_delta or timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
     )
     to_encode["exp"] = expire
+    # Coerce UUID to str so jose can serialize it
+    if "sub" in to_encode and not isinstance(to_encode["sub"], str):
+        to_encode["sub"] = str(to_encode["sub"])
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -36,10 +40,11 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str | None = payload.get("sub")
-        if user_id is None:
+        user_id_raw: str | None = payload.get("sub")
+        if user_id_raw is None:
             raise credentials_exc
-    except JWTError:
+        user_id = uuid.UUID(user_id_raw)
+    except (JWTError, ValueError):
         raise credentials_exc
 
     result = await db.execute(select(User).where(User.id == user_id))
@@ -49,4 +54,6 @@ async def get_current_user(
     return user
 
 
-CurrentUserDep = Annotated[object, Depends(get_current_user)]
+# Typed dependency alias — import this everywhere instead of raw Depends
+from app.models.user import User as _User  # noqa: E402
+CurrentUserDep = Annotated[_User, Depends(get_current_user)]
