@@ -1,0 +1,37 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.iml
+*.ipr
+*.iws
+.idea/
+*.lock
+pubspec.lock
+
+# Env
+.env
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Android
+android/.gradle
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+
+# macOS
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Generated files
+**/*.g.dart
+**/*.freezed.dart
+
+# Coverage
+coverage/
