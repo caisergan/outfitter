@@ -8,8 +8,28 @@ Outfitter is a personal fashion and wardrobe management application with an AI-p
 outfitter/
 ├── backend/   # FastAPI API server with PostgreSQL (pgvector) and Redis
 ├── admin/     # Next.js admin panel for managing the backend
+├── mobile/    # Flutter mobile application (iOS/Android)
 └── docs/      # Project documentation
 ```
+
+## Quick Start (Backend & Admin)
+
+You can start both the Backend (via Docker) and the Admin Panel (via Node.js) using the high-level startup script:
+
+1. Ensure Docker is running.
+2. Run the startup script:
+
+   ```bash
+   ./start.sh
+   ```
+
+To stop all services:
+
+   ```bash
+   ./start.sh stop
+   ```
+
+*Note: This script does not start the Mobile app. See the [Mobile](#mobile-app-flutter) section below.*
 
 ## Backend
 
@@ -142,6 +162,40 @@ npm start
 | `/wardrobe` | Manage user wardrobe items |
 | `/outfits` | View and manage saved outfits |
 | `/tryon` | Manage AI try-on jobs |
+
+---
+
+## Mobile App (Flutter)
+
+The `mobile` directory contains the Flutter mobile application for iOS and Android.
+
+### Prerequisites
+
+- Flutter SDK `>=3.19` (Dart `>=3.3`)
+- Xcode (iOS) or Android Studio (Android)
+
+### Running the App
+
+1. Navigate to the mobile directory:
+
+   ```bash
+   cd mobile
+   ```
+
+2. Install dependencies and generate code:
+
+   ```bash
+   flutter pub get
+   flutter pub run build_runner build --delete-conflicting-outputs
+   ```
+
+3. Run on a simulator/device:
+
+   ```bash
+   flutter run
+   ```
+
+For detailed technical details, see [docs/flutter-technical.md](docs/flutter-technical.md).
 
 ---
 
