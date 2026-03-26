@@ -24,7 +24,8 @@ export default function LoginPage() {
         setError("");
         setLoading(true);
         try {
-            const { access_token } = await login(email, password);
+            const normalizedEmail = email.trim().toLowerCase();
+            const { access_token } = await login(normalizedEmail, password);
             // Store token BEFORE getMe so apiFetch can attach Bearer header
             localStorage.setItem("outfitter_token", access_token);
             const user = await getMe();
@@ -72,7 +73,7 @@ export default function LoginPage() {
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="admin@example.com"
+                                    placeholder="user@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required

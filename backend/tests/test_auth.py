@@ -58,6 +58,14 @@ async def test_signup_duplicate_email_returns_409(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_signup_duplicate_email_case_insensitive_returns_409(client: AsyncClient):
+    await _signup(client, email="CaseUser@Outfitter.dev")
+    resp = await _signup(client, email="caseuser@outfitter.dev")
+    assert resp.status_code == 409
+    assert "already registered" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
 async def test_signup_invalid_email_returns_422(client: AsyncClient):
     resp = await client.post(SIGNUP_URL, json={"email": "not-an-email", "password": VALID_PASSWORD})
     assert resp.status_code == 422
@@ -97,19 +105,27 @@ async def test_login_unknown_email_returns_401(client: AsyncClient):
     assert resp.status_code == 401
 
 
+@pytest.mark.asyncio
+async def test_login_email_is_case_insensitive(client: AsyncClient):
+    await _signup(client, email="MixedCase@Outfitter.dev")
+    resp = await _login(client, email="mixedcase@outfitter.dev")
+    assert resp.status_code == 200
+    assert "access_token" in resp.json()
+
+
 # ---------------------------------------------------------------------------
 # Protected endpoint: GET /auth/me
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_me_with_valid_token(client: AsyncClient):
-    signup_resp = await _signup(client)
+    signup_resp = await _signup(client, email="UpperCase@Outfitter.dev")
     token = signup_resp.json()["access_token"]
 
     resp = await client.get(ME_URL, headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["email"] == VALID_EMAIL
+    assert body["email"] == "uppercase@outfitter.dev"
     assert "id" in body
     assert "created_at" in body
     # password_hash must never be leaked
