@@ -12,6 +12,22 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+get_env_value() {
+    local key="$1"
+    local file="$2"
+    if [ ! -f "$file" ]; then
+        return 0
+    fi
+
+    awk -F= -v target="$key" '
+        $1 == target {
+            value = substr($0, index($0, "=") + 1)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+            print value
+        }
+    ' "$file" | tail -n 1
+}
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -73,6 +89,17 @@ if [ ! -f "admin/.env.local" ]; then
 fi
 echo -e "${GREEN}  ✓ Environment files exist${NC}"
 
+USE_EXTERNAL_DB="$(get_env_value "USE_EXTERNAL_DB" "backend/.env")"
+if [ -z "$USE_EXTERNAL_DB" ]; then
+    USE_EXTERNAL_DB="false"
+fi
+
+if [ "$USE_EXTERNAL_DB" == "true" ]; then
+    echo -e "${GREEN}  ✓ Backend database mode: external${NC}"
+else
+    echo -e "${GREEN}  ✓ Backend database mode: bundled local Postgres${NC}"
+fi
+
 # -----------------------------------------------------------------------------
 # Step 2: Clean up Existing Instances
 # -----------------------------------------------------------------------------
@@ -98,7 +125,16 @@ echo -e "${GREEN}  ✓ Cleanup complete${NC}"
 echo -e "${YELLOW}[3/5] Starting Backend (Docker)...${NC}"
 
 cd backend
-docker compose up -d
+if [ "$USE_EXTERNAL_DB" == "true" ]; then
+    docker compose up -d redis api
+else
+    docker compose up -d db redis
+    echo -e "${YELLOW}Waiting for local PostgreSQL to be healthy...${NC}"
+    until docker compose exec -T db pg_isready -U user -d outfitter >/dev/null 2>&1; do
+        sleep 1
+    done
+    docker compose up -d api
+fi
 cd "$SCRIPT_DIR"
 
 echo -e "${GREEN}  ✓ Backend services started in background${NC}"

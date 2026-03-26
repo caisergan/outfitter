@@ -1,10 +1,13 @@
 from functools import lru_cache
+from pydantic_settings import SettingsConfigDict
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
+    DOCKER_DATABASE_URL: str | None = None
+    USE_EXTERNAL_DB: bool = False
     REDIS_URL: str = "redis://redis:6379/0"
 
     # Auth
@@ -26,8 +29,10 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "info"
     ALLOW_ORIGINS: list[str] = ["*"]
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+    )
 
 
 @lru_cache()

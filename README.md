@@ -62,6 +62,38 @@ To stop all services:
 
 The API will be available at `http://localhost:8000`.
 
+### Using AWS PostgreSQL (RDS / Aurora)
+
+This backend requires PostgreSQL with the `pgvector` extension and HNSW vector indexes. In practice, that means your AWS target should be `Amazon RDS for PostgreSQL` or `Amazon Aurora PostgreSQL`, not DynamoDB or MySQL.
+
+1. Copy the AWS template and fill in your real values:
+
+   ```bash
+   cd backend
+   cp .env.example .env
+   ```
+
+2. Run migrations against the AWS database:
+
+   ```bash
+   alembic upgrade head
+   ```
+
+   If you run the API via Docker, you can also run:
+
+   ```bash
+   docker compose run --rm api alembic upgrade head
+   ```
+
+3. Start the backend:
+
+   ```bash
+   cd ..
+   ./start.sh
+   ```
+
+`USE_EXTERNAL_DB=true` tells `start.sh` to skip the bundled local Postgres container. `DOCKER_DATABASE_URL` is the URL used by the API container. Keep `DATABASE_URL` and `DOCKER_DATABASE_URL` the same when pointing the whole backend at AWS.
+
 ### Running Manually
 
 1. Navigate to the backend directory and create a virtual environment:

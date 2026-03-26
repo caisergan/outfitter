@@ -5,11 +5,9 @@ services:
       - "8000:8000"
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/outfitter
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+asyncpg://user:password@db:5432/outfitter}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_started
     volumes:
