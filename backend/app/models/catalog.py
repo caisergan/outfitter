@@ -15,6 +15,7 @@ class CatalogItem(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    ref_code: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True, index=True)
     brand: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     subtype: Mapped[str | None] = mapped_column(String(100), nullable=True)

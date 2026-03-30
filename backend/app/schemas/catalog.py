@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class CatalogItemCreate(BaseModel):
+    ref_code: str | None = None
     brand: str
     category: str
     subtype: str | None = None
@@ -17,6 +18,7 @@ class CatalogItemCreate(BaseModel):
 
 
 class CatalogItemUpdate(BaseModel):
+    ref_code: str | None = None
     brand: str | None = None
     category: str | None = None
     subtype: str | None = None
@@ -31,6 +33,7 @@ class CatalogItemUpdate(BaseModel):
 
 class CatalogItemResponse(BaseModel):
     id: uuid.UUID
+    ref_code: str | None
     brand: str
     category: str
     subtype: str | None
