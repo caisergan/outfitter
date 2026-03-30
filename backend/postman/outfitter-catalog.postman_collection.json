@@ -1,0 +1,905 @@
+{
+  "info": {
+    "_postman_id": "7f2e9db8-1c7f-4b7f-bb5d-5f44f8e0d001",
+    "name": "Outfitter Backend API",
+    "description": "Postman collection for all endpoints defined under backend/app plus FastAPI docs endpoints exposed by main.py.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "email",
+      "value": "you@example.com"
+    },
+    {
+      "key": "password",
+      "value": "password123"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "category",
+      "value": "top"
+    },
+    {
+      "key": "brand",
+      "value": "Zara"
+    },
+    {
+      "key": "fit",
+      "value": "regular"
+    },
+    {
+      "key": "color",
+      "value": "black,white"
+    },
+    {
+      "key": "style",
+      "value": "minimal"
+    },
+    {
+      "key": "limit",
+      "value": "20"
+    },
+    {
+      "key": "offset",
+      "value": "0"
+    },
+    {
+      "key": "similarSource",
+      "value": "catalog"
+    },
+    {
+      "key": "itemId",
+      "value": ""
+    },
+    {
+      "key": "wardrobeCategory",
+      "value": "bottom"
+    },
+    {
+      "key": "wardrobeSubtype",
+      "value": "jeans"
+    },
+    {
+      "key": "wardrobePattern",
+      "value": "solid"
+    },
+    {
+      "key": "wardrobeColorJson",
+      "value": "[\"blue\"]"
+    },
+    {
+      "key": "wardrobeStyleTagsJson",
+      "value": "[\"casual\"]"
+    },
+    {
+      "key": "wardrobeImageUrl",
+      "value": "https://example.com/wardrobe-item.jpg"
+    },
+    {
+      "key": "wardrobeSort",
+      "value": "recent"
+    },
+    {
+      "key": "wardrobeItemId",
+      "value": ""
+    },
+    {
+      "key": "occasion",
+      "value": "casual"
+    },
+    {
+      "key": "season",
+      "value": "spring"
+    },
+    {
+      "key": "colorPreference",
+      "value": "neutral"
+    },
+    {
+      "key": "suggestionSource",
+      "value": "mix"
+    },
+    {
+      "key": "saveOutfitSource",
+      "value": "playground"
+    },
+    {
+      "key": "generatedImageUrl",
+      "value": "https://example.com/generated-outfit.jpg"
+    },
+    {
+      "key": "outfitId",
+      "value": ""
+    },
+    {
+      "key": "userPhotoUrl",
+      "value": "https://example.com/model-photo.jpg"
+    },
+    {
+      "key": "modelPreference",
+      "value": "neutral"
+    },
+    {
+      "key": "jobId",
+      "value": ""
+    },
+    {
+      "key": "imageFile",
+      "value": "/absolute/path/to/image.jpg"
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/openapi.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "openapi.json"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Docs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "ReDoc",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/redoc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "redoc"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
+            },
+            "description": "POST /auth/signup with SignupRequest { email, password }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) {",
+                  "    pm.collectionVariables.set('accessToken', json.access_token);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "POST /auth/login with OAuth2PasswordRequestForm fields username and password."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) {",
+                  "    pm.collectionVariables.set('accessToken', json.access_token);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "GET /auth/me returns the current authenticated user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "Search Catalog",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/search?category={{category}}&brand={{brand}}&fit={{fit}}&color={{color}}&style={{style}}&limit={{limit}}&offset={{offset}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "{{category}}"
+                },
+                {
+                  "key": "color",
+                  "value": "{{color}}"
+                },
+                {
+                  "key": "brand",
+                  "value": "{{brand}}"
+                },
+                {
+                  "key": "style",
+                  "value": "{{style}}"
+                },
+                {
+                  "key": "fit",
+                  "value": "{{fit}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "offset",
+                  "value": "{{offset}}"
+                }
+              ]
+            },
+            "description": "GET /catalog/search supports category, color, brand, style, fit, limit, and offset query params."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.items && json.items.length > 0 && json.items[0].id) {",
+                  "    pm.collectionVariables.set('itemId', json.items[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Similar Catalog Items",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/similar/{{itemId}}?source={{similarSource}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "similar",
+                "{{itemId}}"
+              ],
+              "query": [
+                {
+                  "key": "source",
+                  "value": "{{similarSource}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                }
+              ]
+            },
+            "description": "GET /catalog/similar/{item_id} with source=catalog|wardrobe|both and limit."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wardrobe",
+      "item": [
+        {
+          "name": "List Wardrobe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/wardrobe?category={{wardrobeCategory}}&sort={{wardrobeSort}}&limit={{limit}}&offset={{offset}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wardrobe"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "{{wardrobeCategory}}"
+                },
+                {
+                  "key": "sort",
+                  "value": "{{wardrobeSort}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "offset",
+                  "value": "{{offset}}"
+                }
+              ]
+            },
+            "description": "GET /wardrobe supports category, sort, limit, and offset query params."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.items && json.items.length > 0 && json.items[0].id) {",
+                  "    pm.collectionVariables.set('wardrobeItemId', json.items[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tag Wardrobe Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "{{imageFile}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wardrobe/tag",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wardrobe",
+                "tag"
+              ]
+            },
+            "description": "POST /wardrobe/tag expects multipart/form-data with a single file field named file."
+          }
+        },
+        {
+          "name": "Create Wardrobe Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"{{wardrobeCategory}}\",\n  \"subtype\": \"{{wardrobeSubtype}}\",\n  \"color\": {{wardrobeColorJson}},\n  \"pattern\": \"{{wardrobePattern}}\",\n  \"fit\": \"{{fit}}\",\n  \"style_tags\": {{wardrobeStyleTagsJson}},\n  \"image_url\": \"{{wardrobeImageUrl}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wardrobe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wardrobe"
+              ]
+            },
+            "description": "POST /wardrobe with WardrobeItemCreate { category, subtype, color, pattern, fit, style_tags, image_url }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) {",
+                  "    pm.collectionVariables.set('wardrobeItemId', json.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Wardrobe Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/wardrobe/{{wardrobeItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wardrobe",
+                "{{wardrobeItemId}}"
+              ]
+            },
+            "description": "DELETE /wardrobe/{item_id}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Outfits",
+      "item": [
+        {
+          "name": "Suggest Outfits",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"occasion\": \"{{occasion}}\",\n  \"season\": \"{{season}}\",\n  \"color_preference\": \"{{colorPreference}}\",\n  \"source\": \"{{suggestionSource}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/outfits/suggest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "outfits",
+                "suggest"
+              ]
+            },
+            "description": "POST /outfits/suggest with SuggestOutfitsRequest { occasion, season, color_preference, source }."
+          }
+        },
+        {
+          "name": "List Outfits",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/outfits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "outfits"
+              ]
+            },
+            "description": "GET /outfits returns saved outfits for the current user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.items && json.items.length > 0 && json.items[0].id) {",
+                  "    pm.collectionVariables.set('outfitId', json.items[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Outfit",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"{{saveOutfitSource}}\",\n  \"slots\": {\n    \"top\": {\n      \"id\": \"{{itemId}}\",\n      \"name\": \"Catalog Top\",\n      \"brand\": \"{{brand}}\",\n      \"image_url\": \"https://example.com/catalog-top.jpg\"\n    },\n    \"bottom\": {\n      \"id\": \"{{wardrobeItemId}}\",\n      \"name\": \"Wardrobe Bottom\",\n      \"brand\": null,\n      \"image_url\": \"{{wardrobeImageUrl}}\"\n    }\n  },\n  \"generated_image_url\": \"{{generatedImageUrl}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/outfits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "outfits"
+              ]
+            },
+            "description": "POST /outfits with SaveOutfitRequest { source, slots, generated_image_url }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) {",
+                  "    pm.collectionVariables.set('outfitId', json.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Outfit",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/outfits/{{outfitId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "outfits",
+                "{{outfitId}}"
+              ]
+            },
+            "description": "DELETE /outfits/{outfit_id}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Try-On",
+      "item": [
+        {
+          "name": "Submit Try-On",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slots\": {\n    \"top\": \"{{itemId}}\",\n    \"bottom\": \"{{wardrobeItemId}}\"\n  },\n  \"model_preference\": \"{{modelPreference}}\",\n  \"user_photo_url\": \"{{userPhotoUrl}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tryon/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tryon",
+                "submit"
+              ]
+            },
+            "description": "POST /tryon/submit with TryOnSubmitRequest { slots, model_preference, user_photo_url }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.job_id) {",
+                  "    pm.collectionVariables.set('jobId', json.job_id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Try-On Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tryon/status/{{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tryon",
+                "status",
+                "{{jobId}}"
+              ]
+            },
+            "description": "GET /tryon/status/{job_id}."
+          }
+        }
+      ]
+    }
+  ]
+}
