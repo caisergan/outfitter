@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -15,8 +16,21 @@ class CatalogItemCreate(BaseModel):
     product_url: str | None = None
 
 
+class CatalogItemUpdate(BaseModel):
+    brand: str | None = None
+    category: str | None = None
+    subtype: str | None = None
+    name: str | None = None
+    color: list[str] | None = None
+    pattern: str | None = None
+    fit: str | None = None
+    style_tags: list[str] | None = None
+    image_url: str | None = None
+    product_url: str | None = None
+
+
 class CatalogItemResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     brand: str
     category: str
     subtype: str | None
@@ -32,13 +46,6 @@ class CatalogItemResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-    @classmethod
-    def model_validate(cls, obj, **kwargs):
-        # Coerce UUID pk to str
-        if hasattr(obj, "id") and not isinstance(obj.id, str):
-            obj.id = str(obj.id)
-        return super().model_validate(obj, **kwargs)
-
 
 class CatalogSearchResponse(BaseModel):
     items: list[CatalogItemResponse]
@@ -46,8 +53,20 @@ class CatalogSearchResponse(BaseModel):
 
 
 class SimilarItemResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     name: str
     category: str
     image_url: str
     similarity: float
+
+
+class BulkInsertError(BaseModel):
+    index: int
+    detail: str
+
+
+class CatalogBulkCreateResponse(BaseModel):
+    created: int
+    failed: int
+    items: list[CatalogItemResponse]
+    errors: list[BulkInsertError]

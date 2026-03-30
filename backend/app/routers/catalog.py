@@ -1,6 +1,7 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +9,15 @@ from app.auth.jwt import get_current_user
 from app.database import get_db
 from app.models.catalog import CatalogItem
 from app.models.user import User
-from app.schemas.catalog import CatalogSearchResponse, CatalogItemResponse, SimilarItemResponse
+from app.schemas.catalog import (
+    BulkInsertError,
+    CatalogBulkCreateResponse,
+    CatalogItemCreate,
+    CatalogItemResponse,
+    CatalogItemUpdate,
+    CatalogSearchResponse,
+    SimilarItemResponse,
+)
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
@@ -121,3 +130,96 @@ async def similar_items(
 
     results.sort(key=lambda r: r.similarity, reverse=True)
     return results[:limit]
+
+
+@router.post("/items", response_model=CatalogItemResponse, status_code=status.HTTP_201_CREATED)
+async def create_catalog_item(
+    body: CatalogItemCreate,
+    db: DbDep,
+    _: CurrentUserDep,
+) -> CatalogItemResponse:
+    item = CatalogItem(**body.model_dump())
+    db.add(item)
+    await db.flush()
+    await db.refresh(item)
+    return CatalogItemResponse.model_validate(item)
+
+
+@router.post("/items/bulk", response_model=CatalogBulkCreateResponse, status_code=status.HTTP_200_OK)
+async def bulk_create_catalog_items(
+    body: list[CatalogItemCreate],
+    db: DbDep,
+    _: CurrentUserDep,
+) -> CatalogBulkCreateResponse:
+    created_items: list[CatalogItemResponse] = []
+    errors: list[BulkInsertError] = []
+
+    for index, item_data in enumerate(body):
+        try:
+            item = CatalogItem(**item_data.model_dump())
+            db.add(item)
+            await db.flush()
+            await db.refresh(item)
+            created_items.append(CatalogItemResponse.model_validate(item))
+        except Exception as exc:
+            await db.rollback()
+            errors.append(BulkInsertError(index=index, detail=str(exc)))
+
+    return CatalogBulkCreateResponse(
+        created=len(created_items),
+        failed=len(errors),
+        items=created_items,
+        errors=errors,
+    )
+
+
+@router.get("/items/{item_id}", response_model=CatalogItemResponse)
+async def get_catalog_item(
+    item_id: uuid.UUID,
+    db: DbDep,
+    _: CurrentUserDep,
+) -> CatalogItemResponse:
+    result = await db.execute(select(CatalogItem).where(CatalogItem.id == item_id))
+    item = result.scalar_one_or_none()
+
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    return CatalogItemResponse.model_validate(item)
+
+
+@router.patch("/items/{item_id}", response_model=CatalogItemResponse)
+async def update_catalog_item(
+    item_id: uuid.UUID,
+    body: CatalogItemUpdate,
+    db: DbDep,
+    _: CurrentUserDep,
+) -> CatalogItemResponse:
+    result = await db.execute(select(CatalogItem).where(CatalogItem.id == item_id))
+    item = result.scalar_one_or_none()
+
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+
+    await db.flush()
+    await db.refresh(item)
+    return CatalogItemResponse.model_validate(item)
+
+
+@router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_catalog_item(
+    item_id: uuid.UUID,
+    db: DbDep,
+    _: CurrentUserDep,
+) -> None:
+    result = await db.execute(select(CatalogItem).where(CatalogItem.id == item_id))
+    item = result.scalar_one_or_none()
+
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    await db.delete(item)
+    await db.flush()
