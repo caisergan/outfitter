@@ -57,19 +57,26 @@ async def _check_rate_limit(user_id: str) -> None:
         logger.error("Redis rate limit error: %s", e)
 
 
-async def _resolve_image_urls(slots: dict, db: AsyncSession) -> dict[str, str]:
+async def _resolve_image_urls(
+    slots: dict, db: AsyncSession, user_id: str
+) -> dict[str, str]:
     urls: dict[str, str] = {}
     for slot_name, item_id in slots.items():
         if not item_id:
             continue
-        # Try catalog first
+        # Try catalog first (catalog items are not user-scoped)
         result = await db.execute(select(CatalogItem).where(CatalogItem.id == item_id))
         item = result.scalar_one_or_none()
         if item:
             urls[slot_name] = item.image_url
             continue
-        # Try wardrobe
-        result = await db.execute(select(WardrobeItem).where(WardrobeItem.id == item_id))
+        # Try wardrobe — filter by owner to prevent cross-user image resolution
+        result = await db.execute(
+            select(WardrobeItem).where(
+                WardrobeItem.id == item_id,
+                WardrobeItem.user_id == user_id,
+            )
+        )
         w_item = result.scalar_one_or_none()
         if w_item:
             urls[slot_name] = w_item.image_url
@@ -86,7 +93,7 @@ async def submit_tryon(
 
     from app.services.kling_service import submit_tryon as kling_submit
 
-    outfit_image_urls = await _resolve_image_urls(body.slots, db)
+    outfit_image_urls = await _resolve_image_urls(body.slots, db, str(current_user.id))
 
     if not outfit_image_urls:
         raise HTTPException(

@@ -19,10 +19,12 @@ class Settings(BaseSettings):
     KLING_API_KEY: str
 
     # Storage (Cloudflare R2 / AWS S3)
-    R2_ENDPOINT_URL: str
+    R2_ENDPOINT_URL: str | None = None  # None = use AWS default endpoint resolution
     R2_ACCESS_KEY_ID: str
     R2_SECRET_ACCESS_KEY: str
     R2_BUCKET: str
+    STORAGE_REGION: str = "auto"  # "auto" for R2; use e.g. "us-east-1" for real AWS S3
+    STORAGE_PUBLIC_BASE_URL: str = ""  # e.g. https://cdn.example.com or https://<bucket>.s3.<region>.amazonaws.com
 
     # App
     ENV: str = "development"
