@@ -1,11 +1,24 @@
-"""Cloudflare R2 / S3-compatible storage service.
+"""AWS S3 / S3-compatible storage service.
 
-Provides pre-signed URLs for client uploads, signed read URLs for serving
-private images, and a helper for direct backend uploads (e.g. Kling results).
+Provides presigned PUT upload targets for client uploads, signed read URLs for
+serving private images, and a helper for direct backend uploads (e.g. Kling results).
+
+Upload target flow:
+  1. Caller requests an upload target.
+  2. Client PUTs image bytes directly to ``upload_url`` with the correct Content-Type.
+  3. Client passes the returned ``image_url`` to a create or update endpoint that
+     stores the durable public URL.
+
+Follow-up work (out of scope for this change):
+  - Object lifecycle cleanup when persisted image_url values are replaced.
+  - Private-bucket read signing for deployments where the bucket is not public.
 """
 
 import logging
+import re
+from dataclasses import dataclass
 from functools import lru_cache
+from uuid import uuid4
 
 import boto3
 from botocore.config import Config
@@ -15,9 +28,25 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+IMAGE_UPLOAD_EXPIRES_IN = 900  # 15 minutes shared image upload target expiry
+
+ALLOWED_CATALOG_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+CONTENT_TYPE_EXTENSIONS = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
 
 class StorageError(Exception):
     """Raised when an R2/S3 operation fails."""
+
+
+@dataclass(frozen=True)
+class UploadTarget:
+    key: str
+    upload_url: str
+    image_url: str
 
 
 @lru_cache(maxsize=1)
@@ -29,20 +58,59 @@ def _get_client():
     and other modules that never call storage functions won't crash when
     R2 env vars are absent.
     """
-    logger.info("Initializing R2 storage client → %s", settings.R2_ENDPOINT_URL)
+    # Blank env vars are parsed as "", but boto3 requires None to use AWS's
+    # default endpoint resolution path.
+    endpoint = settings.R2_ENDPOINT_URL or None
+    logger.info("Initializing storage client → %s", endpoint or "AWS default")
     return boto3.client(
         "s3",
-        endpoint_url=settings.R2_ENDPOINT_URL,
+        endpoint_url=endpoint,
         aws_access_key_id=settings.R2_ACCESS_KEY_ID,
         aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-        region_name="auto",
+        region_name=settings.STORAGE_REGION,
         config=Config(signature_version="s3v4"),
     )
+
+
+def _slugify(text: str) -> str:
+    """Convert brand or folder name to URL-safe lowercase slug."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def _build_public_url(key: str) -> str:
+    """Construct a stable public URL for an object key."""
+    base = (settings.STORAGE_PUBLIC_BASE_URL or "").rstrip("/")
+    if base:
+        return f"{base}/{key}" if key else base
+    # Fallback: synthesise an S3-style URL from bucket + region
+    bucket = settings.R2_BUCKET
+    region = settings.STORAGE_REGION
+    base = f"https://{bucket}.s3.{region}.amazonaws.com"
+    return f"{base}/{key}" if key else base
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+
+def _generate_presigned_put(key: str, content_type: str, expires_in: int = 900) -> str:
+    """Generate a presigned PUT URL for any object key and content type."""
+    try:
+        url: str = _get_client().generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": settings.R2_BUCKET,
+                "Key": key,
+                "ContentType": content_type,
+            },
+            ExpiresIn=expires_in,
+        )
+        logger.debug("Generated presigned PUT URL for key=%s", key)
+        return url
+    except (ClientError, BotoCoreError) as exc:
+        logger.error("Failed to generate presigned PUT URL for key=%s: %s", key, exc)
+        raise StorageError(f"Could not generate upload URL: {exc}") from exc
 
 
 def get_upload_url(user_id: str, item_id: str) -> str:
@@ -51,21 +119,33 @@ def get_upload_url(user_id: str, item_id: str) -> str:
     The object key follows the convention ``wardrobe/{user_id}/{item_id}.jpg``.
     """
     key = f"wardrobe/{user_id}/{item_id}.jpg"
-    try:
-        url: str = _get_client().generate_presigned_url(
-            "put_object",
-            Params={
-                "Bucket": settings.R2_BUCKET,
-                "Key": key,
-                "ContentType": "image/jpeg",
-            },
-            ExpiresIn=900,
-        )
-        logger.debug("Generated upload URL for key=%s", key)
-        return url
-    except (ClientError, BotoCoreError) as exc:
-        logger.error("Failed to generate upload URL for key=%s: %s", key, exc)
-        raise StorageError(f"Could not generate upload URL: {exc}") from exc
+    return _generate_presigned_put(key, "image/jpeg")
+
+
+def get_catalog_upload_target(brand: str, filename: str, content_type: str) -> UploadTarget:
+    """Return a presigned PUT URL plus stable public image URL for a catalog image.
+
+    The object key follows ``catalog/{brand-slug}/{uuid}{ext}`` so URLs are
+    stable after upload and can be stored directly in ``catalog_items.image_url``.
+
+    Args:
+        brand: The catalog item brand name (used as folder slug).
+        filename: Original filename from the client (used to infer extension fallback).
+        content_type: MIME type of the image (must be jpeg, png, or webp).
+
+    Raises:
+        StorageError: if the presigned URL cannot be generated.
+    """
+    extension = CONTENT_TYPE_EXTENSIONS.get(content_type)
+    if not extension:
+        # Fall back to file extension from the original filename
+        dot_index = filename.rfind(".")
+        extension = ("." + filename[dot_index + 1:].lower()) if dot_index != -1 else ""
+
+    key = f"catalog/{_slugify(brand)}/{uuid4()}{extension}"
+    upload_url = _generate_presigned_put(key, content_type, expires_in=IMAGE_UPLOAD_EXPIRES_IN)
+    image_url = _build_public_url(key)
+    return UploadTarget(key=key, upload_url=upload_url, image_url=image_url)
 
 
 def get_signed_read_url(key: str, expires_in: int = 900) -> str:

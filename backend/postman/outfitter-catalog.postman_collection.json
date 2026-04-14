@@ -59,6 +59,18 @@
       "value": ""
     },
     {
+      "key": "catalogUploadUrl",
+      "value": ""
+    },
+    {
+      "key": "catalogImageUrl",
+      "value": ""
+    },
+    {
+      "key": "catalogObjectKey",
+      "value": ""
+    },
+    {
       "key": "wardrobeCategory",
       "value": "bottom"
     },
@@ -448,6 +460,111 @@
             },
             "description": "GET /catalog/similar/{item_id} with source=catalog|wardrobe|both and limit."
           }
+        },
+        {
+          "name": "Request Catalog Image Upload URL",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"{{brand}}\",\n  \"filename\": \"linen-shirt.jpg\",\n  \"content_type\": \"image/jpeg\",\n  \"file_size\": 1048576\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/images/upload-url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "images",
+                "upload-url"
+              ]
+            },
+            "description": "Step 1 of the catalog image upload flow. Returns a presigned S3 PUT URL and the stable public image_url to use when creating the catalog item."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('catalogUploadUrl', json.upload_url);",
+                  "  pm.collectionVariables.set('catalogImageUrl', json.image_url);",
+                  "  pm.collectionVariables.set('catalogObjectKey', json.object_key);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Catalog Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"{{brand}}\",\n  \"category\": \"{{category}}\",\n  \"name\": \"Linen Shirt\",\n  \"image_url\": \"{{catalogImageUrl}}\",\n  \"color\": [\"white\"],\n  \"fit\": \"{{fit}}\",\n  \"style_tags\": [\"casual\", \"minimal\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "items"
+              ]
+            },
+            "description": "Step 3 of the catalog image upload flow. Pass the image_url returned from the upload-url endpoint."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('itemId', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

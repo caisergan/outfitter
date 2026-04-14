@@ -17,6 +17,7 @@ class CatalogItem(Base, TimestampMixin):
     )
     ref_code: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True, index=True)
     brand: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    gender: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     subtype: Mapped[str | None] = mapped_column(String(100), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

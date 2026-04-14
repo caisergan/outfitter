@@ -17,6 +17,7 @@ build/
 *.bak
 *.swp
 .vscode/
+output/
 
 # Flutter / Mobile
 mobile/.dart_tool/
@@ -35,3 +36,13 @@ mobile/android/gradlew.bat
 mobile/android/local.properties
 mobile/android/**/GeneratedPluginRegistrant.java
 mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+
+
+#AI AGENTS
+.agent/
+.agents/
+.claude/
+.codex/
+.omx
+graphify-out/
+openspec/

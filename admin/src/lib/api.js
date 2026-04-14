@@ -83,6 +83,10 @@ export async function healthCheck() {
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
+export async function getCatalogFilterOptions() {
+  return apiFetch("/catalog/filter-options");
+}
+
 export async function searchCatalog(params = {}) {
   const q = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
@@ -93,6 +97,18 @@ export async function searchCatalog(params = {}) {
 
 export async function getSimilarItems(itemId, limit = 10, source = "catalog") {
   return apiFetch(`/catalog/similar/${itemId}?limit=${limit}&source=${source}`);
+}
+
+export async function requestCatalogImageUpload(data) {
+  return apiFetch("/catalog/images/upload-url", { method: "POST", body: data });
+}
+
+export async function createCatalogItem(data) {
+  return apiFetch("/catalog/items", { method: "POST", body: data });
+}
+
+export async function updateCatalogItem(itemId, data) {
+  return apiFetch(`/catalog/items/${itemId}`, { method: "PATCH", body: data });
 }
 
 // ── Wardrobe ─────────────────────────────────────────────────────────────────
