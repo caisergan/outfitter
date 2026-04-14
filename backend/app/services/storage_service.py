@@ -1,7 +1,17 @@
-"""Cloudflare R2 / S3-compatible storage service.
+"""AWS S3 / S3-compatible storage service.
 
-Provides pre-signed URLs for client uploads, signed read URLs for serving
-private images, and a helper for direct backend uploads (e.g. Kling results).
+Provides presigned PUT upload targets for client uploads, signed read URLs for
+serving private images, and a helper for direct backend uploads (e.g. Kling results).
+
+Upload target flow:
+  1. Caller requests an upload target.
+  2. Client PUTs image bytes directly to ``upload_url`` with the correct Content-Type.
+  3. Client passes the returned ``image_url`` to a create or update endpoint that
+     stores the durable public URL.
+
+Follow-up work (out of scope for this change):
+  - Object lifecycle cleanup when persisted image_url values are replaced.
+  - Private-bucket read signing for deployments where the bucket is not public.
 """
 
 import logging
@@ -18,7 +28,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-CATALOG_UPLOAD_EXPIRES_IN = 900  # 15 minutes
+IMAGE_UPLOAD_EXPIRES_IN = 900  # 15 minutes shared image upload target expiry
 
 ALLOWED_CATALOG_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 CONTENT_TYPE_EXTENSIONS = {
@@ -48,7 +58,9 @@ def _get_client():
     and other modules that never call storage functions won't crash when
     R2 env vars are absent.
     """
-    endpoint = settings.R2_ENDPOINT_URL  # None for real AWS S3
+    # Blank env vars are parsed as "", but boto3 requires None to use AWS's
+    # default endpoint resolution path.
+    endpoint = settings.R2_ENDPOINT_URL or None
     logger.info("Initializing storage client → %s", endpoint or "AWS default")
     return boto3.client(
         "s3",
@@ -67,13 +79,14 @@ def _slugify(text: str) -> str:
 
 def _build_public_url(key: str) -> str:
     """Construct a stable public URL for an object key."""
-    base = settings.STORAGE_PUBLIC_BASE_URL.rstrip("/")
+    base = (settings.STORAGE_PUBLIC_BASE_URL or "").rstrip("/")
     if base:
-        return f"{base}/{key}"
+        return f"{base}/{key}" if key else base
     # Fallback: synthesise an S3-style URL from bucket + region
     bucket = settings.R2_BUCKET
     region = settings.STORAGE_REGION
-    return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
+    base = f"https://{bucket}.s3.{region}.amazonaws.com"
+    return f"{base}/{key}" if key else base
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +143,7 @@ def get_catalog_upload_target(brand: str, filename: str, content_type: str) -> U
         extension = ("." + filename[dot_index + 1:].lower()) if dot_index != -1 else ""
 
     key = f"catalog/{_slugify(brand)}/{uuid4()}{extension}"
-    upload_url = _generate_presigned_put(key, content_type, expires_in=CATALOG_UPLOAD_EXPIRES_IN)
+    upload_url = _generate_presigned_put(key, content_type, expires_in=IMAGE_UPLOAD_EXPIRES_IN)
     image_url = _build_public_url(key)
     return UploadTarget(key=key, upload_url=upload_url, image_url=image_url)
 
