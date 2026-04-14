@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { searchCatalog, getSimilarItems, requestCatalogImageUpload, createCatalogItem } from "@/lib/api";
+import { useState, useRef, useEffect } from "react";
+import { searchCatalog, getSimilarItems, requestCatalogImageUpload, createCatalogItem, getCatalogFilterOptions } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,20 +18,36 @@ import { toast } from "sonner";
 
 const LIMIT = 20;
 
-function CatalogFilters({ filters, onChange, onSearch, loading }) {
+const FILTER_FIELDS = [
+    { key: "category", label: "Category", optionsKey: "categories" },
+    { key: "brand",    label: "Brand",    optionsKey: "brands" },
+    { key: "gender",   label: "Gender",   optionsKey: "genders" },
+    { key: "color",    label: "Color",    optionsKey: "colors" },
+    { key: "style",    label: "Style",    optionsKey: "style_tags" },
+    { key: "fit",      label: "Fit",      optionsKey: "fits" },
+];
+
+function CatalogFilters({ filters, onChange, onSearch, loading, filterOptions }) {
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-            {["category", "brand", "color", "style", "fit"].map((field) => (
-                <div key={field} className="space-y-1">
-                    <Label className="text-xs text-slate-400 capitalize">{field}</Label>
-                    <Input
-                        placeholder={field}
-                        value={filters[field] || ""}
-                        onChange={(e) => onChange({ ...filters, [field]: e.target.value })}
-                        className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm"
-                    />
-                </div>
-            ))}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 mb-4">
+            {FILTER_FIELDS.map(({ key, label, optionsKey }) => {
+                const options = filterOptions?.[optionsKey] ?? [];
+                return (
+                    <div key={key} className="space-y-1">
+                        <Label className="text-xs text-slate-400">{label}</Label>
+                        <select
+                            value={filters[key] || ""}
+                            onChange={(e) => onChange({ ...filters, [key]: e.target.value })}
+                            className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                            <option value="">All</option>
+                            {options.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    </div>
+                );
+            })}
             <div className="flex items-end">
                 <Button onClick={onSearch} disabled={loading} size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700">
                     {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3 mr-1" />}
@@ -46,7 +62,7 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const EMPTY_FORM = {
-    ref_code: "", brand: "", category: "", subtype: "",
+    ref_code: "", brand: "", gender: "", category: "", subtype: "",
     name: "", color: "", pattern: "", fit: "",
     style_tags: "", product_url: "",
 };
@@ -212,6 +228,7 @@ function CreateCatalogForm({ onCreated }) {
                 {[
                     { name: "brand", label: "Brand *", required: true },
                     { name: "name", label: "Name *", required: true },
+                    { name: "gender", label: "Gender *", required: true },
                     { name: "category", label: "Category *", required: true },
                     { name: "subtype", label: "Subtype" },
                     { name: "ref_code", label: "Ref Code" },
@@ -221,13 +238,27 @@ function CreateCatalogForm({ onCreated }) {
                 ].map(({ name, label, required }) => (
                     <div key={name} className="space-y-1">
                         <Label className="text-xs text-slate-400">{label}</Label>
-                        <Input
-                            name={name}
-                            value={form[name]}
-                            onChange={handleField}
-                            required={required}
-                            className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm"
-                        />
+                        {name === "gender" ? (
+                            <select
+                                name="gender"
+                                value={form.gender}
+                                onChange={handleField}
+                                required
+                                className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            >
+                                <option value="">Select gender</option>
+                                <option value="women">Women</option>
+                                <option value="men">Men</option>
+                            </select>
+                        ) : (
+                            <Input
+                                name={name}
+                                value={form[name]}
+                                onChange={handleField}
+                                required={required}
+                                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm"
+                            />
+                        )}
                     </div>
                 ))}
                 <div className="space-y-1">
@@ -288,6 +319,7 @@ function CreateCatalogForm({ onCreated }) {
 
 export default function CatalogPage() {
     const [filters, setFilters] = useState({});
+    const [filterOptions, setFilterOptions] = useState(null);
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(false);
     const [offset, setOffset] = useState(0);
@@ -297,6 +329,12 @@ export default function CatalogPage() {
     const [simItemId, setSimItemId] = useState("");
     const [simLimit, setSimLimit] = useState(10);
     const [simSource, setSimSource] = useState("catalog");
+    const [lightboxUrl, setLightboxUrl] = useState(null);
+
+    useEffect(() => {
+        handleSearch(0);
+        getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
+    }, []);
 
     async function handleSearch(newOffset = 0) {
         setLoading(true);
@@ -346,7 +384,7 @@ export default function CatalogPage() {
 
                 <TabsContent value="search" className="mt-4 space-y-4">
                     <Card className="bg-slate-900 border-slate-800 p-4">
-                        <CatalogFilters filters={filters} onChange={setFilters} onSearch={() => handleSearch(0)} loading={loading} />
+                        <CatalogFilters filters={filters} onChange={setFilters} onSearch={() => handleSearch(0)} loading={loading} filterOptions={filterOptions} />
                     </Card>
 
                     {loading && (
@@ -390,6 +428,7 @@ export default function CatalogPage() {
                                             <TableHead className="text-slate-400 w-16">Image</TableHead>
                                             <TableHead className="text-slate-400">Name</TableHead>
                                             <TableHead className="text-slate-400">Brand</TableHead>
+                                            <TableHead className="text-slate-400">Gender</TableHead>
                                             <TableHead className="text-slate-400">Category</TableHead>
                                             <TableHead className="text-slate-400">Color</TableHead>
                                             <TableHead className="text-slate-400">Fit</TableHead>
@@ -405,7 +444,8 @@ export default function CatalogPage() {
                                                         <img
                                                             src={item.image_url}
                                                             alt={item.name}
-                                                            className="w-10 h-10 object-cover rounded border border-slate-700"
+                                                            className="w-10 h-10 object-cover rounded border border-slate-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                                            onClick={() => setLightboxUrl(item.image_url)}
                                                             onError={(e) => { e.target.style.display = "none"; }}
                                                         />
                                                     ) : (
@@ -416,6 +456,7 @@ export default function CatalogPage() {
                                                 </TableCell>
                                                 <TableCell className="text-slate-100 font-medium text-sm">{item.name}</TableCell>
                                                 <TableCell className="text-slate-300 text-sm">{item.brand}</TableCell>
+                                                <TableCell className="text-slate-300 text-sm capitalize">{item.gender || "—"}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">{item.category}</Badge>
                                                 </TableCell>
@@ -502,7 +543,12 @@ export default function CatalogPage() {
                                         <TableRow key={item.id} className="border-slate-800 hover:bg-slate-800/50">
                                             <TableCell>
                                                 {item.image_url ? (
-                                                    <img src={item.image_url} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-700" />
+                                                    <img
+                                                        src={item.image_url}
+                                                        alt={item.name}
+                                                        className="w-10 h-10 object-cover rounded border border-slate-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                                        onClick={() => setLightboxUrl(item.image_url)}
+                                                    />
                                                 ) : (
                                                     <div className="w-10 h-10 bg-slate-800 rounded border border-slate-700" />
                                                 )}
@@ -541,6 +587,26 @@ export default function CatalogPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            {lightboxUrl && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+                    onClick={() => setLightboxUrl(null)}
+                >
+                    <button
+                        className="absolute top-4 right-4 text-white bg-slate-800 hover:bg-slate-700 rounded-full w-8 h-8 flex items-center justify-center"
+                        onClick={() => setLightboxUrl(null)}
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                    <img
+                        src={lightboxUrl}
+                        alt="Product preview"
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </div>
     );
 }

@@ -83,6 +83,10 @@ export async function healthCheck() {
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
+export async function getCatalogFilterOptions() {
+  return apiFetch("/catalog/filter-options");
+}
+
 export async function searchCatalog(params = {}) {
   const q = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
