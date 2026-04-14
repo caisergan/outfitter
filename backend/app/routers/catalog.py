@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, distinct, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import get_current_user
@@ -22,7 +22,7 @@ from app.schemas.catalog import (
     SimilarItemsResponse,
 )
 from app.services.storage_service import (
-    CATALOG_UPLOAD_EXPIRES_IN,
+    IMAGE_UPLOAD_EXPIRES_IN,
     StorageError,
     get_catalog_upload_target,
 )
@@ -89,8 +89,42 @@ async def get_catalog_image_upload_url(
         upload_url=target.upload_url,
         image_url=target.image_url,
         object_key=target.key,
-        expires_in=CATALOG_UPLOAD_EXPIRES_IN,
+        expires_in=IMAGE_UPLOAD_EXPIRES_IN,
     )
+
+
+@router.get("/filter-options")
+async def get_catalog_filter_options(db: DbDep, _: CurrentUserDep) -> dict:
+    """Return distinct values for each filterable field to populate UI dropdowns."""
+
+    async def scalar_distinct(col):
+        res = await db.execute(
+            select(distinct(col)).where(col.is_not(None)).order_by(col)
+        )
+        return res.scalars().all()
+
+    async def array_distinct(col):
+        unnested = select(func.unnest(col).label("val")).where(col.is_not(None)).subquery()
+        res = await db.execute(
+            select(distinct(unnested.c.val)).order_by(text("val"))
+        )
+        return res.scalars().all()
+
+    categories = await scalar_distinct(CatalogItem.category)
+    brands = await scalar_distinct(CatalogItem.brand)
+    genders = await scalar_distinct(CatalogItem.gender)
+    fits = await scalar_distinct(CatalogItem.fit)
+    colors = await array_distinct(CatalogItem.color)
+    style_tags = await array_distinct(CatalogItem.style_tags)
+
+    return {
+        "categories": categories,
+        "brands": brands,
+        "genders": genders,
+        "fits": fits,
+        "colors": colors,
+        "style_tags": style_tags,
+    }
 
 
 @router.get("/search", response_model=CatalogSearchResponse)
@@ -100,6 +134,7 @@ async def search_catalog(
     category: Annotated[str | None, Query()] = None,
     color: Annotated[str | None, Query()] = None,
     brand: Annotated[str | None, Query()] = None,
+    gender: Annotated[str | None, Query()] = None,
     style: Annotated[str | None, Query()] = None,
     fit: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -111,6 +146,8 @@ async def search_catalog(
         q = q.where(CatalogItem.category == category)
     if brand:
         q = q.where(CatalogItem.brand == brand)
+    if gender:
+        q = q.where(CatalogItem.gender == gender)
     if fit:
         q = q.where(CatalogItem.fit == fit)
     if color:
