@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, field_validator
 
+from app.services.storage_service import ALLOWED_CATALOG_CONTENT_TYPES
+
 # Controlled taxonomy for catalog item categories.
 # Downstream outfit and try-on flows treat category as controlled vocabulary,
 # so we enforce it here at the API boundary rather than in the database.
@@ -18,11 +20,13 @@ CATALOG_CATEGORIES = Literal[
     "swimwear",
     "activewear",
 ]
+CATALOG_GENDERS = Literal["men", "women"]
 
 
 class CatalogItemCreate(BaseModel):
     ref_code: str | None = None
     brand: str
+    gender: CATALOG_GENDERS | None = None
     category: CATALOG_CATEGORIES
     subtype: str | None = None
     name: str
@@ -37,6 +41,7 @@ class CatalogItemCreate(BaseModel):
 class CatalogItemUpdate(BaseModel):
     ref_code: str | None = None
     brand: str | None = None
+    gender: CATALOG_GENDERS | None = None
     category: CATALOG_CATEGORIES | None = None
     subtype: str | None = None
     name: str | None = None
@@ -52,6 +57,7 @@ class CatalogItemResponse(BaseModel):
     id: uuid.UUID
     ref_code: str | None
     brand: str
+    gender: str | None
     category: str
     subtype: str | None
     name: str
@@ -122,7 +128,8 @@ class CatalogBulkCreateResponse(BaseModel):
 # Image upload flow
 # ---------------------------------------------------------------------------
 
-ALLOWED_CATALOG_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+# ALLOWED_CATALOG_CONTENT_TYPES is imported from storage_service so the
+# validator and the storage layer always agree on the allowed set.
 MAX_CATALOG_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
