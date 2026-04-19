@@ -11,6 +11,7 @@ import 'features/assistant/ui/assistant_screen.dart';
 import 'features/wardrobe/ui/wardrobe_screen.dart';
 import 'features/wardrobe/ui/wardrobe_item_detail_screen.dart';
 import 'core/widgets/main_scaffold.dart';
+import 'features/profile/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authNotifierProvider);
@@ -73,6 +74,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
+
         ],
       ),
     ],

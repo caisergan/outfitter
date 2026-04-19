@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/auth_provider.dart';
 import 'router.dart';
+import 'core/theme/app_colors.dart';
 
 class FashionApp extends ConsumerWidget {
   const FashionApp({super.key});
@@ -13,7 +14,37 @@ class FashionApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Outfitter',
       debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
+      theme: ThemeData(
+        scaffoldBackgroundColor: AppColors.cream,
+
+        textTheme: const TextTheme().apply(
+          bodyColor: AppColors.text,
+          displayColor: AppColors.text,
+        ),
+
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.cream,
+          foregroundColor: AppColors.text,
+          elevation: 0,
+          centerTitle: true,
+
+          titleTextStyle: TextStyle(
+            color: AppColors.text,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+
+          iconTheme: IconThemeData(
+            color: AppColors.text,
+          ),
+        ),
+
+        colorScheme: ColorScheme.light(
+          primary: AppColors.blush,
+          secondary: AppColors.mint,
+        ),
+      ),
       routerConfig: router,
     );
   }
