@@ -36,10 +36,8 @@ class WardrobeRepository {
         contentType: DioMediaType('image', 'jpeg'),
       ),
     });
-    final response =
-        await _dio.post(ApiEndpoints.wardrobeTag, data: formData);
-    return WardrobeTagResult.fromJson(
-        response.data as Map<String, dynamic>);
+    final response = await _dio.post(ApiEndpoints.wardrobeTag, data: formData);
+    return WardrobeTagResult.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<WardrobeItem> save(CreateWardrobeItemRequest body) async {

@@ -49,7 +49,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             : assistantState.when(
                 data: (outfits) => OutfitCarousel(
                   outfits: outfits,
-                  onRefresh: () => ref.read(assistantNotifierProvider.notifier).refresh(),
+                  onRefresh: () =>
+                      ref.read(assistantNotifierProvider.notifier).refresh(),
                 ),
                 loading: () => const Center(
                   child: Column(

@@ -65,14 +65,16 @@ class SlotTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-            color: item == null ? Colors.grey.shade200 : Theme.of(context).primaryColor,
+            color: item == null
+                ? Colors.grey.shade200
+                : Theme.of(context).primaryColor,
             width: item == null ? 1 : 2,
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             if (item != null)
               BoxShadow(
-                color: Theme.of(context).primaryColor.withOpacity(0.08),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -80,7 +82,9 @@ class SlotTile extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14),
-          child: item == null ? _buildEmptyState(context) : _buildFilledState(context),
+          child: item == null
+              ? _buildEmptyState(context)
+              : _buildFilledState(context),
         ),
       ),
     );
@@ -94,7 +98,10 @@ class SlotTile extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           type.displayName,
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
+          style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 12,
+              fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -122,7 +129,10 @@ class SlotTile extends StatelessWidget {
               item!.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500),
             ),
           ),
         ),

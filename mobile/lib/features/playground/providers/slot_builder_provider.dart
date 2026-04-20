@@ -39,8 +39,8 @@ class SlotBuilderNotifier extends StateNotifier<OutfitSlots> {
     var current = OutfitSlots.empty();
     for (final entry in itemIds.entries) {
       try {
-        final slotType = SlotType.values
-            .firstWhere((t) => t.categoryString == entry.key);
+        final slotType =
+            SlotType.values.firstWhere((t) => t.categoryString == entry.key);
         final item = itemMap[entry.value];
         if (item != null) current = current.copyWithSlot(slotType, item);
       } catch (_) {}

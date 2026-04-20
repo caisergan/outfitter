@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,10 +7,10 @@ import 'features/auth/ui/signup_screen.dart';
 import 'features/discover/ui/discover_screen.dart';
 import 'features/playground/ui/playground_screen.dart';
 import 'features/assistant/ui/assistant_screen.dart';
+import 'features/profile/ui/profile_screen.dart';
 import 'features/wardrobe/ui/wardrobe_screen.dart';
 import 'features/wardrobe/ui/wardrobe_item_detail_screen.dart';
 import 'core/widgets/main_scaffold.dart';
-import 'features/profile/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authNotifierProvider);
@@ -21,8 +20,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoading = authState == AuthStatus.loading;
       final isAuthenticated = authState == AuthStatus.authenticated;
-      final isAuthRoute =
-          state.matchedLocation == '/login' ||
+      final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/signup';
 
       if (isLoading) return null;
@@ -59,7 +57,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/assistant',
             builder: (_, state) {
               final extra = state.extra as Map<String, dynamic>?;
-              return AssistantScreen(anchorItemId: extra?['anchorItemId'] as String?);
+              return AssistantScreen(
+                  anchorItemId: extra?['anchorItemId'] as String?);
             },
           ),
           GoRoute(
@@ -76,9 +75,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
+            builder: (_, __) => const ProfileScreen(),
           ),
-
         ],
       ),
     ],

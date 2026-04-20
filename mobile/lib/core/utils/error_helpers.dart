@@ -14,7 +14,9 @@ String dioErrorToMessage(Object error) {
     case DioExceptionType.badResponse:
       final statusCode = error.response?.statusCode;
       if (statusCode == 401) return 'Session expired. Please log in again.';
-      if (statusCode == 422) return 'Invalid request. Please check your inputs.';
+      if (statusCode == 422) {
+        return 'Invalid request. Please check your inputs.';
+      }
       if (statusCode != null && statusCode >= 500) {
         return 'Server error. Please try again later.';
       }

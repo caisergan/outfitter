@@ -27,9 +27,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     try {
       await ref.read(authNotifierProvider.notifier).signup(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
 
       if (mounted) context.go('/discover');
     } catch (e) {
@@ -43,13 +43,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.cream,
-
       appBar: AppBar(
         backgroundColor: AppColors.cream,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
       ),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -66,9 +64,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     'Create account',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.text,
-                    ),
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text,
+                        ),
                   ),
                 ),
 
@@ -80,7 +78,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     'Start building your digital wardrobe',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.text.withOpacity(0.6),
+                      color: AppColors.text.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -96,7 +94,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   decoration: InputDecoration(
                     hintText: 'Email',
                     hintStyle: TextStyle(
-                      color: AppColors.text.withOpacity(0.4),
+                      color: AppColors.text.withValues(alpha: 0.4),
                     ),
                     prefixIcon: const Icon(
                       Icons.email_outlined,
@@ -120,7 +118,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   decoration: InputDecoration(
                     hintText: 'Password',
                     hintStyle: TextStyle(
-                      color: AppColors.text.withOpacity(0.4),
+                      color: AppColors.text.withValues(alpha: 0.4),
                     ),
                     prefixIcon: const Icon(
                       Icons.lock_outlined,
@@ -129,7 +127,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Enter a password';
-                    if (v.length < 8) return 'Password must be at least 8 characters';
+                    if (v.length < 8) {
+                      return 'Password must be at least 8 characters';
+                    }
                     return null;
                   },
                 ),
@@ -148,17 +148,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   child: _loading
                       ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
-                    'Create Account',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
+                          'Create Account',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                 ),
                 const SizedBox(height: 16),
 
@@ -168,7 +168,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     Text(
                       'Already have an account? ',
                       style: TextStyle(
-                        color: AppColors.text.withOpacity(0.6),
+                        color: AppColors.text.withValues(alpha: 0.6),
                       ),
                     ),
                     TextButton(

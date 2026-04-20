@@ -18,7 +18,9 @@ class OutfitSuggestionCard extends ConsumerWidget {
             source: 'assistant',
             slots: outfit.slots.map((k, v) => MapEntry(k, v.id)),
           );
-      if (context.mounted) showSuccessSnackbar(context, 'Outfit saved to Lookbook!');
+      if (context.mounted) {
+        showSuccessSnackbar(context, 'Outfit saved to Lookbook!');
+      }
     } catch (e) {
       if (context.mounted) showErrorSnackbar(context, dioErrorToMessage(e));
     }
@@ -45,7 +47,8 @@ class OutfitSuggestionCard extends ConsumerWidget {
                   outfit.styleNote,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, height: 1.4),
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500, height: 1.4),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -53,7 +56,8 @@ class OutfitSuggestionCard extends ConsumerWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => context.go('/playground', extra: {
-                          'slots': outfit.slots.map((k, v) => MapEntry(k, v.id)),
+                          'slots':
+                              outfit.slots.map((k, v) => MapEntry(k, v.id)),
                         }),
                         child: const Text('Try On'),
                       ),
@@ -62,7 +66,9 @@ class OutfitSuggestionCard extends ConsumerWidget {
                     IconButton.filledTonal(
                       icon: const Icon(Icons.bookmark_border),
                       onPressed: () => _handleSave(context, ref),
-                      style: IconButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                      style: IconButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14))),
                     ),
                   ],
                 ),
@@ -93,13 +99,16 @@ class OutfitSuggestionCard extends ConsumerWidget {
               Expanded(
                 child: CachedItemImage(
                   url: slotItems[1].imageUrl,
-                  borderRadius: const BorderRadius.only(topRight: Radius.circular(24)),
+                  borderRadius:
+                      const BorderRadius.only(topRight: Radius.circular(24)),
                 ),
               ),
               const SizedBox(height: 2),
               Expanded(
                 child: CachedItemImage(
-                  url: slotItems.length > 2 ? slotItems[2].imageUrl : slotItems[0].imageUrl,
+                  url: slotItems.length > 2
+                      ? slotItems[2].imageUrl
+                      : slotItems[0].imageUrl,
                 ),
               ),
             ],

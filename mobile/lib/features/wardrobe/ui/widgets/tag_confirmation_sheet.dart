@@ -17,7 +17,8 @@ class TagConfirmationSheet extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TagConfirmationSheet> createState() => _TagConfirmationSheetState();
+  ConsumerState<TagConfirmationSheet> createState() =>
+      _TagConfirmationSheetState();
 }
 
 class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
@@ -81,11 +82,14 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
                     controller: scrollController,
                     padding: const EdgeInsets.all(24),
                     children: [
-                      const Text('Confirm Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                      const Text('Confirm Details',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 24),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: CachedItemImage(url: widget.imageUrl, height: 200),
+                        child:
+                            CachedItemImage(url: widget.imageUrl, height: 200),
                       ),
                       const SizedBox(height: 32),
                       _buildSection('Category', _category),
@@ -104,7 +108,11 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _handleSave,
                 child: _isSaving
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
                     : const Text('Add to Wardrobe'),
               ),
             ),
@@ -120,9 +128,15 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(title,
+              style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Divider(color: Colors.grey.shade200),
         ],

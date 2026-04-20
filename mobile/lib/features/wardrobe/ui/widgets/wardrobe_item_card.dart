@@ -33,7 +33,10 @@ class WardrobeItemCard extends StatelessWidget {
               '${item.color.join(", ")} ${item.subtype ?? "Item"}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2),
             ),
           ),
         ],

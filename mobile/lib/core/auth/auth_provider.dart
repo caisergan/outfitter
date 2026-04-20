@@ -17,7 +17,8 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
   Future<void> _checkExistingToken() async {
     final token = await _storage.read();
-    state = token != null ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+    state =
+        token != null ? AuthStatus.authenticated : AuthStatus.unauthenticated;
   }
 
   Future<void> login(String email, String password) async {

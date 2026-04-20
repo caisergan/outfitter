@@ -19,8 +19,7 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline,
-                size: 48, color: Colors.red.shade300),
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
             const SizedBox(height: 16),
             Text(
               message,
@@ -69,8 +68,8 @@ class LoadingOverlay extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 32, vertical: 24),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

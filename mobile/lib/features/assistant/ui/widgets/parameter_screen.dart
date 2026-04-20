@@ -47,9 +47,7 @@ class _ParameterScreenState extends State<ParameterScreen> {
               selected: _occasion,
               onSelected: (val) => setState(() => _occasion = val),
             ),
-
             const SizedBox(height: 32),
-
             _buildSectionHeader("Which season?"),
             const SizedBox(height: 12),
             _buildChipGroup(
@@ -57,9 +55,7 @@ class _ParameterScreenState extends State<ParameterScreen> {
               selected: _season,
               onSelected: (val) => setState(() => _season = val),
             ),
-
             const SizedBox(height: 32),
-
             _buildSectionHeader("Color preference?"),
             const SizedBox(height: 12),
             _buildChipGroup(
@@ -73,9 +69,7 @@ class _ParameterScreenState extends State<ParameterScreen> {
               selected: _colorPreference,
               onSelected: (val) => setState(() => _colorPreference = val),
             ),
-
             const SizedBox(height: 32),
-
             _buildSectionHeader("Item source"),
             const SizedBox(height: 12),
             _buildChipGroup(
@@ -83,9 +77,7 @@ class _ParameterScreenState extends State<ParameterScreen> {
               selected: _source,
               onSelected: (val) => setState(() => _source = val ?? 'mix'),
             ),
-
             const SizedBox(height: 48),
-
             ElevatedButton(
               onPressed: () => widget.onFind(
                 AssistantParams(
@@ -125,7 +117,6 @@ class _ParameterScreenState extends State<ParameterScreen> {
     );
   }
 
-
   Widget _buildChipGroup({
     required List<String> options,
     required String? selected,
@@ -143,21 +134,17 @@ class _ParameterScreenState extends State<ParameterScreen> {
             style: TextStyle(
               color: isSelected
                   ? AppColors.text
-                  : AppColors.text.withOpacity(0.7),
+                  : AppColors.text.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
-
           selected: isSelected,
           onSelected: (val) => onSelected(val ? opt : null),
-
           backgroundColor: AppColors.lightMint,
           selectedColor: AppColors.mint,
-
           side: BorderSide(
             color: isSelected ? AppColors.mint : AppColors.lightMint,
           ),
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),

@@ -19,7 +19,15 @@ class WardrobeScreen extends ConsumerStatefulWidget {
 class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _categories = ['All', 'top', 'bottom', 'shoes', 'outerwear', 'accessory', 'bag'];
+  final _categories = [
+    'All',
+    'top',
+    'bottom',
+    'shoes',
+    'outerwear',
+    'accessory',
+    'bag'
+  ];
 
   @override
   void initState() {
@@ -33,7 +41,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
   }
 
   void _refresh() {
-    final cat = _tabController.index == 0 ? null : _categories[_tabController.index];
+    final cat =
+        _tabController.index == 0 ? null : _categories[_tabController.index];
     ref.read(wardrobeNotifierProvider.notifier).fetch(category: cat);
   }
 
@@ -86,7 +95,9 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          tabs: _categories.map((c) => Tab(text: c[0].toUpperCase() + c.substring(1))).toList(),
+          tabs: _categories
+              .map((c) => Tab(text: c[0].toUpperCase() + c.substring(1)))
+              .toList(),
         ),
       ),
       body: wardrobeState.when(
@@ -101,7 +112,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
                   childAspectRatio: 0.75,
                 ),
                 itemCount: items.length,
-                itemBuilder: (context, index) => WardrobeItemCard(item: items[index]),
+                itemBuilder: (context, index) =>
+                    WardrobeItemCard(item: items[index]),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, __) => ErrorView(
@@ -121,7 +133,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.door_sliding_outlined, size: 64, color: Colors.grey.shade300),
+          Icon(Icons.door_sliding_outlined,
+              size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           const Text('Your wardrobe is empty.'),
           const SizedBox(height: 8),

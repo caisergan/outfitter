@@ -53,5 +53,5 @@ class TryOnRepository {
   }
 }
 
-final tryonRepositoryProvider = Provider<TryOnRepository>(
-    (ref) => TryOnRepository(ref.read(dioProvider)));
+final tryonRepositoryProvider =
+    Provider<TryOnRepository>((ref) => TryOnRepository(ref.read(dioProvider)));

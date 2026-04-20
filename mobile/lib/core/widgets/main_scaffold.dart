@@ -15,25 +15,18 @@ class MainScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.cream,
-
       body: child,
-
       bottomNavigationBar: NavigationBar(
         backgroundColor: AppColors.cream,
-
         indicatorColor: AppColors.mint,
-
-        labelTextStyle: MaterialStateProperty.all(
+        labelTextStyle: WidgetStateProperty.all(
           const TextStyle(
             color: AppColors.text,
             fontWeight: FontWeight.w500,
           ),
         ),
-
         selectedIndex: currentIndex < 0 ? 0 : currentIndex,
-
         onDestinationSelected: (i) => context.go(_tabs[i]),
-
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.explore_outlined, color: AppColors.text),

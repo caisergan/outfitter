@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fashion_app/core/models/wardrobe_item.dart';
 import 'package:fashion_app/features/wardrobe/data/wardrobe_repository.dart';
 
-class WardrobeNotifier
-    extends StateNotifier<AsyncValue<List<WardrobeItem>>> {
+class WardrobeNotifier extends StateNotifier<AsyncValue<List<WardrobeItem>>> {
   final WardrobeRepository _repo;
 
   WardrobeNotifier(this._repo) : super(const AsyncValue.loading()) {

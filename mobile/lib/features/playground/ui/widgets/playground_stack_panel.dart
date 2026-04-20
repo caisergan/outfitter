@@ -31,9 +31,9 @@ class PlaygroundStackPanel extends ConsumerWidget {
       width: 100,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
@@ -96,15 +96,18 @@ class _StackSlotTile extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: item == null ? Colors.white.withOpacity(0.3) : Colors.white,
+              color: item == null
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: item != null 
-                ? Border.all(color: const Color(0xFF1D5CE0), width: 3)
-                : Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+              border: item != null
+                  ? Border.all(color: const Color(0xFF1D5CE0), width: 3)
+                  : Border.all(
+                      color: Colors.white.withValues(alpha: 0.4), width: 1),
               boxShadow: [
                 if (item != null)
                   BoxShadow(
-                    color: const Color(0xFF1D5CE0).withOpacity(0.2),
+                    color: const Color(0xFF1D5CE0).withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -112,15 +115,15 @@ class _StackSlotTile extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(13),
-              child: item == null 
-                ? Center(
-                    child: Icon(
-                      _getIconForType(type),
-                      color: Colors.black45,
-                      size: 24,
-                    ),
-                  )
-                : CachedItemImage(url: item!.imageUrl),
+              child: item == null
+                  ? Center(
+                      child: Icon(
+                        _getIconForType(type),
+                        color: Colors.black45,
+                        size: 24,
+                      ),
+                    )
+                  : CachedItemImage(url: item!.imageUrl),
             ),
           ),
           if (item != null)

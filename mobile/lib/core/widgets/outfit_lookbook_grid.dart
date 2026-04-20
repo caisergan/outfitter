@@ -48,7 +48,8 @@ class OutfitLookbookGrid extends StatelessWidget {
                       ? CachedItemImage(url: outfit.generatedImageUrl!)
                       : Container(
                           color: Colors.grey.shade100,
-                          child: const Icon(Icons.checkroom, color: Colors.grey),
+                          child:
+                              const Icon(Icons.checkroom, color: Colors.grey),
                         ),
                 ),
                 Padding(

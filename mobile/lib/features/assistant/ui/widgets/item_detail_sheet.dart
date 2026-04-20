@@ -40,9 +40,15 @@ class ItemDetailSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.brand, style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                    Text(item.brand,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w500)),
                     const SizedBox(height: 4),
-                    Text(item.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Text(item.name,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -54,7 +60,9 @@ class ItemDetailSheet extends StatelessWidget {
             child: const Text('View Official Page'),
           ),
           const SizedBox(height: 12),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
           const SizedBox(height: 16),
         ],
       ),

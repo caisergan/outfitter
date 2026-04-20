@@ -6,8 +6,6 @@ import '../providers/wardrobe_provider.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/utils/error_helpers.dart';
 import '../../../core/widgets/shared_widgets.dart';
-import '../../discover/data/catalog_repository.dart';
-import '../../../core/models/catalog_item.dart';
 
 class WardrobeItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -17,7 +15,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wardrobeState = ref.watch(wardrobeNotifierProvider);
-    
+
     return wardrobeState.when(
       data: (items) {
         final item = items.firstWhere(
@@ -32,7 +30,8 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                 expandedHeight: 400,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: CachedItemImage(url: item.imageUrl, fit: BoxFit.cover),
+                  background:
+                      CachedItemImage(url: item.imageUrl, fit: BoxFit.cover),
                 ),
                 actions: [
                   IconButton(
@@ -47,9 +46,10 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     Text(
                       '${item.color.join(", ")} ${item.subtype ?? "Item"}',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -80,7 +80,8 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 48),
                     const Text(
                       'Similar in your Wardrobe',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 16),
                     _buildSimilarWardrobeItems(items, item),
@@ -92,7 +93,8 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, __) => Scaffold(
         appBar: AppBar(),
         body: ErrorView(
@@ -107,23 +109,27 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: tags.map((t) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          t,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-        ),
-      )).toList(),
+      children: tags
+          .map((t) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  t,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+              ))
+          .toList(),
     );
   }
 
   Widget _buildSimilarWardrobeItems(List<dynamic> items, dynamic currentItem) {
     final similar = items
-        .where((i) => i.id != currentItem.id && i.category == currentItem.category)
+        .where(
+            (i) => i.id != currentItem.id && i.category == currentItem.category)
         .take(4)
         .toList();
 
@@ -159,9 +165,12 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Item?'),
-        content: const Text('This will permanently remove this item from your wardrobe.'),
+        content: const Text(
+            'This will permanently remove this item from your wardrobe.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),

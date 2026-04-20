@@ -28,9 +28,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref.read(authNotifierProvider.notifier).login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
 
       if (mounted) context.go('/discover');
     } catch (e) {
@@ -44,29 +44,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.cream,
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-
           child: Form(
             key: _formKey,
-
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-
               children: [
                 const SizedBox(height: 64),
 
                 Text(
                   'Welcome back',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.text,
-                  ),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text,
+                      ),
                 ),
 
                 const SizedBox(height: 8),
@@ -74,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'Sign in to continue',
                   style: TextStyle(
-                    color: AppColors.text.withOpacity(0.6),
+                    color: AppColors.text.withValues(alpha: 0.6),
                   ),
                 ),
 
@@ -85,16 +78,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(color: AppColors.text),
-
                   decoration: InputDecoration(
                     hintText: 'Email',
                     hintStyle: TextStyle(
-                      color: AppColors.text.withOpacity(0.4),
+                      color: AppColors.text.withValues(alpha: 0.4),
                     ),
-                    prefixIcon: const Icon(Icons.email_outlined,
-                        color: AppColors.text),
+                    prefixIcon:
+                        const Icon(Icons.email_outlined, color: AppColors.text),
                   ),
-
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Enter your email';
                     if (!v.contains('@')) return 'Enter a valid email';
@@ -109,16 +100,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   style: const TextStyle(color: AppColors.text),
-
                   decoration: InputDecoration(
                     hintText: 'Password',
                     hintStyle: TextStyle(
-                      color: AppColors.text.withOpacity(0.4),
+                      color: AppColors.text.withValues(alpha: 0.4),
                     ),
-
-                    prefixIcon: const Icon(Icons.lock_outlined,
-                        color: AppColors.text),
-
+                    prefixIcon:
+                        const Icon(Icons.lock_outlined, color: AppColors.text),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -127,11 +115,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: AppColors.text,
                       ),
                       onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
+                        () => _obscurePassword = !_obscurePassword,
                       ),
                     ),
                   ),
-
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Enter your password';
                     if (v.length < 6) return 'Password too short';
@@ -152,20 +139,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-
                   child: _loading
                       ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
-                    'Sign In',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
+                          'Sign In',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                 ),
 
                 const SizedBox(height: 16),
@@ -177,7 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       "Don't have an account? ",
                       style: TextStyle(
-                        color: AppColors.text.withOpacity(0.6),
+                        color: AppColors.text.withValues(alpha: 0.6),
                       ),
                     ),
                     TextButton(

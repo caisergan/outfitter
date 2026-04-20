@@ -19,7 +19,5 @@ enum SlotType {
       };
 
   bool get isRequired =>
-      this == SlotType.top ||
-      this == SlotType.bottom ||
-      this == SlotType.shoes;
+      this == SlotType.top || this == SlotType.bottom || this == SlotType.shoes;
 }

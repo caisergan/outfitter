@@ -5,7 +5,6 @@ import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/core/models/catalog_item.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/discover/data/catalog_repository.dart';
-import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
 import 'package:fashion_app/features/playground/providers/slot_builder_provider.dart';
 
 class ItemBrowserSheet extends ConsumerStatefulWidget {
@@ -102,7 +101,13 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   }
 
   Widget _buildCategoryFilters() {
-    final categories = ['All Styles', 'Outerwear', 'Knitwear', 'Tops', 'Bottoms'];
+    final categories = [
+      'All Styles',
+      'Outerwear',
+      'Knitwear',
+      'Tops',
+      'Bottoms'
+    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -114,9 +119,12 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
             child: GestureDetector(
               onTap: () => setState(() => _selectedCategory = cat),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF1D5CE0) : const Color(0xFFF3F4F6),
+                  color: isSelected
+                      ? const Color(0xFF1D5CE0)
+                      : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -141,8 +149,8 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
 
     return FutureBuilder<List<CatalogItem>>(
       future: ref.read(catalogRepositoryProvider).search(
-        category: widget.type.categoryString,
-      ),
+            category: widget.type.categoryString,
+          ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -166,7 +174,9 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
 
             return GestureDetector(
               onTap: () {
-                ref.read(slotBuilderProvider.notifier).setSlot(widget.type, item);
+                ref
+                    .read(slotBuilderProvider.notifier)
+                    .setSlot(widget.type, item);
                 Navigator.pop(context);
               },
               child: Column(
@@ -180,7 +190,8 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                             color: const Color(0xFFF3F4F6),
                             borderRadius: BorderRadius.circular(16),
                             border: isSelected
-                                ? Border.all(color: const Color(0xFF1D5CE0), width: 2)
+                                ? Border.all(
+                                    color: const Color(0xFF1D5CE0), width: 2)
                                 : null,
                           ),
                           clipBehavior: Clip.antiAlias,
@@ -214,8 +225,10 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                     textAlign: TextAlign.left,
                     style: TextStyle(
                       fontSize: 9,
-                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                      color: isSelected ? const Color(0xFF1D5CE0) : Colors.black87,
+                      fontWeight:
+                          isSelected ? FontWeight.w900 : FontWeight.w700,
+                      color:
+                          isSelected ? const Color(0xFF1D5CE0) : Colors.black87,
                       letterSpacing: 0.5,
                     ),
                   ),

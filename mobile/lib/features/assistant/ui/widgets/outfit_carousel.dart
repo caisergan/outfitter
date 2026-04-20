@@ -7,7 +7,8 @@ class OutfitCarousel extends StatefulWidget {
   final List<OutfitSuggestion> outfits;
   final VoidCallback onRefresh;
 
-  const OutfitCarousel({required this.outfits, required this.onRefresh, super.key});
+  const OutfitCarousel(
+      {required this.outfits, required this.onRefresh, super.key});
 
   @override
   State<OutfitCarousel> createState() => _OutfitCarouselState();
@@ -32,7 +33,8 @@ class _OutfitCarouselState extends State<OutfitCarousel> {
           children: [
             const Text('No outfits found for these parameters.'),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: widget.onRefresh, child: const Text('Try Again')),
+            ElevatedButton(
+                onPressed: widget.onRefresh, child: const Text('Try Again')),
           ],
         ),
       );
@@ -65,7 +67,9 @@ class _OutfitCarouselState extends State<OutfitCarousel> {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _currentPage == index ? Theme.of(context).primaryColor : Colors.grey.shade300,
+                color: _currentPage == index
+                    ? Theme.of(context).primaryColor
+                    : Colors.grey.shade300,
               ),
             ),
           ),
