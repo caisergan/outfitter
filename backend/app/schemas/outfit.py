@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Literal
@@ -42,8 +43,8 @@ class SaveOutfitRequest(BaseModel):
 
 
 class SavedOutfitResponse(BaseModel):
-    id: str
-    user_id: str
+    id: uuid.UUID
+    user_id: uuid.UUID
     source: str
     slots: dict
     generated_image_url: str | None

@@ -8,6 +8,7 @@ import 'features/auth/ui/signup_screen.dart';
 import 'features/discover/ui/discover_screen.dart';
 import 'features/playground/ui/playground_screen.dart';
 import 'features/assistant/ui/assistant_screen.dart';
+import 'features/profile/ui/profile_screen.dart';
 import 'features/wardrobe/ui/wardrobe_screen.dart';
 import 'features/wardrobe/ui/wardrobe_item_detail_screen.dart';
 import 'core/widgets/main_scaffold.dart';
@@ -44,6 +45,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/discover',
             builder: (_, __) => const DiscoverScreen(),
+            routes: [
+              GoRoute(
+                path: 'profile',
+                builder: (_, __) => const ProfileScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/playground',

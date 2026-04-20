@@ -21,7 +21,9 @@ class OutfitRepository {
 
   Future<List<SavedOutfit>> listSaved() async {
     final response = await _dio.get(ApiEndpoints.outfits);
-    return (response.data['outfits'] as List)
+    final data = response.data as Map<String, dynamic>;
+    final items = (data['items'] ?? data['outfits']) as List;
+    return items
         .map((e) => SavedOutfit.fromJson(e as Map<String, dynamic>))
         .toList();
   }

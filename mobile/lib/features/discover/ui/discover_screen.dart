@@ -16,9 +16,7 @@ class DiscoverScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
-            onPressed: () {
-              // Show profile / logout option
-            },
+            onPressed: () => context.push('/discover/profile'),
           ),
         ],
       ),
