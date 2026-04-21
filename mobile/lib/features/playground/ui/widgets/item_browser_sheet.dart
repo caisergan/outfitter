@@ -3,28 +3,65 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/core/models/catalog_item.dart';
+import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/discover/data/catalog_repository.dart';
+import 'package:fashion_app/features/playground/models/garment_category_filter.dart';
 import 'package:fashion_app/features/playground/providers/slot_builder_provider.dart';
 
 class ItemBrowserSheet extends ConsumerStatefulWidget {
-  final SlotType type;
+  final SlotType? type;
   final Function(CatalogItem) onItemSelected;
   final bool updateSlotOnSelect;
+  final String? initialCategory;
 
   const ItemBrowserSheet({
-    required this.type,
+    this.type,
     required this.onItemSelected,
     this.updateSlotOnSelect = true,
+    this.initialCategory,
     super.key,
-  });
+  }) : assert(!updateSlotOnSelect || type != null);
 
   @override
   ConsumerState<ItemBrowserSheet> createState() => _ItemBrowserSheetState();
 }
 
 class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
-  String _selectedCategory = 'All Styles';
+  late GarmentCategoryFilter _selectedCategory;
+  late Future<List<CatalogItem>> _itemsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialCategory == null
+        ? widget.type == null
+            ? garmentCategoryFilters.first
+            : garmentCategoryForSlotType(widget.type!)
+        : garmentCategoryForBackendCategory(widget.initialCategory!);
+    _itemsFuture = _searchSelectedCategory();
+  }
+
+  List<GarmentCategoryFilter> get _categoryFilters {
+    final hasSelectedCategory = garmentCategoryFilters.any(
+      (filter) => filter.backendCategory == _selectedCategory.backendCategory,
+    );
+    if (hasSelectedCategory) return garmentCategoryFilters;
+    return [_selectedCategory, ...garmentCategoryFilters];
+  }
+
+  Future<List<CatalogItem>> _searchSelectedCategory() {
+    return ref.read(catalogRepositoryProvider).search(
+          category: _selectedCategory.backendCategory,
+        );
+  }
+
+  void _selectCategory(GarmentCategoryFilter filter) {
+    setState(() {
+      _selectedCategory = filter;
+      _itemsFuture = _searchSelectedCategory();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,10 +101,9 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                           ),
                     ),
                     const SizedBox(width: 12),
-                    // Item Count Badge Mock
-                    _buildItemCountBadge('248 Items'),
                     const Spacer(),
-                    Icon(Icons.tune, color: Colors.grey.shade400),
+                    Icon(Icons.tune,
+                        color: AppColors.text.withValues(alpha: 0.5)),
                   ],
                 ),
               ),
@@ -84,57 +120,34 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
     );
   }
 
-  Widget _buildItemCountBadge(String count) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE9F0FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        count,
-        style: const TextStyle(
-          color: Color(0xFF1D5CE0),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-
   Widget _buildCategoryFilters() {
-    final categories = [
-      'All Styles',
-      'Outerwear',
-      'Knitwear',
-      'Tops',
-      'Bottoms'
-    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
-        children: categories.map((cat) {
-          final isSelected = _selectedCategory == cat;
+        children: _categoryFilters.map((filter) {
+          final isSelected =
+              _selectedCategory.backendCategory == filter.backendCategory;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () => setState(() => _selectedCategory = cat),
+              onTap: () => _selectCategory(filter),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF1D5CE0)
-                      : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected ? AppColors.text : AppColors.lightMint,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? AppColors.text : AppColors.lightMint,
+                  ),
                 ),
                 child: Text(
-                  cat,
+                  filter.label,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black87,
+                    color: isSelected ? Colors.white : AppColors.text,
                     fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   ),
                 ),
               ),
@@ -151,15 +164,37 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
         : null;
 
     return FutureBuilder<List<CatalogItem>>(
-      future: ref.read(catalogRepositoryProvider).search(
-            category: widget.type.categoryString,
-          ),
+      future: _itemsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text(
+              'Could not load garments.',
+              style: TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          );
+        }
+
         final items = snapshot.data ?? [];
+
+        if (items.isEmpty) {
+          return const Center(
+            child: Text(
+              'No garments found for this category.',
+              style: TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          );
+        }
 
         return GridView.builder(
           controller: scrollController,
@@ -177,10 +212,10 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
 
             return GestureDetector(
               onTap: () {
-                if (widget.updateSlotOnSelect) {
+                if (widget.updateSlotOnSelect && widget.type != null) {
                   ref
                       .read(slotBuilderProvider.notifier)
-                      .setSlot(widget.type, item);
+                      .setSlot(widget.type!, item);
                 }
                 widget.onItemSelected(item);
                 Navigator.pop(context);

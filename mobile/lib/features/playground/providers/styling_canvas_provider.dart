@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:fashion_app/core/models/catalog_item.dart';
+import 'package:fashion_app/core/models/wardrobe_item.dart';
 import 'package:fashion_app/features/playground/models/styling_canvas_models.dart';
 
 class StylingCanvasState {
@@ -126,6 +127,23 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
     state = state.copyWith(
       garments: [...state.garments, garment],
       selectedGarmentId: garment.id,
+    );
+  }
+
+  void addWardrobeGarment(WardrobeItem item) {
+    addGarment(
+      CatalogItem(
+        id: item.id,
+        brand: 'My Wardrobe',
+        category: item.category,
+        subtype: item.subtype,
+        name: _wardrobeItemName(item),
+        color: item.color,
+        pattern: item.pattern,
+        fit: item.fit,
+        styleTags: item.styleTags,
+        imageUrl: item.imageUrl,
+      ),
     );
   }
 
@@ -338,6 +356,12 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
 
   double _clampDouble(double value, double min, double max) {
     return value.clamp(min, max).toDouble();
+  }
+
+  String _wardrobeItemName(WardrobeItem item) {
+    final color = item.color.isEmpty ? null : item.color.join(', ');
+    final subtype = item.subtype ?? item.category;
+    return [color, subtype].whereType<String>().join(' ');
   }
 }
 

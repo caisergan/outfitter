@@ -3,13 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/models/slot_type.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../models/styling_canvas_models.dart';
 import '../providers/styling_canvas_provider.dart';
 import 'widgets/item_browser_sheet.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'widgets/wardrobe_browser_sheet.dart';
 
 class PlaygroundScreen extends ConsumerStatefulWidget {
   final Map<String, String>? prefilledSlots;
@@ -20,33 +19,50 @@ class PlaygroundScreen extends ConsumerStatefulWidget {
 }
 
 class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
-  void _openCategoryPicker() {
-    showModalBottomSheet(
+  Future<void> _openGarmentSourcePicker() async {
+    final source = await showModalBottomSheet<_GarmentSource>(
       context: context,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return _CategoryPickerSheet(
-          onSelected: (type) {
-            Navigator.pop(sheetContext);
-            _openItemBrowser(type);
-          },
-        );
-      },
+      builder: (_) => const _GarmentSourceSheet(),
     );
+
+    if (!mounted || source == null) return;
+
+    switch (source) {
+      case _GarmentSource.onlinePlatform:
+        _openOnlinePlatformBrowser();
+        break;
+      case _GarmentSource.myWardrobe:
+        _openWardrobeBrowser();
+        break;
+    }
   }
 
-  void _openItemBrowser(SlotType type) {
+  void _openOnlinePlatformBrowser() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ItemBrowserSheet(
-        type: type,
         updateSlotOnSelect: false,
         onItemSelected: (item) {
           ref.read(stylingCanvasProvider.notifier).addGarment(item);
+        },
+      ),
+    );
+  }
+
+  void _openWardrobeBrowser() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => WardrobeBrowserSheet(
+        onItemSelected: (item) {
+          ref.read(stylingCanvasProvider.notifier).addWardrobeGarment(item);
         },
       ),
     );
@@ -173,7 +189,7 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                       ),
                       icon: const Icon(Icons.add),
                       label: const Text('Add garment'),
-                      onPressed: _openCategoryPicker,
+                      onPressed: _openGarmentSourcePicker,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -480,10 +496,10 @@ class _SelectionInspector extends ConsumerWidget {
   }
 }
 
-class _CategoryPickerSheet extends StatelessWidget {
-  final ValueChanged<SlotType> onSelected;
+enum _GarmentSource { onlinePlatform, myWardrobe }
 
-  const _CategoryPickerSheet({required this.onSelected});
+class _GarmentSourceSheet extends StatelessWidget {
+  const _GarmentSourceSheet();
 
   @override
   Widget build(BuildContext context) {
@@ -509,59 +525,80 @@ class _CategoryPickerSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           const Text(
-            'Garment Selection',
+            'Add garment from',
             style: TextStyle(
               color: AppColors.text,
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: SlotType.values.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.05,
-            ),
-            itemBuilder: (context, index) {
-              final type = SlotType.values[index];
-              return InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => onSelected(type),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    color: AppColors.lightMint.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.lightMint),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-
-                      _iconForType(type),
-
-                      const SizedBox(height: 8),
-                      Text(
-                        type.displayName,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          _GarmentSourceTile(
+            icon: Icons.public,
+            title: 'Online Platform',
+            onTap: () => Navigator.pop(context, _GarmentSource.onlinePlatform),
+          ),
+          const SizedBox(height: 10),
+          _GarmentSourceTile(
+            icon: Icons.door_sliding,
+            title: 'My Wardrobe',
+            onTap: () => Navigator.pop(context, _GarmentSource.myWardrobe),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GarmentSourceTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _GarmentSourceTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.lightMint.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.lightMint),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: AppColors.text),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: AppColors.text),
+          ],
+        ),
       ),
     );
   }
@@ -901,67 +938,4 @@ class _CanvasGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-Widget _iconForType(SlotType type) {
-  switch (type) {
-    case SlotType.top:
-      return SvgPicture.asset(
-        'assets/icons/top2.svg',
-        width: 24,
-        height: 24,
-        colorFilter: const ColorFilter.mode(
-          AppColors.text,
-          BlendMode.srcIn,
-        ),
-      );
-
-    case SlotType.bottom:
-      return SvgPicture.asset(
-        'assets/icons/bottom1.svg',
-        width: 24,
-        height: 24,
-        colorFilter: const ColorFilter.mode(
-          AppColors.text,
-          BlendMode.srcIn,
-        ),
-      );
-
-    case SlotType.shoes:
-      return SvgPicture.asset(
-        'assets/icons/shoes.svg',
-        width: 24,
-        height: 24,
-        colorFilter: const ColorFilter.mode(
-          AppColors.text,
-          BlendMode.srcIn,
-        ),
-      );
-
-    case SlotType.accessory:
-      return const Icon(
-        Icons.watch_outlined,
-        color: AppColors.text,
-        size: 24,
-      );
-
-    case SlotType.outerwear:
-      return SvgPicture.asset(
-        'assets/icons/jacket2.svg',
-        width: 24,
-        height: 24,
-        colorFilter: const ColorFilter.mode(
-          AppColors.text,
-          BlendMode.srcIn,
-        ),
-      );
-
-    case SlotType.bag:
-      return const Icon(
-        Icons.shopping_bag_outlined,
-        color: AppColors.text,
-        size: 24,
-      );
-  }
-
 }
