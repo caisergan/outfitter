@@ -10,10 +10,12 @@ import 'package:fashion_app/features/playground/providers/slot_builder_provider.
 class ItemBrowserSheet extends ConsumerStatefulWidget {
   final SlotType type;
   final Function(CatalogItem) onItemSelected;
+  final bool updateSlotOnSelect;
 
   const ItemBrowserSheet({
     required this.type,
     required this.onItemSelected,
+    this.updateSlotOnSelect = true,
     super.key,
   });
 
@@ -144,8 +146,9 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   }
 
   Widget _buildItemGrid(ScrollController scrollController) {
-    final currentSlots = ref.watch(slotBuilderProvider).slots;
-    final selectedInSlot = currentSlots[widget.type];
+    final selectedInSlot = widget.updateSlotOnSelect
+        ? ref.watch(slotBuilderProvider).slots[widget.type]
+        : null;
 
     return FutureBuilder<List<CatalogItem>>(
       future: ref.read(catalogRepositoryProvider).search(
@@ -174,9 +177,12 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
 
             return GestureDetector(
               onTap: () {
-                ref
-                    .read(slotBuilderProvider.notifier)
-                    .setSlot(widget.type, item);
+                if (widget.updateSlotOnSelect) {
+                  ref
+                      .read(slotBuilderProvider.notifier)
+                      .setSlot(widget.type, item);
+                }
+                widget.onItemSelected(item);
                 Navigator.pop(context);
               },
               child: Column(
