@@ -9,6 +9,7 @@ import '../../../core/widgets/shared_widgets.dart';
 import '../models/styling_canvas_models.dart';
 import '../providers/styling_canvas_provider.dart';
 import 'widgets/item_browser_sheet.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class PlaygroundScreen extends ConsumerStatefulWidget {
   final Map<String, String>? prefilledSlots;
@@ -541,11 +542,9 @@ class _CategoryPickerSheet extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _iconForType(type),
-                        color: AppColors.text,
-                        size: 24,
-                      ),
+
+                      _iconForType(type),
+
                       const SizedBox(height: 8),
                       Text(
                         type.displayName,
@@ -806,8 +805,8 @@ class _EmptyCanvasPrompt extends StatelessWidget {
     return const Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.checkroom_outlined, color: AppColors.blush, size: 34),
-        SizedBox(height: 10),
+        Icon(Icons.checkroom_outlined, color: AppColors.blush, size: 45),
+        SizedBox(height: 15),
         Text(
           'Add a garment',
           style: TextStyle(
@@ -904,13 +903,65 @@ class _CanvasGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-IconData _iconForType(SlotType type) {
-  return switch (type) {
-    SlotType.top => Icons.checkroom,
-    SlotType.bottom => Icons.inventory_2_outlined,
-    SlotType.shoes => Icons.directions_run_outlined,
-    SlotType.accessory => Icons.watch_outlined,
-    SlotType.outerwear => Icons.dry_cleaning,
-    SlotType.bag => Icons.shopping_bag_outlined,
-  };
+Widget _iconForType(SlotType type) {
+  switch (type) {
+    case SlotType.top:
+      return SvgPicture.asset(
+        'assets/icons/top2.svg',
+        width: 24,
+        height: 24,
+        colorFilter: const ColorFilter.mode(
+          AppColors.text,
+          BlendMode.srcIn,
+        ),
+      );
+
+    case SlotType.bottom:
+      return SvgPicture.asset(
+        'assets/icons/bottom1.svg',
+        width: 24,
+        height: 24,
+        colorFilter: const ColorFilter.mode(
+          AppColors.text,
+          BlendMode.srcIn,
+        ),
+      );
+
+    case SlotType.shoes:
+      return SvgPicture.asset(
+        'assets/icons/shoes.svg',
+        width: 24,
+        height: 24,
+        colorFilter: const ColorFilter.mode(
+          AppColors.text,
+          BlendMode.srcIn,
+        ),
+      );
+
+    case SlotType.accessory:
+      return const Icon(
+        Icons.watch_outlined,
+        color: AppColors.text,
+        size: 24,
+      );
+
+    case SlotType.outerwear:
+      return SvgPicture.asset(
+        'assets/icons/jacket2.svg',
+        width: 24,
+        height: 24,
+        colorFilter: const ColorFilter.mode(
+          AppColors.text,
+          BlendMode.srcIn,
+        ),
+      );
+
+    case SlotType.bag:
+      return const Icon(
+        Icons.shopping_bag_outlined,
+        color: AppColors.text,
+        size: 24,
+      );
+  }
+
 }
