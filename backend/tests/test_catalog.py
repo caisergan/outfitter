@@ -78,6 +78,102 @@ async def test_catalog_search_returns_items_with_string_ids(client: AsyncClient,
     assert body["items"][0]["style_tags"] == ["casual"]
 
 
+@pytest.mark.asyncio
+async def test_catalog_search_filters_by_color_array_members(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-color-filter@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    matching_item = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="dress",
+        subtype="dress",
+        name="Aqua Slip Dress",
+        color=["Aqua Green", "White"],
+        pattern=None,
+        fit="regular",
+        style_tags=["occasion"],
+        image_url="https://example.com/catalog/aqua-slip-dress.jpg",
+        product_url="https://example.com/products/aqua-slip-dress",
+    )
+    other_item = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="dress",
+        subtype="dress",
+        name="Black Slip Dress",
+        color=["Black"],
+        pattern=None,
+        fit="regular",
+        style_tags=["occasion"],
+        image_url="https://example.com/catalog/black-slip-dress.jpg",
+        product_url="https://example.com/products/black-slip-dress",
+    )
+    db.add_all([matching_item, other_item])
+    await db.commit()
+    await db.refresh(matching_item)
+    await db.refresh(other_item)
+
+    response = await client.get(
+        "/catalog/search?color=Aqua%20Green",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(matching_item.id)
+    assert body["items"][0]["color"] == ["Aqua Green", "White"]
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_filters_by_style_tag_array_members(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-style-filter@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    matching_item = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="top",
+        subtype="shirt",
+        name="Minimal Shirt",
+        color=["White"],
+        pattern=None,
+        fit="regular",
+        style_tags=["minimal", "office"],
+        image_url="https://example.com/catalog/minimal-shirt.jpg",
+        product_url="https://example.com/products/minimal-shirt",
+    )
+    other_item = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="top",
+        subtype="shirt",
+        name="Boho Shirt",
+        color=["Blue"],
+        pattern=None,
+        fit="regular",
+        style_tags=["boho"],
+        image_url="https://example.com/catalog/boho-shirt.jpg",
+        product_url="https://example.com/products/boho-shirt",
+    )
+    db.add_all([matching_item, other_item])
+    await db.commit()
+    await db.refresh(matching_item)
+    await db.refresh(other_item)
+
+    response = await client.get(
+        "/catalog/search?style=minimal",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(matching_item.id)
+    assert body["items"][0]["style_tags"] == ["minimal", "office"]
+
+
 # ---------------------------------------------------------------------------
 # POST /catalog/images/upload-url
 # ---------------------------------------------------------------------------

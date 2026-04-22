@@ -2,7 +2,8 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select, distinct, text
+from sqlalchemy import String, distinct, func, select, text
+from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import get_current_user
@@ -59,6 +60,20 @@ async def _embed_catalog_image(image_url: str) -> list[float] | None:  # noqa: A
     """
     # TODO(clip): Remove this stub return once embedding is implemented.
     return None
+
+
+def _array_has_any(column, values: list[str], dialect_name: str):
+    """Return a SQL clause that matches rows where ``column`` contains any value."""
+    if dialect_name == "sqlite":
+        json_values = func.json_each(column).table_valued("value").alias(f"{column.key}_values")
+        return (
+            select(1)
+            .select_from(json_values)
+            .where(json_values.c.value.in_(values))
+            .exists()
+        )
+
+    return column.op("&&")(pg_array(values, type_=String()))
 
 
 @router.post("/images/upload-url", response_model=CatalogImageUploadResponse)
@@ -141,6 +156,7 @@ async def search_catalog(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CatalogSearchResponse:
     q = select(CatalogItem)
+    dialect_name = db.get_bind().dialect.name
 
     if category:
         q = q.where(CatalogItem.category == category)
@@ -151,10 +167,13 @@ async def search_catalog(
     if fit:
         q = q.where(CatalogItem.fit == fit)
     if color:
-        colors = [c.strip() for c in color.split(",")]
-        q = q.where(CatalogItem.color.overlap(colors))
+        colors = [value.strip() for value in color.split(",") if value.strip()]
+        if colors:
+            q = q.where(_array_has_any(CatalogItem.color, colors, dialect_name))
     if style:
-        q = q.where(CatalogItem.style_tags.contains([style]))
+        styles = [value.strip() for value in style.split(",") if value.strip()]
+        if styles:
+            q = q.where(_array_has_any(CatalogItem.style_tags, styles, dialect_name))
 
     count_result = await db.execute(select(func.count()).select_from(q.subquery()))
     total = count_result.scalar_one()
