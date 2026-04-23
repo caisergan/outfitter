@@ -112,6 +112,26 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
     );
   }
 
+  void addGarmentFromUrl({
+    required String slot,
+    required String imageUrl,
+  }) {
+    final item = CatalogItem(
+      id: _uuid.v4(),
+      brand: 'Prefilled',
+      category: slot,
+      subtype: slot,
+      name: slot,
+      color: const [],
+      pattern: null,
+      fit: null,
+      styleTags: const [],
+      imageUrl: imageUrl,
+    );
+
+    addGarment(item);
+  }
+
   void addGarment(CatalogItem item) {
     final index = state.garments.length;
     final offset = (index % 5) * 0.045;
@@ -323,7 +343,16 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
 
   void openOutfit(SavedStylingCanvasOutfit outfit) {
     state = state.copyWith(
-      garments: outfit.garments,
+      garments: outfit.garments
+          .map((g) => CanvasGarment(
+        id: g.id,
+        item: g.item,
+        x: g.x,
+        y: g.y,
+        scale: g.scale,
+        rotation: g.rotation,
+      ))
+          .toList(),
       selectedGarmentId: null,
       activeOutfitId: outfit.id,
       title: outfit.title,
