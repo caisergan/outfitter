@@ -16,13 +16,16 @@ class Settings(BaseSettings):
 
     # AI APIs
     ANTHROPIC_API_KEY: str
+    GEMINI_API_KEY: str
     KLING_API_KEY: str
 
     # Storage (Cloudflare R2 / AWS S3)
-    R2_ENDPOINT_URL: str
+    R2_ENDPOINT_URL: str | None = None
     R2_ACCESS_KEY_ID: str
     R2_SECRET_ACCESS_KEY: str
     R2_BUCKET: str
+    STORAGE_REGION: str = "eu-north-1"
+    STORAGE_PUBLIC_BASE_URL: str | None = None
 
     # App
     ENV: str = "development"

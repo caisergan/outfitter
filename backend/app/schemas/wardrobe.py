@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from pydantic import BaseModel, Field
 
@@ -20,11 +21,12 @@ class WardrobeTagResponse(BaseModel):
     fit: str | None = None
     style_tags: list[str] | None = None
     confidence: float
+    image_url: str | None = None
 
 
 class WardrobeItemResponse(BaseModel):
-    id: str
-    user_id: str
+    id: uuid.UUID
+    user_id: uuid.UUID
     category: str
     subtype: str | None
     color: list[str] | None
