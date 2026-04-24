@@ -28,5 +28,5 @@ class WardrobeItem(Base, TimestampMixin):
     style_tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     image_url: Mapped[str] = mapped_column(Text, nullable=False)
     clip_embedding: Mapped[list[float] | None] = mapped_column(Vector(512), nullable=True)
-    times_used: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
+    times_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -53,21 +53,24 @@ class UploadTarget:
 def _get_client():
     """Lazily create and cache a single boto3 S3 client.
 
-    Using ``lru_cache`` ensures the client is only created the first time
-    a storage function is called — not at module-import time — so tests
-    and other modules that never call storage functions won't crash when
-    R2 env vars are absent.
+    Supports both Cloudflare R2 (with endpoint_url) and standard AWS S3.
     """
-    # Blank env vars are parsed as "", but boto3 requires None to use AWS's
-    # default endpoint resolution path.
-    endpoint = settings.R2_ENDPOINT_URL or None
-    logger.info("Initializing storage client → %s", endpoint or "AWS default")
+    endpoint = settings.R2_ENDPOINT_URL
+    # Check if endpoint is a placeholder or empty
+    if not endpoint or "<account_id>" in endpoint:
+        endpoint = None
+        region = settings.STORAGE_REGION
+    else:
+        region = "auto"  # Cloudflare R2 convention
+
+    logger.info("Initializing storage client → Region: %s, Endpoint: %s", region, endpoint)
+    
     return boto3.client(
         "s3",
         endpoint_url=endpoint,
         aws_access_key_id=settings.R2_ACCESS_KEY_ID,
         aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-        region_name=settings.STORAGE_REGION,
+        region_name=region,
         config=Config(signature_version="s3v4"),
     )
 
@@ -193,3 +196,31 @@ def upload_bytes(
     except (ClientError, BotoCoreError) as exc:
         logger.error("Failed to upload bytes to key=%s: %s", key, exc)
         raise StorageError(f"Could not upload bytes: {exc}") from exc
+
+
+def download_bytes(key: str) -> bytes:
+    """Download raw bytes from R2 using the object key."""
+    try:
+        response = _get_client().get_object(Bucket=settings.R2_BUCKET, Key=key)
+        return response["Body"].read()
+    except (ClientError, BotoCoreError) as exc:
+        logger.error("Failed to download bytes from key=%s: %s", key, exc)
+        raise StorageError(f"Could not download bytes: {exc}") from exc
+
+
+def get_public_url(key: str) -> str:
+    """Return a public URL for the given key.
+    
+    Uses STORAGE_PUBLIC_BASE_URL if configured, otherwise falls back to 
+    standard S3 URL format or signed URL if private.
+    """
+    if settings.STORAGE_PUBLIC_BASE_URL:
+        base_url = settings.STORAGE_PUBLIC_BASE_URL.rstrip("/")
+        return f"{base_url}/{key}"
+    
+    # Fallback to standard S3 URL (works if bucket is public)
+    if not settings.R2_ENDPOINT_URL or "<account_id>" in settings.R2_ENDPOINT_URL:
+        return f"https://{settings.R2_BUCKET}.s3.{settings.STORAGE_REGION}.amazonaws.com/{key}"
+    
+    # For R2 or other S3 compatibles, we might need a signed URL or custom domain
+    return get_signed_read_url(key, expires_in=3600 * 24 * 7)  # 7 days
