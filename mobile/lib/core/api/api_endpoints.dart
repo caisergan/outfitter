@@ -6,6 +6,7 @@ class ApiEndpoints {
 
   // Catalog
   static const catalogSearch = '/catalog/search';
+  static const catalogFilterOptions = '/catalog/filter-options';
   static String catalogSimilar(String id) => '/catalog/similar/$id';
 
   // Wardrobe

@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.catalog import (
     BulkInsertError,
     CatalogBulkCreateResponse,
+    CatalogFilterOptionsResponse,
     CatalogImageUploadRequest,
     CatalogImageUploadResponse,
     CatalogItemCreate,
@@ -31,6 +32,23 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+_CATALOG_CATEGORY_ALIASES = {
+    # Mobile slot selection currently uses "shoes" while catalog ingestion
+    # persists the canonical "footwear" category.
+    "shoes": "footwear",
+}
+
+
+def _normalize_catalog_category(category: str | None) -> str | None:
+    if category is None:
+        return None
+
+    normalized = category.strip().lower()
+    if not normalized:
+        return None
+
+    return _CATALOG_CATEGORY_ALIASES.get(normalized, normalized)
 
 
 # ---------------------------------------------------------------------------
@@ -93,38 +111,55 @@ async def get_catalog_image_upload_url(
     )
 
 
-@router.get("/filter-options")
-async def get_catalog_filter_options(db: DbDep, _: CurrentUserDep) -> dict:
+@router.get("/filter-options", response_model=CatalogFilterOptionsResponse)
+async def get_catalog_filter_options(
+    db: DbDep,
+    _: CurrentUserDep,
+    category: Annotated[str | None, Query()] = None,
+) -> CatalogFilterOptionsResponse:
     """Return distinct values for each filterable field to populate UI dropdowns."""
+
+    normalized_category = _normalize_catalog_category(category)
+    filters = []
+    if normalized_category:
+        filters.append(CatalogItem.category == normalized_category)
 
     async def scalar_distinct(col):
         res = await db.execute(
-            select(distinct(col)).where(col.is_not(None)).order_by(col)
+            select(distinct(col)).where(col.is_not(None), *filters).order_by(col)
         )
         return res.scalars().all()
 
     async def array_distinct(col):
-        unnested = select(func.unnest(col).label("val")).where(col.is_not(None)).subquery()
+        unnested = (
+            select(func.unnest(col).label("val"))
+            .where(col.is_not(None), *filters)
+            .subquery()
+        )
         res = await db.execute(
             select(distinct(unnested.c.val)).order_by(text("val"))
         )
         return res.scalars().all()
 
     categories = await scalar_distinct(CatalogItem.category)
+    subtypes = await scalar_distinct(CatalogItem.subtype)
     brands = await scalar_distinct(CatalogItem.brand)
     genders = await scalar_distinct(CatalogItem.gender)
     fits = await scalar_distinct(CatalogItem.fit)
+    patterns = await scalar_distinct(CatalogItem.pattern)
     colors = await array_distinct(CatalogItem.color)
     style_tags = await array_distinct(CatalogItem.style_tags)
 
-    return {
-        "categories": categories,
-        "brands": brands,
-        "genders": genders,
-        "fits": fits,
-        "colors": colors,
-        "style_tags": style_tags,
-    }
+    return CatalogFilterOptionsResponse(
+        categories=categories,
+        subtypes=subtypes,
+        brands=brands,
+        genders=genders,
+        fits=fits,
+        patterns=patterns,
+        colors=colors,
+        style_tags=style_tags,
+    )
 
 
 @router.get("/search", response_model=CatalogSearchResponse)
@@ -132,24 +167,31 @@ async def search_catalog(
     db: DbDep,
     _: CurrentUserDep,
     category: Annotated[str | None, Query()] = None,
+    subtype: Annotated[str | None, Query()] = None,
     color: Annotated[str | None, Query()] = None,
     brand: Annotated[str | None, Query()] = None,
     gender: Annotated[str | None, Query()] = None,
     style: Annotated[str | None, Query()] = None,
+    pattern: Annotated[str | None, Query()] = None,
     fit: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CatalogSearchResponse:
     q = select(CatalogItem)
 
-    if category:
-        q = q.where(CatalogItem.category == category)
+    normalized_category = _normalize_catalog_category(category)
+    if normalized_category:
+        q = q.where(CatalogItem.category == normalized_category)
+    if subtype:
+        q = q.where(CatalogItem.subtype == subtype)
     if brand:
         q = q.where(CatalogItem.brand == brand)
     if gender:
         q = q.where(CatalogItem.gender == gender)
     if fit:
         q = q.where(CatalogItem.fit == fit)
+    if pattern:
+        q = q.where(CatalogItem.pattern == pattern)
     if color:
         colors = [c.strip() for c in color.split(",")]
         q = q.where(CatalogItem.color.overlap(colors))

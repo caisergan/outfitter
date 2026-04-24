@@ -88,6 +88,17 @@ class CatalogSearchResponse(BaseModel):
     total: int
 
 
+class CatalogFilterOptionsResponse(BaseModel):
+    categories: list[str]
+    subtypes: list[str]
+    brands: list[str]
+    genders: list[str]
+    fits: list[str]
+    patterns: list[str]
+    colors: list[str]
+    style_tags: list[str]
+
+
 class SimilarItemResponse(BaseModel):
     """Item returned by /catalog/similar/{item_id}.
 

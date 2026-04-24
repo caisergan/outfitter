@@ -78,6 +78,117 @@ async def test_catalog_search_returns_items_with_string_ids(client: AsyncClient,
     assert body["items"][0]["style_tags"] == ["casual"]
 
 
+@pytest.mark.asyncio
+async def test_catalog_filter_options_can_scope_to_category_alias(
+    client: AsyncClient,
+    db,
+):
+    signup_resp = await _signup(client, email="catalog-filter-options@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    db.add_all(
+        [
+            CatalogItem(
+                brand="Nike",
+                gender="women",
+                category="footwear",
+                subtype="sneaker",
+                name="City Sneaker",
+                color=["white"],
+                pattern="solid",
+                fit="regular",
+                style_tags=["sport"],
+                image_url="https://example.com/catalog/city-sneaker.jpg",
+                product_url="https://example.com/products/city-sneaker",
+            ),
+            CatalogItem(
+                brand="Mango",
+                gender="women",
+                category="top",
+                subtype="blouse",
+                name="Silk Blouse",
+                color=["red"],
+                pattern="floral",
+                fit="relaxed",
+                style_tags=["evening"],
+                image_url="https://example.com/catalog/silk-blouse.jpg",
+                product_url="https://example.com/products/silk-blouse",
+            ),
+        ]
+    )
+    await db.commit()
+
+    response = await client.get(
+        "/catalog/filter-options?category=shoes",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["categories"] == ["footwear"]
+    assert body["subtypes"] == ["sneaker"]
+    assert body["brands"] == ["Nike"]
+    assert body["genders"] == ["women"]
+    assert body["fits"] == ["regular"]
+    assert body["patterns"] == ["solid"]
+    assert body["colors"] == ["white"]
+    assert body["style_tags"] == ["sport"]
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_supports_category_alias_subtype_and_pattern(
+    client: AsyncClient,
+    db,
+):
+    signup_resp = await _signup(client, email="catalog-search-filters@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    db.add_all(
+        [
+            CatalogItem(
+                brand="Nike",
+                gender="women",
+                category="footwear",
+                subtype="sneaker",
+                name="Striped Runner",
+                color=["white"],
+                pattern="striped",
+                fit="regular",
+                style_tags=["sport"],
+                image_url="https://example.com/catalog/striped-runner.jpg",
+                product_url="https://example.com/products/striped-runner",
+            ),
+            CatalogItem(
+                brand="Nike",
+                gender="women",
+                category="footwear",
+                subtype="heel",
+                name="Solid Heel",
+                color=["black"],
+                pattern="solid",
+                fit="regular",
+                style_tags=["evening"],
+                image_url="https://example.com/catalog/solid-heel.jpg",
+                product_url="https://example.com/products/solid-heel",
+            ),
+        ]
+    )
+    await db.commit()
+
+    response = await client.get(
+        "/catalog/search?category=shoes&subtype=sneaker&pattern=striped",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["name"] == "Striped Runner"
+    assert body["items"][0]["category"] == "footwear"
+    assert body["items"][0]["pattern"] == "striped"
+    assert body["items"][0]["style_tags"] == ["sport"]
+
+
 # ---------------------------------------------------------------------------
 # POST /catalog/images/upload-url
 # ---------------------------------------------------------------------------
