@@ -39,6 +39,26 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.prefilledSlots != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final notifier = ref.read(stylingCanvasProvider.notifier);
+
+        widget.prefilledSlots!.forEach((slot, url) {
+          notifier.addGarmentFromUrl(
+            slot: slot,
+            imageUrl: url,
+          );
+        });
+      });
+    }
+  }
+
+
+
   void _openOnlinePlatformBrowser() {
     showModalBottomSheet(
       context: context,

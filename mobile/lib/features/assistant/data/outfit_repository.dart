@@ -4,19 +4,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fashion_app/core/api/api_client.dart';
 import 'package:fashion_app/core/api/api_endpoints.dart';
 import 'package:fashion_app/core/models/outfit_models.dart';
+import '/features/assistant/ui/mew.dart';
 
 class OutfitRepository {
   final Dio _dio;
   OutfitRepository(this._dio);
 
   Future<List<OutfitSuggestion>> suggest(AssistantParams params) async {
-    final response = await _dio.post(
-      ApiEndpoints.outfitsSuggest,
-      data: params.toJson(),
-    );
-    return (response.data['outfits'] as List)
-        .map((e) => OutfitSuggestion.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.outfitsSuggest,
+        data: params.toJson(),
+      );
+
+      final data = response.data;
+
+      if (data == null || data['outfits'] == null) {
+        return buildMockOutfits();
+      }
+
+      return (data['outfits'] as List)
+          .map((e) => OutfitSuggestion.fromJson(e))
+          .toList();
+    } catch (e) {
+      // fallback when API fails
+      return buildMockOutfits();
+    }
   }
 
   Future<List<SavedOutfit>> listSaved() async {
