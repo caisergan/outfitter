@@ -29,7 +29,7 @@ def test_catalog_item_response_serializes_uuid_without_mutating_model():
         pattern=None,
         fit="regular",
         style_tags=["casual"],
-        image_url="https://example.com/catalog/linen-shirt.jpg",
+        image_front_url="https://example.com/catalog/linen-shirt.jpg",
         product_url="https://example.com/products/linen-shirt",
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -57,7 +57,7 @@ async def test_catalog_search_returns_items_with_string_ids(client: AsyncClient,
         pattern=None,
         fit="regular",
         style_tags=["casual"],
-        image_url="https://example.com/catalog/linen-shirt.jpg",
+        image_front_url="https://example.com/catalog/linen-shirt.jpg",
         product_url="https://example.com/products/linen-shirt",
     )
     db.add(item)
@@ -176,13 +176,13 @@ class TestCatalogImageUploadUrl:
 
 
 # ---------------------------------------------------------------------------
-# Catalog image_url persistence through create / update / read
+# Catalog image_front_url persistence through create / update / read
 # ---------------------------------------------------------------------------
 
 
-class TestCatalogImageUrlPersistence:
+class TestCatalogImageFrontUrlPersistence:
     @pytest.mark.asyncio
-    async def test_create_item_persists_image_url(self, client: AsyncClient, db) -> None:
+    async def test_create_item_persists_image_front_url(self, client: AsyncClient, db) -> None:
         signup_resp = await _signup(client, email="catalog-persist@outfitter.dev")
         token = signup_resp.json()["access_token"]
         image_url = "https://cdn.example.com/catalog/nike/abc-123.jpg"
@@ -195,16 +195,16 @@ class TestCatalogImageUrlPersistence:
                 "gender": "women",
                 "name": "Air Max 90",
                 "category": "footwear",
-                "image_url": image_url,
+                "image_front_url": image_url,
             },
         )
 
         assert response.status_code == 201
-        assert response.json()["image_url"] == image_url
+        assert response.json()["image_front_url"] == image_url
         assert response.json()["gender"] == "women"
 
     @pytest.mark.asyncio
-    async def test_update_item_replaces_image_url(self, client: AsyncClient, db) -> None:
+    async def test_update_item_replaces_image_front_url(self, client: AsyncClient, db) -> None:
         signup_resp = await _signup(client, email="catalog-update-img@outfitter.dev")
         token = signup_resp.json()["access_token"]
 
@@ -216,7 +216,7 @@ class TestCatalogImageUrlPersistence:
                 "gender": "men",
                 "name": "Air Max 90",
                 "category": "footwear",
-                "image_url": "https://cdn.example.com/catalog/nike/old.jpg",
+                "image_front_url": "https://cdn.example.com/catalog/nike/old.jpg",
             },
         )
         item_id = create_resp.json()["id"]
@@ -225,15 +225,15 @@ class TestCatalogImageUrlPersistence:
         update_resp = await client.patch(
             f"/catalog/items/{item_id}",
             headers={"Authorization": f"Bearer {token}"},
-            json={"image_url": new_url, "gender": "women"},
+            json={"image_front_url": new_url, "gender": "women"},
         )
 
         assert update_resp.status_code == 200
-        assert update_resp.json()["image_url"] == new_url
+        assert update_resp.json()["image_front_url"] == new_url
         assert update_resp.json()["gender"] == "women"
 
     @pytest.mark.asyncio
-    async def test_get_item_exposes_stored_image_url_unchanged(self, client: AsyncClient, db) -> None:
+    async def test_get_item_exposes_stored_image_front_url_unchanged(self, client: AsyncClient, db) -> None:
         signup_resp = await _signup(client, email="catalog-read-img@outfitter.dev")
         token = signup_resp.json()["access_token"]
         image_url = "https://cdn.example.com/catalog/nike/abc-123.jpg"
@@ -246,7 +246,7 @@ class TestCatalogImageUrlPersistence:
                 "gender": "women",
                 "name": "Air Max 90",
                 "category": "footwear",
-                "image_url": image_url,
+                "image_front_url": image_url,
             },
         )
         item_id = create_resp.json()["id"]
@@ -257,11 +257,11 @@ class TestCatalogImageUrlPersistence:
         )
 
         assert get_resp.status_code == 200
-        assert get_resp.json()["image_url"] == image_url
+        assert get_resp.json()["image_front_url"] == image_url
         assert get_resp.json()["gender"] == "women"
 
     @pytest.mark.asyncio
-    async def test_search_exposes_stored_image_url_unchanged(self, client: AsyncClient, db) -> None:
+    async def test_search_exposes_stored_image_front_url_unchanged(self, client: AsyncClient, db) -> None:
         signup_resp = await _signup(client, email="catalog-search-img@outfitter.dev")
         token = signup_resp.json()["access_token"]
         image_url = "https://cdn.example.com/catalog/adidas/shoe.webp"
@@ -274,7 +274,7 @@ class TestCatalogImageUrlPersistence:
                 "gender": "men",
                 "name": "Stan Smith",
                 "category": "footwear",
-                "image_url": image_url,
+                "image_front_url": image_url,
             },
         )
 
@@ -284,5 +284,5 @@ class TestCatalogImageUrlPersistence:
         )
 
         assert search_resp.status_code == 200
-        assert search_resp.json()["items"][0]["image_url"] == image_url
+        assert search_resp.json()["items"][0]["image_front_url"] == image_url
         assert search_resp.json()["items"][0]["gender"] == "men"

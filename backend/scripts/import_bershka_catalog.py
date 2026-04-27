@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
 import json
 import mimetypes
 import os
@@ -11,38 +10,30 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = PROJECT_ROOT / "backend"
 
-
 CANONICAL_CATEGORY_MAP = {
-    "sweaters-and-cardigans": "top",
-    "jackets": "outerwear",
-    "pants": "bottom",
-    "jeans": "bottom",
-    "blazers": "outerwear",
-    "shirts": "top",
-    "coats": "outerwear",
-    "sweatshirts": "top",
-    "overshirts": "top",
     "t-shirts": "top",
-    "trench-coats": "outerwear",
-    "polos": "top",
-    "swimwear": "swimwear",
-    "underwear": "underwear",
-    "pajamas": "underwear",
-    "linen": "top",
-    "dresses-and-jumpsuits": "dress",
-    "shirts---blouses": "top",
-    "skirts": "bottom",
-    "tops": "top",
-    "trench-coats-and-parkas": "outerwear",
-    "leather": "outerwear",
-    "vests": "outerwear",
+    "jeans": "bottom",
+    "trousers": "bottom",
+    "baggy-trousers": "bottom",
+    "shorts": "bottom",
+    "jackets": "outerwear",
+    "jackets-and-coats": "outerwear",
+    "shirts": "top",
+    "shirts-and-blouses": "top",
+    "sweaters-and-cardigans": "top",
+    "sweatshirts-and-hoodies": "top",
+    "tops-and-bodies": "top",
+    "dresses": "dress",
+    "skirts-and-shorts": "bottom",
+    "shoes": "footwear",
+    "accessories": "accessory",
+    "bags": "bag",
     "bikinis-and-swimsuits": "swimwear",
+    "tracksuit": "activewear",
 }
 
 FIT_PATTERNS = [
@@ -50,23 +41,15 @@ FIT_PATTERNS = [
     re.compile(r"\b(slim fit)\b", re.IGNORECASE),
     re.compile(r"\b(relaxed fit)\b", re.IGNORECASE),
     re.compile(r"\b(oversized)\b", re.IGNORECASE),
-    re.compile(r"\b(straight design)\b", re.IGNORECASE),
-    re.compile(r"\b(straight fit)\b", re.IGNORECASE),
+    re.compile(r"\b(super baggy)\b", re.IGNORECASE),
+    re.compile(r"\b(baggy)\b", re.IGNORECASE),
     re.compile(r"\b(wide[- ]leg)\b", re.IGNORECASE),
-    re.compile(r"\b(flared)\b", re.IGNORECASE),
-    re.compile(r"\b(skinny fit)\b", re.IGNORECASE),
+    re.compile(r"\b(flare)\b", re.IGNORECASE),
+    re.compile(r"\b(skinny)\b", re.IGNORECASE),
+    re.compile(r"\b(straight)\b", re.IGNORECASE),
+    re.compile(r"\b(boxy)\b", re.IGNORECASE),
+    re.compile(r"\b(cropped)\b", re.IGNORECASE),
 ]
-
-
-@dataclass(frozen=True)
-class RawMangoRecord:
-    gender: str
-    source_category: str
-    product_url: str
-    ref_code: str
-    color: str | None
-    description: str | None
-    images: list[str]
 
 
 @dataclass(frozen=True)
@@ -76,9 +59,19 @@ class ImagePaths:
 
 
 @dataclass(frozen=True)
+class RawBershkaRecord:
+    gender: str
+    source_category: str
+    product_url: str
+    ref_code: str
+    name: str
+    color: str | None
+    description: str | None
+
+
+@dataclass(frozen=True)
 class PreparedCatalogRow:
     ref_code: str
-    original_ref_code: str
     gender: str
     source_category: str
     category: str
@@ -92,23 +85,23 @@ class PreparedCatalogRow:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Upload the local Mango catalog export to AWS S3 and upsert it into catalog_items.",
+        description="Upload the local Bershka catalog export to AWS S3 and upsert it into catalog_items.",
     )
     parser.add_argument(
         "--json",
         type=Path,
-        default=PROJECT_ROOT / "output/mango/mango_products.json",
-        help="Path to mango_products.json",
+        default=PROJECT_ROOT / "output/bershka/bershka_products.json",
+        help="Path to bershka_products.json",
     )
     parser.add_argument(
         "--images-root",
         type=Path,
-        default=PROJECT_ROOT / "output/mango/images",
-        help="Root directory containing the local Mango product images",
+        default=PROJECT_ROOT / "output/bershka/images",
+        help="Root directory containing the local Bershka product images",
     )
     parser.add_argument(
         "--brand",
-        default="mango",
+        default="bershka",
         help="Brand slug/value to persist in catalog_items.brand",
     )
     parser.add_argument(
@@ -128,57 +121,22 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Preview the prepared rows without touching S3 or the database",
     )
-    parser.add_argument(
-        "--backfill-gender-only",
-        action="store_true",
-        help="Skip S3 uploads and only update existing catalog_items.gender values for matching Mango rows",
-    )
     return parser.parse_args()
 
 
-def clean_product_url(url: str) -> str:
-    return url.rstrip("\\").strip()
-
-
-def extract_color_code(product_url: str) -> str:
-    query = parse_qs(urlparse(product_url).query)
-    return query.get("c", [""])[0].strip()
-
-
-def slug_to_words(slug: str) -> str:
-    cleaned = slug.replace("_", "-")
-    parts = [part for part in cleaned.split("-") if part]
-    return " ".join(parts)
+def ref_code_to_filename_prefix(ref_code: str) -> str:
+    """Convert bershka ref_code to filename prefix: '8123/152/251' → '8123-152-251'."""
+    return ref_code.replace("/", "-")
 
 
 def titleize(text: str) -> str:
     return " ".join(word.capitalize() for word in text.split())
 
 
-def derive_name(record: RawMangoRecord) -> str:
-    parsed = urlparse(record.product_url)
-    last_segment = parsed.path.rstrip("/").split("/")[-1]
-    name_slug = last_segment.rsplit("_", 1)[0]
-    return titleize(slug_to_words(name_slug))
-
-
-def derive_subtype(record: RawMangoRecord) -> str | None:
-    path_parts = [part for part in urlparse(record.product_url).path.split("/") if part]
-    if len(path_parts) >= 2:
-        subtype = titleize(slug_to_words(path_parts[-2]))
-        return subtype or None
-    subtype = titleize(slug_to_words(record.source_category))
-    return subtype or None
-
-
-def derive_fit(description: str | None) -> str | None:
-    if not description:
-        return None
-    for pattern in FIT_PATTERNS:
-        match = pattern.search(description)
-        if match:
-            return match.group(1).lower().replace("-", " ")
-    return None
+def slug_to_words(slug: str) -> str:
+    cleaned = slug.replace("_", "-")
+    parts = [part for part in cleaned.split("-") if part]
+    return " ".join(parts)
 
 
 def canonical_category(source_category: str) -> str:
@@ -188,43 +146,47 @@ def canonical_category(source_category: str) -> str:
     return mapped
 
 
-def _classify_mango_image(path: Path) -> str | None:
-    """Classify a mango image into front or back (no-bg only).
+def derive_subtype(source_category: str) -> str | None:
+    subtype = titleize(slug_to_words(source_category))
+    return subtype or None
 
-    Mango naming: _R = front, _B = back, _no_bg = background removed.
+
+def derive_fit(name: str) -> str | None:
+    for pattern in FIT_PATTERNS:
+        match = pattern.search(name)
+        if match:
+            return match.group(1).lower().replace("-", " ")
+    return None
+
+
+def _classify_bershka_image(path: Path) -> str | None:
+    """Classify a bershka image into front or back (no-bg only).
+
+    Bershka naming: -a4o = front, -b = back, _no_bg = background removed.
     We only import no-bg variants; with-bg images are ignored.
     """
     name = path.name
-    if "_R_no_bg." in name:
+    if "-a4o_no_bg." in name:
         return "front"
-    if "_B_no_bg." in name:
+    if "-b_no_bg." in name:
         return "back"
     return None
 
 
-def _filter_by_color(matches: list[Path], color_code: str) -> list[Path]:
-    if not color_code:
-        return matches
-    filtered = [p for p in matches if f"_{color_code}_" in p.name]
-    return filtered if filtered else matches
-
-
-def find_image_paths(record: RawMangoRecord, images_root: Path) -> ImagePaths | None:
-    color_code = extract_color_code(record.product_url)
+def find_image_paths(record: RawBershkaRecord, images_root: Path) -> ImagePaths | None:
+    prefix = ref_code_to_filename_prefix(record.ref_code)
     expected_dir = images_root / record.gender / record.source_category
-    local_matches = list(expected_dir.glob(f"{record.ref_code}*"))
-    matches = _filter_by_color(local_matches, color_code)
+    matches = list(expected_dir.glob(f"{prefix}*"))
 
     if not matches:
-        fallback = list(images_root.rglob(f"{record.ref_code}*"))
-        matches = _filter_by_color(fallback, color_code)
+        matches = list(images_root.rglob(f"{prefix}*"))
 
     if not matches:
         return None
 
     slots: dict[str, Path] = {}
     for path in sorted(matches):
-        slot = _classify_mango_image(path)
+        slot = _classify_bershka_image(path)
         if slot and slot not in slots:
             slots[slot] = path
 
@@ -237,9 +199,9 @@ def find_image_paths(record: RawMangoRecord, images_root: Path) -> ImagePaths | 
     )
 
 
-def load_raw_records(json_path: Path) -> list[RawMangoRecord]:
+def load_raw_records(json_path: Path) -> list[RawBershkaRecord]:
     data = json.loads(json_path.read_text())
-    rows: list[RawMangoRecord] = []
+    rows: list[RawBershkaRecord] = []
     for gender, categories in data.items():
         if not isinstance(categories, dict):
             continue
@@ -248,25 +210,25 @@ def load_raw_records(json_path: Path) -> list[RawMangoRecord]:
                 continue
             for item in items:
                 rows.append(
-                    RawMangoRecord(
+                    RawBershkaRecord(
                         gender=gender,
                         source_category=source_category,
-                        product_url=clean_product_url(item["product_url"]),
+                        product_url=item["product_url"].rstrip("\\").strip(),
                         ref_code=str(item["ref_code"]).strip(),
+                        name=item.get("name", ""),
                         color=item.get("color"),
                         description=item.get("description"),
-                        images=list(item.get("images", [])),
                     )
                 )
     return rows
 
 
-def dedupe_records(records: list[RawMangoRecord], images_root: Path) -> list[RawMangoRecord]:
-    grouped: dict[str, list[RawMangoRecord]] = {}
+def dedupe_records(records: list[RawBershkaRecord], images_root: Path) -> list[RawBershkaRecord]:
+    grouped: dict[str, list[RawBershkaRecord]] = {}
     for record in records:
         grouped.setdefault(record.product_url, []).append(record)
 
-    chosen: list[RawMangoRecord] = []
+    chosen: list[RawBershkaRecord] = []
     for product_url, variants in grouped.items():
         best = None
         for record in variants:
@@ -284,20 +246,7 @@ def dedupe_records(records: list[RawMangoRecord], images_root: Path) -> list[Raw
     return chosen
 
 
-def build_unique_ref_code(record: RawMangoRecord, seen: set[str]) -> str:
-    color_code = extract_color_code(record.product_url)
-    candidate = record.ref_code if not color_code else f"{record.ref_code}-{color_code}"
-    if candidate not in seen:
-        seen.add(candidate)
-        return candidate
-
-    digest = hashlib.sha1(record.product_url.encode("utf-8")).hexdigest()[:8]
-    unique = f"{candidate}-{digest}"
-    seen.add(unique)
-    return unique
-
-
-def prepare_rows(records: list[RawMangoRecord], images_root: Path) -> tuple[list[PreparedCatalogRow], list[str]]:
+def prepare_rows(records: list[RawBershkaRecord], images_root: Path) -> tuple[list[PreparedCatalogRow], list[str]]:
     prepared: list[PreparedCatalogRow] = []
     missing_images: list[str] = []
     seen_ref_codes: set[str] = set()
@@ -308,17 +257,21 @@ def prepare_rows(records: list[RawMangoRecord], images_root: Path) -> tuple[list
             missing_images.append(record.product_url)
             continue
 
+        ref_code = ref_code_to_filename_prefix(record.ref_code)
+        if ref_code in seen_ref_codes:
+            continue
+        seen_ref_codes.add(ref_code)
+
         prepared.append(
             PreparedCatalogRow(
-                ref_code=build_unique_ref_code(record, seen_ref_codes),
-                original_ref_code=record.ref_code,
+                ref_code=ref_code,
                 gender=record.gender,
                 source_category=record.source_category,
                 category=canonical_category(record.source_category),
-                subtype=derive_subtype(record),
-                name=derive_name(record),
+                subtype=derive_subtype(record.source_category),
+                name=record.name,
                 color=[record.color.strip()] if record.color else None,
-                fit=derive_fit(record.description),
+                fit=derive_fit(record.name),
                 images=paths,
                 product_url=record.product_url,
             )
@@ -336,7 +289,6 @@ def print_preview(rows: list[PreparedCatalogRow], missing_images: list[str], lim
             json.dumps(
                 {
                     "ref_code": row.ref_code,
-                    "original_ref_code": row.original_ref_code,
                     "gender": row.gender,
                     "source_category": row.source_category,
                     "category": row.category,
@@ -358,7 +310,6 @@ def print_preview(rows: list[PreparedCatalogRow], missing_images: list[str], lim
 
 
 def _upload_image(s3, bucket: str, image_path: Path, brand: str, ref_code: str, suffix: str) -> str:
-    """Upload a single image to S3 and return its public URL."""
     from app.services.storage_service import _build_public_url
 
     content_type = mimetypes.guess_type(image_path.name)[0] or "image/jpeg"
@@ -375,7 +326,6 @@ def _upload_image(s3, bucket: str, image_path: Path, brand: str, ref_code: str, 
 def _upload_all_images(
     s3, bucket: str, images: ImagePaths, brand: str, ref_code: str,
 ) -> dict[str, str | None]:
-    """Upload all available image variants and return a dict of public URLs."""
     urls: dict[str, str | None] = {
         "image_front_url": None,
         "image_back_url": None,
@@ -414,7 +364,6 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
         for index, row in enumerate(rows, start=1):
             urls = _upload_all_images(s3, settings.R2_BUCKET, row.images, brand, row.ref_code)
 
-            # image_front_url is NOT NULL — fall back to any available image
             front_url = urls["image_front_url"]
             if not front_url:
                 fallback = urls["image_back_url"]
@@ -463,46 +412,6 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
         await session.close()
 
 
-async def run_gender_backfill(rows: list[PreparedCatalogRow], brand: str, commit_every: int) -> None:
-    os.chdir(BACKEND_ROOT)
-    if str(BACKEND_ROOT) not in sys.path:
-        sys.path.insert(0, str(BACKEND_ROOT))
-
-    from sqlalchemy import select
-
-    from app.database import AsyncSessionLocal
-    from app.models.catalog import CatalogItem
-
-    session = AsyncSessionLocal()
-    try:
-        result = await session.execute(select(CatalogItem).where(CatalogItem.brand == brand))
-        existing_by_ref = {item.ref_code: item for item in result.scalars() if item.ref_code}
-
-        touched = 0
-        missing = 0
-
-        for index, row in enumerate(rows, start=1):
-            item = existing_by_ref.get(row.ref_code)
-            if item is None:
-                missing += 1
-                continue
-            if item.gender != row.gender:
-                item.gender = row.gender
-                touched += 1
-
-            if index % commit_every == 0:
-                await session.commit()
-                print(
-                    f"Backfill progress {index}/{len(rows)} rows "
-                    f"(updated={touched}, missing={missing})"
-                )
-
-        await session.commit()
-        print(f"Gender backfill complete: updated={touched}, missing={missing}, total={len(rows)}")
-    finally:
-        await session.close()
-
-
 def main() -> None:
     args = parse_args()
     raw_rows = load_raw_records(args.json)
@@ -515,10 +424,6 @@ def main() -> None:
     print_preview(prepared_rows, missing_images, args.limit)
 
     if args.dry_run:
-        return
-
-    if args.backfill_gender_only:
-        asyncio.run(run_gender_backfill(prepared_rows, args.brand, args.commit_every))
         return
 
     asyncio.run(run_import(prepared_rows, args.brand, args.commit_every))

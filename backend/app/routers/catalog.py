@@ -41,8 +41,8 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 #   - Handle HTTP/timeout errors and raise HTTPException(502) on failure
 #   - Wire into create_catalog_item, bulk_create_catalog_items, update_catalog_item
 # ---------------------------------------------------------------------------
-async def _embed_catalog_image(image_url: str) -> list[float] | None:  # noqa: ARG001
-    """Fetch image from ``image_url`` and return a CLIP embedding vector.
+async def _embed_catalog_image(image_front_url: str) -> list[float] | None:  # noqa: ARG001
+    """Fetch image from ``image_front_url`` and return a CLIP embedding vector.
 
     TODO(clip): Replace this stub with a real implementation:
 
@@ -50,7 +50,7 @@ async def _embed_catalog_image(image_url: str) -> list[float] | None:  # noqa: A
         from app.services.clip_service import embed_image_async
 
         async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get(image_url)
+            response = await client.get(image_front_url)
             response.raise_for_status()
         return await embed_image_async(response.content)
 
@@ -71,7 +71,9 @@ async def get_catalog_image_upload_url(
     The admin client should:
     1. Call this endpoint to get ``upload_url`` and ``image_url``.
     2. PUT the image file directly to ``upload_url`` (with the correct Content-Type header).
-    3. Pass the returned ``image_url`` to POST /catalog/items or PATCH /catalog/items/{id}.
+    3. Pass the returned ``image_url`` as any of the image columns
+       (image_front_url, image_back_url, image_front_no_bg_url, image_back_no_bg_url)
+       to POST /catalog/items or PATCH /catalog/items/{id}.
     """
     try:
         target = get_catalog_upload_target(
@@ -207,7 +209,7 @@ async def similar_items(
                     category=row.category,
                     color=row.color,
                     style_tags=row.style_tags,
-                    image_url=row.image_url,
+                    image_front_url=row.image_front_url,
                     similarity=round(1 - distance, 4),
                 )
             )
@@ -234,7 +236,7 @@ async def similar_items(
                     category=row.category,
                     color=row.color,
                     style_tags=row.style_tags,
-                    image_url=row.image_url,
+                    image_front_url=row.image_url,
                     similarity=round(1 - distance, 4),
                 )
             )
@@ -251,8 +253,8 @@ async def create_catalog_item(
     _: CurrentUserDep,
 ) -> CatalogItemResponse:
     item = CatalogItem(**body.model_dump())
-    # TODO(clip): Compute and persist clip_embedding at write time when an image_url is present.
-    #   embedding = await _embed_catalog_image(body.image_url)
+    # TODO(clip): Compute and persist clip_embedding at write time when image_front_url is present.
+    #   embedding = await _embed_catalog_image(body.image_front_url)
     #   item.clip_embedding = embedding
     db.add(item)
     await db.flush()
@@ -274,7 +276,7 @@ async def bulk_create_catalog_items(
             item = CatalogItem(**item_data.model_dump())
             # TODO(clip): Compute clip_embedding per item here and collect embedding errors
             #   into the BulkInsertError list so callers can resubmit failing items.
-            #   embedding = await _embed_catalog_image(item_data.image_url)
+            #   embedding = await _embed_catalog_image(item_data.image_front_url)
             #   item.clip_embedding = embedding
             db.add(item)
             await db.flush()
@@ -321,15 +323,15 @@ async def update_catalog_item(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
     update_data = body.model_dump(exclude_unset=True)
-    image_url_changed = "image_url" in update_data
+    image_front_url_changed = "image_front_url" in update_data
 
     for field, value in update_data.items():
         setattr(item, field, value)
 
-    # TODO(clip): Recompute clip_embedding only when image_url changed.
-    #   if image_url_changed and item.image_url:
-    #       item.clip_embedding = await _embed_catalog_image(item.image_url)
-    _ = image_url_changed  # remove once TODO(clip) is implemented
+    # TODO(clip): Recompute clip_embedding only when image_front_url changed.
+    #   if image_front_url_changed and item.image_front_url:
+    #       item.clip_embedding = await _embed_catalog_image(item.image_front_url)
+    _ = image_front_url_changed  # remove once TODO(clip) is implemented
 
     await db.flush()
     await db.refresh(item)
