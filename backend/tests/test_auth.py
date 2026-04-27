@@ -1,33 +1,33 @@
 """
-Integration tests for Phase 3: Authentication.
-
-Covers every scenario from the task breakdown:
-  - POST /auth/signup  → success, duplicate email
-  - POST /auth/login   → success, wrong password, unknown email
-  - GET  /auth/me      → success, missing token, tampered token
-  - Full flow: signup → login → protected endpoint
+Integration tests for authentication flows.
 """
+
 import pytest
 from httpx import AsyncClient
 
 
 SIGNUP_URL = "/auth/signup"
 LOGIN_URL = "/auth/login"
+REFRESH_URL = "/auth/refresh"
 ME_URL = "/auth/me"
 
 VALID_EMAIL = "sofia@outfitter.dev"
 VALID_PASSWORD = "supersecret99"
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-async def _signup(client: AsyncClient, email: str = VALID_EMAIL, password: str = VALID_PASSWORD):
+async def _signup(
+    client: AsyncClient,
+    email: str = VALID_EMAIL,
+    password: str = VALID_PASSWORD,
+):
     return await client.post(SIGNUP_URL, json={"email": email, "password": password})
 
 
-async def _login(client: AsyncClient, email: str = VALID_EMAIL, password: str = VALID_PASSWORD):
+async def _login(
+    client: AsyncClient,
+    email: str = VALID_EMAIL,
+    password: str = VALID_PASSWORD,
+):
     return await client.post(
         LOGIN_URL,
         data={"username": email, "password": password},
@@ -35,24 +35,22 @@ async def _login(client: AsyncClient, email: str = VALID_EMAIL, password: str = 
     )
 
 
-# ---------------------------------------------------------------------------
-# Signup
-# ---------------------------------------------------------------------------
-
 @pytest.mark.asyncio
 async def test_signup_success(client: AsyncClient):
     resp = await _signup(client)
     assert resp.status_code == 201
     body = resp.json()
     assert "access_token" in body
+    assert "refresh_token" in body
     assert body["token_type"] == "bearer"
     assert len(body["access_token"]) > 20
+    assert len(body["refresh_token"]) > 20
 
 
 @pytest.mark.asyncio
 async def test_signup_duplicate_email_returns_409(client: AsyncClient):
-    await _signup(client)  # first signup succeeds
-    resp = await _signup(client)  # second with same email
+    await _signup(client)
+    resp = await _signup(client)
     assert resp.status_code == 409
     assert "already registered" in resp.json()["detail"].lower()
 
@@ -67,7 +65,10 @@ async def test_signup_duplicate_email_case_insensitive_returns_409(client: Async
 
 @pytest.mark.asyncio
 async def test_signup_invalid_email_returns_422(client: AsyncClient):
-    resp = await client.post(SIGNUP_URL, json={"email": "not-an-email", "password": VALID_PASSWORD})
+    resp = await client.post(
+        SIGNUP_URL,
+        json={"email": "not-an-email", "password": VALID_PASSWORD},
+    )
     assert resp.status_code == 422
 
 
@@ -77,10 +78,6 @@ async def test_signup_short_password_returns_422(client: AsyncClient):
     assert resp.status_code == 422
 
 
-# ---------------------------------------------------------------------------
-# Login
-# ---------------------------------------------------------------------------
-
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient):
     await _signup(client)
@@ -88,6 +85,7 @@ async def test_login_success(client: AsyncClient):
     assert resp.status_code == 200
     body = resp.json()
     assert "access_token" in body
+    assert "refresh_token" in body
     assert body["token_type"] == "bearer"
 
 
@@ -113,9 +111,35 @@ async def test_login_email_is_case_insensitive(client: AsyncClient):
     assert "access_token" in resp.json()
 
 
-# ---------------------------------------------------------------------------
-# Protected endpoint: GET /auth/me
-# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_refresh_with_valid_refresh_token_returns_new_tokens(client: AsyncClient):
+    signup_resp = await _signup(client, email="refreshable@outfitter.dev")
+    refresh_token = signup_resp.json()["refresh_token"]
+
+    resp = await client.post(REFRESH_URL, json={"refresh_token": refresh_token})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "access_token" in body
+    assert "refresh_token" in body
+    assert body["token_type"] == "bearer"
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_access_token(client: AsyncClient):
+    signup_resp = await _signup(client, email="refresh-reject@outfitter.dev")
+    access_token = signup_resp.json()["access_token"]
+
+    resp = await client.post(REFRESH_URL, json={"refresh_token": access_token})
+    assert resp.status_code == 401
+    assert "refresh" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_tampered_token(client: AsyncClient):
+    resp = await client.post(REFRESH_URL, json={"refresh_token": "tampered.token.value"})
+    assert resp.status_code == 401
+    assert "refresh" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_me_with_valid_token(client: AsyncClient):
@@ -128,7 +152,6 @@ async def test_me_with_valid_token(client: AsyncClient):
     assert body["email"] == "uppercase@outfitter.dev"
     assert "id" in body
     assert "created_at" in body
-    # password_hash must never be leaked
     assert "password_hash" not in body
 
 
@@ -140,7 +163,10 @@ async def test_me_without_token_returns_401(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_me_with_tampered_token_returns_401(client: AsyncClient):
-    resp = await client.get(ME_URL, headers={"Authorization": "Bearer tampered.token.value"})
+    resp = await client.get(
+        ME_URL,
+        headers={"Authorization": "Bearer tampered.token.value"},
+    )
     assert resp.status_code == 401
 
 
@@ -150,24 +176,24 @@ async def test_me_with_malformed_bearer_returns_401(client: AsyncClient):
     assert resp.status_code == 401
 
 
-# ---------------------------------------------------------------------------
-# Full flow: signup → login → protected endpoint
-# ---------------------------------------------------------------------------
-
 @pytest.mark.asyncio
 async def test_full_auth_flow(client: AsyncClient):
-    # 1. Signup
     signup_resp = await _signup(client)
     assert signup_resp.status_code == 201
     signup_token = signup_resp.json()["access_token"]
+    signup_refresh = signup_resp.json()["refresh_token"]
 
-    # 2. Login with same credentials → distinct token (different exp)
     login_resp = await _login(client)
     assert login_resp.status_code == 200
     login_token = login_resp.json()["access_token"]
+    login_refresh = login_resp.json()["refresh_token"]
 
-    # Both tokens should grant access to /auth/me
     for token in (signup_token, login_token):
         resp = await client.get(ME_URL, headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
         assert resp.json()["email"] == VALID_EMAIL
+
+    for refresh_token in (signup_refresh, login_refresh):
+        resp = await client.post(REFRESH_URL, json={"refresh_token": refresh_token})
+        assert resp.status_code == 200
+        assert "access_token" in resp.json()

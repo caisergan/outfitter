@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,17 +5,28 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.jwt import CurrentUserDep, create_access_token
+from app.auth.jwt import (
+    CurrentUserDep,
+    create_access_token,
+    create_refresh_token,
+    get_token_subject,
+)
 from app.auth.password import get_password_hash, verify_password
-from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import SignupRequest, TokenResponse
+from app.schemas.auth import RefreshTokenRequest, SignupRequest, TokenResponse
 from app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+
+
+def _issue_tokens(user: User) -> TokenResponse:
+    return TokenResponse(
+        access_token=create_access_token({"sub": user.id}),
+        refresh_token=create_refresh_token({"sub": user.id}),
+    )
 
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -33,12 +43,7 @@ async def signup(body: SignupRequest, db: DbDep) -> TokenResponse:
     db.add(user)
     await db.flush()
     await db.refresh(user)
-
-    token = create_access_token(
-        {"sub": user.id},
-        expires_delta=timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS),
-    )
-    return TokenResponse(access_token=token)
+    return _issue_tokens(user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -50,7 +55,11 @@ async def login(
     result = await db.execute(select(User).where(func.lower(User.email) == normalized_email))
     users = result.scalars().all()
     user = next(
-        (candidate for candidate in users if verify_password(form_data.password, candidate.password_hash)),
+        (
+            candidate
+            for candidate in users
+            if verify_password(form_data.password, candidate.password_hash)
+        ),
         None,
     )
 
@@ -61,11 +70,26 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = create_access_token(
-        {"sub": user.id},
-        expires_delta=timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS),
+    return _issue_tokens(user)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_session(body: RefreshTokenRequest, db: DbDep) -> TokenResponse:
+    user_id = get_token_subject(
+        body.refresh_token,
+        expected_type="refresh",
+        detail="Could not refresh session",
     )
-    return TokenResponse(access_token=token)
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not refresh session",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return _issue_tokens(user)
 
 
 @router.get("/me", response_model=UserResponse)

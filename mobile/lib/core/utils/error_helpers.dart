@@ -1,6 +1,18 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
+import '../api/api_endpoints.dart';
+
+String? _responseDetail(Object? data) {
+  if (data is Map && data['detail'] is String) {
+    return data['detail'] as String;
+  }
+  if (data is String && data.isNotEmpty) {
+    return data;
+  }
+  return null;
+}
+
 /// Converts a DioException to a user-friendly message.
 String dioErrorToMessage(Object error) {
   if (error is! DioException) {
@@ -13,8 +25,19 @@ String dioErrorToMessage(Object error) {
       return 'Request timed out. Please check your connection.';
     case DioExceptionType.badResponse:
       final statusCode = error.response?.statusCode;
-      if (statusCode == 401) return 'Session expired. Please log in again.';
+      final detail = _responseDetail(error.response?.data);
+      final path = error.requestOptions.path;
+      if (statusCode == 401) {
+        if (path == ApiEndpoints.login && detail != null) {
+          return detail;
+        }
+        return 'Session expired. Please log in again.';
+      }
+      if (statusCode == 409 && detail != null) {
+        return detail;
+      }
       if (statusCode == 422) {
+        if (detail != null) return detail;
         return 'Invalid request. Please check your inputs.';
       }
       if (statusCode != null && statusCode >= 500) {

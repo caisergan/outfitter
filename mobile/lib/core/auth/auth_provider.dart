@@ -16,9 +16,25 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   }
 
   Future<void> _checkExistingToken() async {
-    final token = await _storage.read();
-    state =
-        token != null ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+    final accessToken = await _storage.readAccessToken();
+    final refreshToken = await _storage.readRefreshToken();
+    if (accessToken == null && refreshToken == null) {
+      state = AuthStatus.unauthenticated;
+      return;
+    }
+
+    try {
+      await _dio.get(ApiEndpoints.authMe);
+      state = AuthStatus.authenticated;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        await _storage.clear();
+        state = AuthStatus.unauthenticated;
+        return;
+      }
+
+      state = AuthStatus.authenticated;
+    }
   }
 
   Future<void> login(String email, String password) async {
@@ -29,7 +45,7 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
         'password': password,
       }),
     );
-    await _storage.write(response.data['access_token'] as String);
+    await _persistTokens(response.data as Map<String, dynamic>);
     state = AuthStatus.authenticated;
   }
 
@@ -38,7 +54,7 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
       'email': email,
       'password': password,
     });
-    await _storage.write(response.data['access_token'] as String);
+    await _persistTokens(response.data as Map<String, dynamic>);
     state = AuthStatus.authenticated;
   }
 
@@ -46,12 +62,29 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
     await _storage.clear();
     state = AuthStatus.unauthenticated;
   }
+
+  Future<void> handleUnauthorized() async {
+    await _storage.clear();
+    state = AuthStatus.unauthenticated;
+  }
+
+  Future<void> _persistTokens(Map<String, dynamic> payload) {
+    return _storage.writeTokens(
+      accessToken: payload['access_token'] as String,
+      refreshToken: payload['refresh_token'] as String,
+    );
+  }
 }
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
-  return AuthNotifier(
-    ref.read(dioProvider),
-    ref.read(tokenStorageProvider),
-  );
-});
+      final notifier = AuthNotifier(
+        ref.read(dioProvider),
+        ref.read(tokenStorageProvider),
+      );
+      ref.listen<int>(unauthorizedEventProvider, (previous, next) {
+        if (previous == next) return;
+        notifier.handleUnauthorized();
+      });
+      return notifier;
+    });

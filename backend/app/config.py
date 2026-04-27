@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     # Auth
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_DAYS: int = 7
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # AI APIs
     ANTHROPIC_API_KEY: str

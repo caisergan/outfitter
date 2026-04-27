@@ -2,6 +2,7 @@ class ApiEndpoints {
   // Auth
   static const signup = '/auth/signup';
   static const login = '/auth/login';
+  static const authRefresh = '/auth/refresh';
   static const authMe = '/auth/me';
 
   // Catalog
