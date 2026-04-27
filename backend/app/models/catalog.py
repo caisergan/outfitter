@@ -25,6 +25,7 @@ class CatalogItem(Base, TimestampMixin):
     pattern: Mapped[str | None] = mapped_column(String(50), nullable=True)
     fit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     style_tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
-    image_url: Mapped[str] = mapped_column(Text, nullable=False)
+    image_front_url: Mapped[str] = mapped_column(Text, nullable=False)
+    image_back_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     product_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     clip_embedding: Mapped[list[float] | None] = mapped_column(Vector(512), nullable=True)

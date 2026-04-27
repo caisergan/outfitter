@@ -47,7 +47,7 @@ async def suggest_outfits(
                     "color": item.color,
                     "style_tags": item.style_tags,
                     "fit": item.fit,
-                    "image_url": item.image_url,
+                    "image_url": item.image_front_url,
                 }
             )
 

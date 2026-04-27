@@ -68,7 +68,7 @@ async def _resolve_image_urls(
         result = await db.execute(select(CatalogItem).where(CatalogItem.id == item_id))
         item = result.scalar_one_or_none()
         if item:
-            urls[slot_name] = item.image_url
+            urls[slot_name] = item.image_front_url
             continue
         # Try wardrobe — filter by owner to prevent cross-user image resolution
         result = await db.execute(

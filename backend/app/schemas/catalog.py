@@ -34,7 +34,8 @@ class CatalogItemCreate(BaseModel):
     pattern: str | None = None
     fit: str | None = None
     style_tags: list[str] | None = None
-    image_url: str
+    image_front_url: str
+    image_back_url: str | None = None
     product_url: str | None = None
 
 
@@ -49,7 +50,8 @@ class CatalogItemUpdate(BaseModel):
     pattern: str | None = None
     fit: str | None = None
     style_tags: list[str] | None = None
-    image_url: str | None = None
+    image_front_url: str | None = None
+    image_back_url: str | None = None
     product_url: str | None = None
 
 
@@ -65,7 +67,8 @@ class CatalogItemResponse(BaseModel):
     pattern: str | None
     fit: str | None
     style_tags: list[str]
-    image_url: str
+    image_front_url: str
+    image_back_url: str | None
     product_url: str | None
     created_at: datetime
     updated_at: datetime
@@ -103,7 +106,7 @@ class SimilarItemResponse(BaseModel):
     category: str
     color: list[str]
     style_tags: list[str]
-    image_url: str
+    image_front_url: str
     similarity: float
 
     @field_validator("color", "style_tags", mode="before")
