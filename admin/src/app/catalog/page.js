@@ -159,7 +159,7 @@ function CreateCatalogForm({ onCreated }) {
         setStage("submitting");
         const payload = {
             ...Object.fromEntries(Object.entries(form).filter(([, v]) => v !== "")),
-            image_url: finalImageUrl,
+            image_front_url: finalImageUrl,
         };
         // Convert comma-separated fields to arrays
         if (payload.color) payload.color = payload.color.split(",").map((s) => s.trim()).filter(Boolean);
@@ -440,12 +440,12 @@ export default function CatalogPage() {
                                         {results.items.map((item) => (
                                             <TableRow key={item.id} className="border-slate-800 hover:bg-slate-800/50">
                                                 <TableCell>
-                                                    {item.image_url ? (
+                                                    {item.image_front_url ? (
                                                         <img
-                                                            src={item.image_url}
+                                                            src={item.image_front_url}
                                                             alt={item.name}
                                                             className="w-10 h-10 object-cover rounded border border-slate-700 cursor-pointer hover:opacity-80 transition-opacity"
-                                                            onClick={() => setLightboxUrl(item.image_url)}
+                                                            onClick={() => setLightboxUrl(item.image_front_url)}
                                                             onError={(e) => { e.target.style.display = "none"; }}
                                                         />
                                                     ) : (
@@ -542,12 +542,12 @@ export default function CatalogPage() {
                                     ) : similar.map((item) => (
                                         <TableRow key={item.id} className="border-slate-800 hover:bg-slate-800/50">
                                             <TableCell>
-                                                {item.image_url ? (
+                                                {item.image_front_url ? (
                                                     <img
-                                                        src={item.image_url}
+                                                        src={item.image_front_url}
                                                         alt={item.name}
                                                         className="w-10 h-10 object-cover rounded border border-slate-700 cursor-pointer hover:opacity-80 transition-opacity"
-                                                        onClick={() => setLightboxUrl(item.image_url)}
+                                                        onClick={() => setLightboxUrl(item.image_front_url)}
                                                     />
                                                 ) : (
                                                     <div className="w-10 h-10 bg-slate-800 rounded border border-slate-700" />
