@@ -3,7 +3,8 @@
 # =============================================================================
 # Outfitter - Project Startup Script
 # =============================================================================
-# This script starts all services for the Outfitter project (excluding Mobile)
+# This script starts all services for the Outfitter project 
+# Compatible with: Linux, macOS, WSL, Git Bash / MSYS2
 # =============================================================================
 
 set -e
@@ -35,6 +36,52 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# -----------------------------------------------------------------------------
+# Detect Environment
+# -----------------------------------------------------------------------------
+detect_env() {
+    if grep -qEi "microsoft|wsl" /proc/version 2>/dev/null; then
+        echo "wsl"
+    elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || -n "$MSYSTEM" ]]; then
+        echo "gitbash"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        echo "linux"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "macos"
+    else
+        echo "unknown"
+    fi
+}
+
+ENV_TYPE=$(detect_env)
+
+# -----------------------------------------------------------------------------
+# Cross-platform: Kill process on port
+# -----------------------------------------------------------------------------
+kill_port() {
+    local port="$1"
+    if [[ "$ENV_TYPE" == "gitbash" || "$ENV_TYPE" == "msys" ]]; then
+        # Git Bash / MSYS2: PowerShell üzerinden
+        local pids
+        pids=$(powershell.exe -NoProfile -Command \
+            "Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess" \
+            2>/dev/null | tr -d '\r')
+        if [ -n "$pids" ]; then
+            for pid in $pids; do
+                [ "$pid" -gt 0 ] 2>/dev/null && \
+                    powershell.exe -NoProfile -Command "Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue" 2>/dev/null || true
+            done
+        fi
+    else
+        # Linux / macOS / WSL: lsof
+        if command -v lsof >/dev/null 2>&1; then
+            kill "$(lsof -ti:"$port")" 2>/dev/null || true
+        elif command -v fuser >/dev/null 2>&1; then
+            fuser -k "${port}/tcp" 2>/dev/null || true
+        fi
+    fi
+}
+
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════════════════╗"
 echo "║                                                                           ║"
@@ -42,6 +89,8 @@ echo "║                     🚀 Outfitter Startup Script 🚀                
 echo "║                                                                           ║"
 echo "╚═══════════════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
+echo -e "${BLUE}  Detected environment: ${GREEN}${ENV_TYPE}${NC}"
+echo ""
 
 # -----------------------------------------------------------------------------
 # Handle 'stop' Command
@@ -54,7 +103,7 @@ if [ "$1" == "stop" ]; then
         cd "$SCRIPT_DIR"
     fi
     echo -e "${BLUE}  Killing existing Admin processes (Port 3000)...${NC}"
-    kill $(lsof -ti:3000) 2>/dev/null || true
+    kill_port 3000
     echo -e "${GREEN}✓ All services stopped.${NC}"
     exit 0
 fi
@@ -113,8 +162,8 @@ fi
 
 # Kill any processes holding standard ports
 echo -e "${BLUE}  Clearing port 3000 (Admin) and 8000 (API)...${NC}"
-kill $(lsof -ti:3000) 2>/dev/null || true
-kill $(lsof -ti:8000) 2>/dev/null || true
+kill_port 3000
+kill_port 8000
 sleep 1
 
 echo -e "${GREEN}  ✓ Cleanup complete${NC}"
