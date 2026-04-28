@@ -93,8 +93,8 @@ Router (playground.py)
     prompt length, ids list size 1..16)
   - SELECT CatalogItem WHERE id IN (:ids)            (single query, async)
   - 404 if any id missing from result
-  - resolve image URL per item:  image_front_no_bg_url ?? image_front_url
-  - 422 if any item has neither URL ("Catalog item {id} has no front image")
+  - resolve image URL per item: image_front_url (required field on the model
+    today; if a future migration adds image_front_no_bg_url, prefer it then)
   - service.generate_outfit_image(reference_urls, prompt, size, quality, n)
 
 Service (codex_image_service.py, httpx.AsyncClient, 90s timeout)
@@ -129,9 +129,9 @@ CODEX_PROXY_API_KEY: str = "dummy"
 
 These can be overridden via `.env`. Defaults match the user's local OpenAI-compatible proxy. The "API key" is purely a placeholder for the proxy's `Authorization` header — the proxy authenticates via the host's Codex OAuth session.
 
-### 4.5 Why `image_front_no_bg_url` first
+### 4.5 Reference image source
 
-`backend/app/models/catalog.py` exposes both `image_front_url` and `image_front_no_bg_url`. The background-removed variant is a cleaner reference for gpt-image-2 (less noise, item silhouette clearer), so prefer it when present and fall back to the standard front image otherwise.
+`backend/app/models/catalog.py` exposes `image_front_url` (required, non-null) and `image_back_url` (optional). For v1 the playground uses `image_front_url` only — that is the canonical product shot. If a future migration adds `image_front_no_bg_url`, the resolver can be updated to prefer it (background-removed images are a cleaner reference for gpt-image-2), but no_bg columns do not exist today.
 
 ## 5. Frontend Details
 
@@ -274,7 +274,6 @@ async def generate_image(
 | ----------------------------------------- | ------- | ----------------------------------------- |
 | No JWT / invalid                          | 401     | redirect to `/login` (existing behavior)  |
 | Empty prompt / 0 items / >16 items / bad size | 422 | toast + inline; button re-enables         |
-| Selected item has no front image URL      | 422     | toast `"Catalog item ... has no front image"` |
 | One or more `catalog_item_ids` not found  | 404     | toast `"Catalog item ... not found"`      |
 | S3 fetch fails on any reference image     | 502     | toast `"Failed to fetch reference image"` |
 | Proxy returns non-2xx                     | 502     | toast `"Image generation failed: ..."`    |
@@ -291,7 +290,6 @@ The frontend never retries automatically. The user re-clicks Generate to retry.
   - service was called with the resolved reference URLs (no_bg preferred)
   - multipart payload includes `model`, `image[]`, `prompt`, `size`, `quality`, `n`
 - `test_generate_unknown_item_id` — one missing UUID -> 404
-- `test_generate_item_missing_image` — item exists but both `image_front_no_bg_url` and `image_front_url` null -> 422
 - `test_generate_proxy_error` — proxy returns 500 -> 502
 - `test_generate_proxy_timeout` — `httpx.TimeoutException` -> 504
 - `test_generate_validation_empty_prompt` -> 422
