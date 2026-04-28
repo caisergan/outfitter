@@ -24,18 +24,18 @@ class WardrobeBrowserSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.backgroundSecondary,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
             children: [
               const SizedBox(height: 12),
               Container(
-                width: 40,
+                width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
               const SizedBox(height: 24),
@@ -45,16 +45,12 @@ class WardrobeBrowserSheet extends StatelessWidget {
                   children: [
                     Text(
                       'My Wardrobe',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const Spacer(),
-                    Icon(
+                    const Icon(
                       Icons.checkroom_outlined,
-                      color: AppColors.text.withValues(alpha: 0.5),
+                      color: AppColors.secondaryText,
                     ),
                   ],
                 ),
@@ -137,7 +133,7 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
             crossAxisCount: 3,
             crossAxisSpacing: 16,
             mainAxisSpacing: 20,
-            childAspectRatio: 0.75,
+            childAspectRatio: 0.72,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -153,25 +149,23 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.lightMint.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.lightMint),
+                        color: AppColors.paper,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.divider),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: CachedItemImage(url: item.imageUrl),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     _wardrobeItemLabel(item).toUpperCase(),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                        ),
                   ),
                 ],
               ),

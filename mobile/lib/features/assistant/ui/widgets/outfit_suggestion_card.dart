@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:fashion_app/core/models/outfit_models.dart';
-import 'package:fashion_app/core/widgets/shared_widgets.dart';
+import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/utils/error_helpers.dart';
+import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/assistant/data/outfit_repository.dart';
 
 class OutfitSuggestionCard extends ConsumerWidget {
@@ -29,26 +30,31 @@ class OutfitSuggestionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(child: _buildStackedImages()),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'STYLED LOOK',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.secondaryText,
+                        letterSpacing: 1.4,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
                   outfit.styleNote,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500, height: 1.4),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        height: 1.35,
+                      ),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -63,12 +69,17 @@ class OutfitSuggestionCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    IconButton.filledTonal(
+                    IconButton.outlined(
                       icon: const Icon(Icons.bookmark_border),
                       onPressed: () => _handleSave(context, ref),
                       style: IconButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14))),
+                        backgroundColor: AppColors.paper,
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.divider),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -86,9 +97,12 @@ class OutfitSuggestionCard extends ConsumerWidget {
       children: [
         Expanded(
           flex: 3,
-          child: CachedItemImage(
-            url: slotItems[0].imageUrl,
-            borderRadius: const BorderRadius.only(topLeft: Radius.circular(24)),
+          child: DecoratedBox(
+            decoration: const BoxDecoration(color: AppColors.backgroundSecondary),
+            child: CachedItemImage(
+              url: slotItems[0].imageUrl,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(24)),
+            ),
           ),
         ),
         const SizedBox(width: 2),
@@ -97,18 +111,26 @@ class OutfitSuggestionCard extends ConsumerWidget {
           child: Column(
             children: [
               Expanded(
-                child: CachedItemImage(
-                  url: slotItems[1].imageUrl,
-                  borderRadius:
-                      const BorderRadius.only(topRight: Radius.circular(24)),
+                child: DecoratedBox(
+                  decoration:
+                      const BoxDecoration(color: AppColors.backgroundSecondary),
+                  child: CachedItemImage(
+                    url: slotItems[1].imageUrl,
+                    borderRadius:
+                        const BorderRadius.only(topRight: Radius.circular(24)),
+                  ),
                 ),
               ),
               const SizedBox(height: 2),
               Expanded(
-                child: CachedItemImage(
-                  url: slotItems.length > 2
-                      ? slotItems[2].imageUrl
-                      : slotItems[0].imageUrl,
+                child: DecoratedBox(
+                  decoration:
+                      const BoxDecoration(color: AppColors.backgroundSecondary),
+                  child: CachedItemImage(
+                    url: slotItems.length > 2
+                        ? slotItems[2].imageUrl
+                        : slotItems[0].imageUrl,
+                  ),
                 ),
               ),
             ],

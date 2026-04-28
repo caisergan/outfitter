@@ -35,11 +35,7 @@ class ProfileOutfitSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColors.text,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
         ),
         const SizedBox(height: 12),
@@ -51,12 +47,12 @@ class ProfileOutfitSection extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 190,
+            height: 206,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
               itemCount: outfits.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
               itemBuilder: (context, index) {
                 final outfit = outfits[index];
                 return _OutfitPreviewCard(
@@ -89,10 +85,10 @@ class _OutfitPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 132,
+      width: 148,
       child: Material(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -106,7 +102,7 @@ class _OutfitPreviewCard extends StatelessWidget {
                     outfit.generatedImageUrl != null
                         ? CachedItemImage(url: outfit.generatedImageUrl!)
                         : Container(
-                            color: AppColors.lightMint,
+                            color: AppColors.backgroundSecondary,
                             child: const Icon(
                               Icons.checkroom_outlined,
                               color: AppColors.text,
@@ -114,21 +110,23 @@ class _OutfitPreviewCard extends StatelessWidget {
                             ),
                           ),
                     Positioned(
-                      top: 8,
-                      right: 8,
+                      top: 10,
+                      right: 10,
                       child: Material(
-                        color: AppColors.cream.withValues(alpha: 0.92),
+                        color: AppColors.paper.withValues(alpha: 0.94),
                         shape: const CircleBorder(),
                         child: InkWell(
                           customBorder: const CircleBorder(),
                           onTap: onToggleLike,
                           child: Padding(
-                            padding: const EdgeInsets.all(7),
+                            padding: const EdgeInsets.all(8),
                             child: Icon(
                               isLiked
                                   ? Icons.favorite
                                   : Icons.favorite_border_outlined,
-                              color: isLiked ? AppColors.blush : AppColors.text,
+                              color: isLiked
+                                  ? AppColors.primary
+                                  : AppColors.secondaryText,
                               size: 18,
                             ),
                           ),
@@ -139,7 +137,7 @@ class _OutfitPreviewCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -147,20 +145,12 @@ class _OutfitPreviewCard extends StatelessWidget {
                       'Outfit ${outfit.id.substring(0, 4)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        letterSpacing: 0,
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       _formatDate(outfit.createdAt),
-                      style: TextStyle(
-                        color: AppColors.text.withValues(alpha: 0.58),
-                        fontSize: 11,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -191,7 +181,7 @@ class _OutfitPreviewCard extends StatelessWidget {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}';
   }
@@ -212,22 +202,23 @@ class _EmptyOutfitState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.divider),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: AppColors.mint,
-              borderRadius: BorderRadius.circular(14),
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.divider),
             ),
-            child: Icon(icon, color: AppColors.text),
+            child: Icon(icon, color: AppColors.primary),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -236,20 +227,14 @@ class _EmptyOutfitState extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   message,
-                  style: TextStyle(
-                    color: AppColors.text.withValues(alpha: 0.68),
-                    height: 1.25,
-                    fontSize: 13,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.secondaryText,
+                      ),
                 ),
               ],
             ),

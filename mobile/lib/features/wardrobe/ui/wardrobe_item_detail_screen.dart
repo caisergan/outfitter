@@ -1,15 +1,14 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/wardrobe_provider.dart';
-import '../../../core/widgets/error_view.dart';
+import '../../../core/models/wardrobe_item.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/error_helpers.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/shared_widgets.dart';
-import '/core/models/wardrobe_item.dart';
-import '/core/theme/app_colors.dart';
-import '/features/playground/providers/styling_canvas_provider.dart';
+import '../../playground/providers/styling_canvas_provider.dart';
+import '../providers/wardrobe_provider.dart';
 
 class WardrobeItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -22,25 +21,27 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
 
     return wardrobeState.when(
       data: (items) {
-        final WardrobeItem? item = items.firstWhereOrNull(
-              (i) => i.id == itemId,
-        );
+        WardrobeItem? item;
+        for (final current in items) {
+          if (current.id == itemId) {
+            item = current;
+            break;
+          }
+        }
 
-        // Item was just deleted — navigator is popping, render nothing
         if (item == null) {
           return const Scaffold(
             backgroundColor: AppColors.cream,
-            body: Center(
-              child: CircularProgressIndicator(color: AppColors.mint),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
+
+        final currentItem = item;
 
         return Scaffold(
           backgroundColor: AppColors.cream,
           body: CustomScrollView(
             slivers: [
-              // ── App Bar ──────────────────────────────────────────────
               SliverAppBar(
                 backgroundColor: AppColors.cream,
                 foregroundColor: AppColors.text,
@@ -50,180 +51,123 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    color: AppColors.text.withOpacity(0.6),
+                    color: AppColors.secondaryText,
                     onPressed: () => _confirmDelete(context, ref),
                   ),
                 ],
               ),
-
-              // ── Hero Image ───────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      height: 320,
-                      color: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      child: CachedItemImage(
-                        url: item.imageUrl,
-                        fit: BoxFit.contain,
-                      ),
+                  child: Container(
+                    height: 336,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.paper,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: CachedItemImage(
+                      url: currentItem.imageUrl,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
               ),
-
-              // ── Name + Edit ──────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 18),
-                  child: Row(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          item.subtype ?? item.category,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.text,
-                          ),
-                        ),
+                      Text(
+                        currentItem.category.toUpperCase(),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: AppColors.secondaryText,
+                                  letterSpacing: 1.2,
+                                ),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          // TODO: open edit sheet
-                        },
-                        child: Icon(
-                          Icons.edit_outlined,
-                          size: 20,
-                          color: AppColors.text.withOpacity(0.5),
-                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        currentItem.subtype ?? currentItem.category,
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
                     ],
                   ),
                 ),
               ),
-
-              // ── Metadata Card ────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.lightMint.withOpacity(0.6),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.mint.withOpacity(0.07),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppColors.divider),
                     ),
                     child: Column(
                       children: [
                         _MetaRow(
                           icon: Icons.style_outlined,
-                          label: item.subtype ?? 'Item',
-                          showDivider: true,
+                          label: currentItem.subtype ?? 'Item',
                         ),
                         _MetaRow(
                           icon: Icons.info_outline,
-                          label: item.category[0].toUpperCase() +
-                              item.category.substring(1),
-                          showDivider: true,
+                          label: currentItem.category[0].toUpperCase() +
+                              currentItem.category.substring(1),
                         ),
-                        if (item.pattern != null && item.pattern!.isNotEmpty)
+                        if (currentItem.pattern != null &&
+                            currentItem.pattern!.isNotEmpty)
                           _MetaRow(
                             icon: Icons.grid_3x3_outlined,
-                            label: item.pattern!,
-                            showDivider: true,
+                            label: currentItem.pattern!,
                           ),
-                        if (item.fit != null && item.fit!.isNotEmpty)
+                        if (currentItem.fit != null &&
+                            currentItem.fit!.isNotEmpty)
                           _MetaRow(
                             icon: Icons.straighten_outlined,
-                            label: item.fit!,
-                            showDivider: item.styleTags.isNotEmpty ||
-                                item.color.isNotEmpty,
+                            label: currentItem.fit!,
                           ),
-                        if (item.styleTags.isNotEmpty)
-                          _TagsRow(tags: item.styleTags),
-                        if (item.color.isNotEmpty)
-                          _ColorsRow(colors: item.color),
+                        if (currentItem.styleTags.isNotEmpty)
+                          _TagsRow(tags: currentItem.styleTags),
+                        if (currentItem.color.isNotEmpty)
+                          _ColorsRow(colors: currentItem.color),
                       ],
                     ),
                   ),
                 ),
               ),
-
-              // ── Action Buttons ───────────────────────────────────────
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blush,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 0,
-                      ),
-                      onPressed: () => _addToPlayground(context, ref, item),
-                      child: const Text(
-                        'Add to Playground',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
-                      ),
+                      onPressed: () =>
+                          _addToPlayground(context, ref, currentItem),
+                      child: const Text('Add to Playground'),
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.blush,
-                        minimumSize: const Size.fromHeight(50),
-                        side: BorderSide(
-                            color: AppColors.mint.withOpacity(0.8),
-                            width: 1.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
                       onPressed: () => context.go('/assistant', extra: {
-                        'anchorItemId': item.id,
+                        'anchorItemId': currentItem.id,
                       }),
-                      child: const Text(
-                        'Style this Item',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
-                      ),
+                      child: const Text('Style this Item'),
                     ),
                   ]),
                 ),
               ),
-
-              // ── Similar Items ────────────────────────────────────────
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 36, 20, 48),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const Text(
+                    Text(
                       'Similar in your Wardrobe',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.text,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 14),
-                    _buildSimilarItems(context, items, item),
+                    _buildSimilarItems(context, items, currentItem),
                   ]),
                 ),
               ),
@@ -233,9 +177,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
       },
       loading: () => const Scaffold(
         backgroundColor: AppColors.cream,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.mint),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       ),
       error: (e, __) => Scaffold(
         backgroundColor: AppColors.cream,
@@ -245,15 +187,17 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
         ),
         body: ErrorView(
           message: dioErrorToMessage(e),
-          onRetry: () =>
-              ref.read(wardrobeNotifierProvider.notifier).fetch(),
+          onRetry: () => ref.read(wardrobeNotifierProvider.notifier).fetch(),
         ),
       ),
     );
   }
 
   Widget _buildSimilarItems(
-      BuildContext context, List<WardrobeItem> items, WardrobeItem current) {
+    BuildContext context,
+    List<WardrobeItem> items,
+    WardrobeItem current,
+  ) {
     final similar = items
         .where((i) => i.id != current.id && i.category == current.category)
         .take(4)
@@ -262,32 +206,32 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     if (similar.isEmpty) {
       return Text(
         'No similar items found.',
-        style: TextStyle(color: AppColors.text.withOpacity(0.4)),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.secondaryText,
+            ),
       );
     }
 
     return SizedBox(
-      height: 120,
+      height: 128,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: similar.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final s = similar[index];
+          final item = similar[index];
           return GestureDetector(
-            onTap: () => context.push('/wardrobe/item/${s.id}'),
+            onTap: () => context.push('/wardrobe/item/${item.id}'),
             child: Container(
-              width: 90,
+              width: 98,
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.lightMint.withOpacity(0.6)),
+                color: AppColors.paper,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.divider),
               ),
-              padding: const EdgeInsets.all(6),
-              clipBehavior: Clip.antiAlias,
               child: CachedItemImage(
-                url: s.imageUrl,
+                url: item.imageUrl,
                 fit: BoxFit.contain,
               ),
             ),
@@ -297,11 +241,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _addToPlayground(
-      BuildContext context,
-      WidgetRef ref,
-      WardrobeItem item,
-      ) {
+  void _addToPlayground(BuildContext context, WidgetRef ref, WardrobeItem item) {
     ref.read(stylingCanvasProvider.notifier).addWardrobeGarment(item);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -316,29 +256,25 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Delete Item?',
-          style: TextStyle(
-              fontWeight: FontWeight.w700, color: AppColors.text),
-        ),
+        title: const Text('Delete Item?'),
         content: Text(
           'This will permanently remove this item from your wardrobe.',
-          style: TextStyle(color: AppColors.text.withOpacity(0.6)),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.secondaryText,
+              ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: TextStyle(color: AppColors.text.withOpacity(0.5))),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF8A584F)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -355,17 +291,13 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
-
 class _MetaRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  final bool showDivider;
 
   const _MetaRow({
     required this.icon,
     required this.label,
-    this.showDivider = false,
   });
 
   @override
@@ -373,31 +305,30 @@ class _MetaRow extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: AppColors.mint),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.paper,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Icon(icon, size: 18, color: AppColors.primary),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.text,
-                  ),
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.text.withOpacity(0.25)),
             ],
           ),
         ),
-        if (showDivider)
-          Divider(
-              height: 1,
-              indent: 48,
-              color: AppColors.lightMint.withOpacity(0.5)),
+        const Divider(height: 1),
       ],
     );
   }
@@ -408,60 +339,53 @@ class _TagsRow extends StatelessWidget {
 
   const _TagsRow({required this.tags});
 
-  static const _pillColors = [
-    Color(0xFFFFB7C5), // pink
-    Color(0xFFB5D5F5), // sky blue
-    Color(0xFFB5EAD7), // soft green
-    Color(0xFFFFDFB5), // peach
-    Color(0xFFD4B5F5), // lavender
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Divider(
-            height: 1,
-            indent: 48,
-            color: AppColors.lightMint.withOpacity(0.5)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Icon(Icons.label_outline,
-                  size: 20, color: AppColors.mint),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: List.generate(tags.length, (i) {
-                    return Container(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: const Icon(Icons.label_outline, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags
+                  .map(
+                    (tag) => Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: _pillColors[i % _pillColors.length],
-                        borderRadius: BorderRadius.circular(20),
+                        color: AppColors.paper,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.divider),
                       ),
                       child: Text(
-                        tags[i],
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.text,
-                        ),
+                        tag,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontSize: 12,
+                            ),
                       ),
-                    );
-                  }),
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.text.withOpacity(0.25)),
-            ],
+                    ),
+                  )
+                  .toList(),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -473,67 +397,70 @@ class _ColorsRow extends StatelessWidget {
 
   Color _nameToColor(String name) {
     const map = {
-      'red': Color(0xFFE74C3C),
-      'blue': Color(0xFF7AAACE),
-      'green': Color(0xFF27AE60),
-      'yellow': Color(0xFFF1C40F),
-      'orange': Color(0xFFE67E22),
-      'purple': Color(0xFF9B59B6),
-      'pink': Color(0xFFFF6FAB),
-      'black': Color(0xFF2C2C2C),
-      'white': Color(0xFFF5F5F5),
-      'grey': Color(0xFF95A5A6),
-      'gray': Color(0xFF95A5A6),
-      'brown': Color(0xFF8B6347),
-      'beige': Color(0xFFF5F0E8),
-      'navy': Color(0xFF1B2A4A),
-      'cream': Color(0xFFF7F8F0),
-      'mint': Color(0xFFbbe2ff),
-      'lavender': Color(0xFFC7CEEA),
-      'olive': Color(0xFF6B7C3F),
+      'red': Color(0xFFC77A6A),
+      'blue': Color(0xFF899CB2),
+      'green': Color(0xFF7F8D73),
+      'yellow': Color(0xFFD8BF7A),
+      'orange': Color(0xFFC89A67),
+      'purple': Color(0xFF9A8DA9),
+      'pink': Color(0xFFC99BA3),
+      'black': Color(0xFF3F3A36),
+      'white': Color(0xFFF0EBE3),
+      'grey': Color(0xFFA39B92),
+      'gray': Color(0xFFA39B92),
+      'brown': Color(0xFF8B6A4F),
+      'beige': Color(0xFFE8DDCB),
+      'navy': Color(0xFF4C5970),
+      'cream': Color(0xFFF4EFE6),
+      'mint': Color(0xFFC8D5C6),
+      'lavender': Color(0xFFBCAFC3),
+      'olive': Color(0xFF7A7A56),
     };
-    return map[name.toLowerCase()] ?? AppColors.lightMint;
+    return map[name.toLowerCase()] ?? AppColors.backgroundSecondary;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Divider(
-            height: 1,
-            indent: 48,
-            color: AppColors.lightMint.withOpacity(0.5)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              const Icon(Icons.water_drop_outlined,
-                  size: 20, color: AppColors.mint),
-              const SizedBox(width: 12),
-              Wrap(
-                spacing: 8,
-                children: colors.map((c) {
-                  return Container(
-                    width: 26,
-                    height: 26,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: const Icon(
+              Icons.water_drop_outlined,
+              size: 18,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Wrap(
+            spacing: 8,
+            children: colors
+                .map(
+                  (color) => Container(
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: _nameToColor(c),
+                      color: _nameToColor(color),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.lightMint.withOpacity(0.6),
+                        color: AppColors.divider,
                         width: 1.5,
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-              const Spacer(),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.text.withOpacity(0.25)),
-            ],
+                  ),
+                )
+                .toList(),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

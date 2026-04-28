@@ -200,8 +200,8 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                   Expanded(
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.text,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.background,
                         minimumSize: const Size.fromHeight(48),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -253,12 +253,12 @@ class _StylingCanvasSurface extends ConsumerWidget {
               ref.read(stylingCanvasProvider.notifier).selectGarment(null),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFEFA),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.lightMint),
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.divider),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(24),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -356,18 +356,14 @@ class _CanvasGarmentWidgetState extends ConsumerState<_CanvasGarmentWidget> {
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: widget.isSelected
-                    ? Border.all(color: AppColors.blush, width: 2)
-                    : Border.all(color: Colors.white.withValues(alpha: 0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.text.withValues(alpha: 0.10),
-                    blurRadius: widget.isSelected ? 18 : 10,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: AppColors.paper,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: widget.isSelected
+                      ? AppColors.primary
+                      : AppColors.divider.withValues(alpha: 0.5),
+                  width: widget.isSelected ? 2 : 1,
+                ),
               ),
               clipBehavior: Clip.antiAlias,
               child: CachedItemImage(
@@ -401,8 +397,9 @@ class _SelectionInspector extends ConsumerWidget {
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.lightMint,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.divider),
         ),
         child: selected == null
             ? Row(
@@ -526,7 +523,7 @@ class _GarmentSourceSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -538,7 +535,7 @@ class _GarmentSourceSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -589,9 +586,9 @@ class _GarmentSourceTile extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.lightMint.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.lightMint),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.divider),
         ),
         child: Row(
           children: [
@@ -599,8 +596,9 @@ class _GarmentSourceTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.paper,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.divider),
               ),
               child: Icon(icon, color: AppColors.text),
             ),
@@ -635,19 +633,19 @@ class _LayerOrderSheet extends ConsumerWidget {
       height: MediaQuery.sizeOf(context).height * 0.62,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
           Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
           const SizedBox(height: 18),
           const Row(
             children: [
@@ -731,19 +729,19 @@ class _SavedOutfitsSheet extends ConsumerWidget {
       height: MediaQuery.sizeOf(context).height * 0.62,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
           Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
           const SizedBox(height: 18),
           const Row(
             children: [
@@ -763,7 +761,7 @@ class _SavedOutfitsSheet extends ConsumerWidget {
           Expanded(
             child: canvas.isLoadingSaved
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.blush),
+                    child: CircularProgressIndicator(color: AppColors.primary),
                   )
                 : canvas.savedOutfits.isEmpty
                     ? const Center(
@@ -829,8 +827,9 @@ class _OutfitPreview extends StatelessWidget {
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.lightMint.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.divider),
             ),
             child: const SizedBox.expand(),
           ),
@@ -862,7 +861,7 @@ class _EmptyCanvasPrompt extends StatelessWidget {
     return const Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.checkroom_outlined, color: AppColors.blush, size: 45),
+        Icon(Icons.checkroom_outlined, color: AppColors.primary, size: 45),
         SizedBox(height: 15),
         Text(
           'Add a garment',
@@ -896,9 +895,9 @@ class _ToolbarIconButton extends StatelessWidget {
         dimension: 48,
         child: IconButton.filledTonal(
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.lightMint,
+            backgroundColor: AppColors.surface,
             foregroundColor: AppColors.text,
-            disabledBackgroundColor: AppColors.lightMint.withValues(alpha: 0.5),
+            disabledBackgroundColor: AppColors.backgroundSecondary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -944,7 +943,7 @@ class _CanvasGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.lightMint.withValues(alpha: 0.35)
+      ..color = AppColors.divider.withValues(alpha: 0.5)
       ..strokeWidth = 1;
     const spacing = 32.0;
 

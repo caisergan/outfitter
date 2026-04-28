@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../api/api_endpoints.dart';
-
 String? _responseDetail(Object? data) {
   if (data is Map && data['detail'] is String) {
     return data['detail'] as String;
@@ -56,10 +55,10 @@ void showErrorSnackbar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),
-      backgroundColor: Colors.red.shade700,
+      backgroundColor: const Color(0xFF7A4B43),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
     ),
   );
 }
@@ -69,10 +68,10 @@ void showSuccessSnackbar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),
-      backgroundColor: Colors.green.shade700,
+      backgroundColor: const Color(0xFF5E6A57),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
     ),
   );
 }

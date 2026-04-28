@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/outfit_models.dart';
-import '/features/assistant/ui/swipe_outfits_screen.dart';
 
 class OutfitCard extends StatelessWidget {
   final OutfitSuggestion outfit;

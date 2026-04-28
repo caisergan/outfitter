@@ -16,39 +16,43 @@ class MainScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: child,
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: AppColors.cream,
-        indicatorColor: AppColors.mint,
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.w500,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.paper,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: NavigationBar(
+            backgroundColor: Colors.transparent,
+            selectedIndex: currentIndex < 0 ? 0 : currentIndex,
+            onDestinationSelected: (i) => context.go(_tabs[i]),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.explore_outlined),
+                selectedIcon: Icon(Icons.explore),
+                label: 'Discover',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.checkroom_outlined),
+                selectedIcon: Icon(Icons.checkroom),
+                label: 'Playground',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.auto_awesome_outlined),
+                selectedIcon: Icon(Icons.auto_awesome),
+                label: 'Assistant',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.door_sliding_outlined),
+                selectedIcon: Icon(Icons.door_sliding),
+                label: 'Wardrobe',
+              ),
+            ],
           ),
         ),
-        selectedIndex: currentIndex < 0 ? 0 : currentIndex,
-        onDestinationSelected: (i) => context.go(_tabs[i]),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.explore, color: AppColors.text),
-            label: 'Discover',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.checkroom_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.checkroom, color: AppColors.text),
-            label: 'Playground',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.auto_awesome, color: AppColors.text),
-            label: 'Assistant',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.door_sliding_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.door_sliding, color: AppColors.text),
-            label: 'Wardrobe',
-          ),
-        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../providers/assistant_provider.dart';
 import '../../../core/models/outfit_models.dart';
 import 'widgets/parameter_screen.dart';
@@ -54,10 +55,21 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ),
 
           if (_loading)
-            const ColoredBox(
-              color: Colors.black26,
+            ColoredBox(
+              color: AppColors.overlay,
               child: Center(
-                child: CircularProgressIndicator(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 24,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.paper,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: const CircularProgressIndicator(),
+                ),
               ),
             ),
         ],

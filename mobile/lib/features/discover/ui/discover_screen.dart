@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../assistant/providers/assistant_provider.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../assistant/providers/assistant_provider.dart';
 
 class DiscoverScreen extends ConsumerWidget {
   const DiscoverScreen({super.key});
@@ -16,13 +16,7 @@ class DiscoverScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.cream,
         elevation: 0,
-        title: const Text(
-          'Discover',
-          style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+        title: const Text('Discover'),
         iconTheme: const IconThemeData(color: AppColors.text),
         actions: [
           IconButton(
@@ -36,56 +30,85 @@ class DiscoverScreen extends ConsumerWidget {
           ref.invalidate(savedOutfitsProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          padding: const EdgeInsets.fromLTRB(0, 12, 0, 32),
           children: [
-            _sectionTitle(context, "Seasonal Edits"),
-            const SizedBox(height: 16),
-            _buildHorizontalOutfitRow(),
-            const SizedBox(height: 32),
-            _sectionTitle(context, "Occasion Collections"),
-            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Curated daily',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: AppColors.secondaryText,
+                            letterSpacing: 1.8,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Refined edits for the week ahead.',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Browse seasonal inspiration, then jump straight into styling.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.secondaryText,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const _SectionTitle(
+              title: 'Seasonal Edits',
+              subtitle: 'Image-led outfit directions with room to browse.',
+            ),
+            const SizedBox(height: 18),
+            _buildHorizontalOutfitRow(context),
+            const SizedBox(height: 36),
+            const _SectionTitle(
+              title: 'Occasion Collections',
+              subtitle: 'Choose a direction and move into the assistant.',
+            ),
+            const SizedBox(height: 18),
             _buildOccasionGrid(context),
-            const SizedBox(height: 32),
-            _sectionTitle(context, "Recently Saved"),
-            const SizedBox(height: 16),
-            _buildSavedOutfitsSection(ref),
+            const SizedBox(height: 36),
+            const _SectionTitle(
+              title: 'Recently Saved',
+              subtitle: 'Return to outfits you already saved.',
+            ),
+            const SizedBox(height: 18),
+            _buildSavedOutfitsSection(context, ref),
           ],
         ),
       ),
     );
   }
 
-  // ---------------- TITLE ----------------
-
-  Widget _sectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.text,
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.3,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHorizontalOutfitRow() {
+  Widget _buildHorizontalOutfitRow(BuildContext context) {
     return SizedBox(
-      height: 240,
+      height: 304,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         scrollDirection: Axis.horizontal,
         itemCount: 3,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        separatorBuilder: (_, __) => const SizedBox(width: 18),
         itemBuilder: (context, index) {
           return Container(
-            width: 180,
+            width: 224,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: AppColors.lightMint.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: AppColors.divider),
+              color: AppColors.surface,
             ),
             clipBehavior: Clip.antiAlias,
             child: Stack(
@@ -95,29 +118,62 @@ class DiscoverScreen extends ConsumerWidget {
                   url:
                       'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop',
                 ),
-                Container(
-                  decoration: const BoxDecoration(
+                DecoratedBox(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        AppColors.text,
+                        AppColors.text.withValues(alpha: 0.72),
                       ],
                     ),
                   ),
                 ),
-                const Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
-                  child: Text(
-                    'Spring Essentials',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                Positioned(
+                  left: 18,
+                  top: 18,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.paper.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.divider),
                     ),
+                    child: const Text(
+                      'SEASONAL EDIT',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 20,
+                  left: 18,
+                  right: 18,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        index.isEven ? 'Spring Essentials' : 'Quiet Luxury',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: AppColors.background,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Soft tailoring, tonal layers, and clean proportions.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  AppColors.background.withValues(alpha: 0.88),
+                            ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -127,8 +183,6 @@ class DiscoverScreen extends ConsumerWidget {
       ),
     );
   }
-
-  // ---------------- OCCASIONS ----------------
 
   Widget _buildOccasionGrid(BuildContext context) {
     final occasions = [
@@ -145,41 +199,52 @@ class DiscoverScreen extends ConsumerWidget {
       itemCount: occasions.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 2.5,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: 1.12,
       ),
       itemBuilder: (context, index) {
-        final o = occasions[index];
+        final occasion = occasions[index];
 
         return InkWell(
           onTap: () => context.go(
             '/assistant',
-            extra: {'occasion': (o['name'] as String).toLowerCase()},
+            extra: {'occasion': (occasion['name'] as String).toLowerCase()},
           ),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
+          borderRadius: BorderRadius.circular(24),
+          child: Ink(
             decoration: BoxDecoration(
-              color: AppColors.lightMint.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.lightMint),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.divider),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  o['icon'] as IconData,
-                  size: 20,
-                  color: AppColors.blush,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  o['name'] as String,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.paper,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.divider),
                   ),
+                  child: Icon(
+                    occasion['icon'] as IconData,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  occasion['name'] as String,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Open styled suggestions',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
@@ -189,28 +254,38 @@ class DiscoverScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSavedOutfitsSection(WidgetRef ref) {
+  Widget _buildSavedOutfitsSection(BuildContext context, WidgetRef ref) {
     final savedOutfits = ref.watch(savedOutfitsProvider);
 
     return savedOutfits.when(
       data: (outfits) {
         if (outfits.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'No saved outfits yet. Create one in the Playground!',
-              style: TextStyle(color: AppColors.text),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: Text(
+                'No saved outfits yet. Create one in the Playground.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.secondaryText,
+                    ),
+              ),
             ),
           );
         }
 
         return SizedBox(
-          height: 120,
+          height: 158,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             scrollDirection: Axis.horizontal,
             itemCount: outfits.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
             itemBuilder: (context, index) {
               final outfit = outfits[index];
 
@@ -219,31 +294,88 @@ class DiscoverScreen extends ConsumerWidget {
                   '/playground',
                   extra: {'slots': outfit.slots},
                 ),
+                borderRadius: BorderRadius.circular(24),
                 child: Container(
-                  width: 100,
+                  width: 132,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: AppColors.lightMint.withValues(alpha: 0.4),
-                    border: Border.all(color: AppColors.lightMint),
+                    borderRadius: BorderRadius.circular(24),
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.divider),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: outfit.generatedImageUrl != null
-                      ? CachedItemImage(url: outfit.generatedImageUrl!)
-                      : const Center(
-                          child: Icon(
-                            Icons.checkroom,
-                            color: AppColors.text,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: outfit.generatedImageUrl != null
+                            ? CachedItemImage(url: outfit.generatedImageUrl!)
+                            : const Center(
+                                child: Icon(
+                                  Icons.checkroom,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Saved Look',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Open in Playground',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                         ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
           ),
         );
       },
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.blush)),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionTitle({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.secondaryText,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

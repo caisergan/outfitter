@@ -1,8 +1,9 @@
 import 'package:fashion_app/core/models/outfit_models.dart';
 
-const String mockCatImage ="https://www.vhv.rs/dpng/d/410-4101929_transparent-crazy-cat-clipart-funny-cat-stickers-whatsapp.png";
+const String mockCatImage =
+    "https://www.vhv.rs/dpng/d/410-4101929_transparent-crazy-cat-clipart-funny-cat-stickers-whatsapp.png";
 List<OutfitSuggestion> buildMockOutfits() {
-  final item = SlotItem(
+  const item = SlotItem(
     id: "mock",
     imageUrl: mockCatImage,
     name: "Mock Item",
@@ -18,7 +19,7 @@ List<OutfitSuggestion> buildMockOutfits() {
 
   return List.generate(
     10,
-        (i) => OutfitSuggestion(
+    (i) => OutfitSuggestion(
       slots: slots,
       styleNote: "Mock outfit ${i + 1}",
     ),

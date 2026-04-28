@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:fashion_app/core/models/outfit_models.dart';
 import 'package:fashion_app/core/theme/app_colors.dart';
 
@@ -24,16 +25,47 @@ class _ParameterScreenState extends State<ParameterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cream,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSectionHeader("What's the occasion?"),
-            const SizedBox(height: 12),
-            _buildChipGroup(
+    return SafeArea(
+      top: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PERSONAL STYLING',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.secondaryText,
+                        letterSpacing: 1.8,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Build a refined outfit brief.',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose the occasion, season, palette, and source. Recommendation logic stays exactly the same.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.secondaryText,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _ParameterSection(
+            title: "What's the occasion?",
+            child: _buildChipGroup(
               options: const [
                 'casual',
                 'work',
@@ -42,77 +74,58 @@ class _ParameterScreenState extends State<ParameterScreen> {
                 'party',
                 'beach',
                 'travel',
-                'gym'
+                'gym',
               ],
               selected: _occasion,
               onSelected: (val) => setState(() => _occasion = val),
             ),
-            const SizedBox(height: 32),
-            _buildSectionHeader("Which season?"),
-            const SizedBox(height: 12),
-            _buildChipGroup(
+          ),
+          const SizedBox(height: 16),
+          _ParameterSection(
+            title: 'Which season?',
+            child: _buildChipGroup(
               options: const ['spring', 'summer', 'autumn', 'winter'],
               selected: _season,
               onSelected: (val) => setState(() => _season = val),
             ),
-            const SizedBox(height: 32),
-            _buildSectionHeader("Color preference?"),
-            const SizedBox(height: 12),
-            _buildChipGroup(
+          ),
+          const SizedBox(height: 16),
+          _ParameterSection(
+            title: 'Color preference?',
+            child: _buildChipGroup(
               options: const [
                 'neutral',
                 'bold',
                 'pastel',
                 'monochrome',
-                'earthy'
+                'earthy',
               ],
               selected: _colorPreference,
               onSelected: (val) => setState(() => _colorPreference = val),
             ),
-            const SizedBox(height: 32),
-            _buildSectionHeader("Item source"),
-            const SizedBox(height: 12),
-            _buildChipGroup(
+          ),
+          const SizedBox(height: 16),
+          _ParameterSection(
+            title: 'Item source',
+            child: _buildChipGroup(
               options: const ['wardrobe', 'catalog', 'mix'],
               selected: _source,
               onSelected: (val) => setState(() => _source = val ?? 'mix'),
             ),
-            const SizedBox(height: 48),
-            ElevatedButton(
-              onPressed: () => widget.onFind(
-                AssistantParams(
-                  occasion: _occasion,
-                  season: _season,
-                  colorPreference: _colorPreference,
-                  source: _source,
-                ),
+          ),
+          const SizedBox(height: 28),
+          ElevatedButton(
+            onPressed: () => widget.onFind(
+              AssistantParams(
+                occasion: _occasion,
+                season: _season,
+                colorPreference: _colorPreference,
+                source: _source,
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blush,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text('Find Outfits'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------- HEADER ----------------
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: AppColors.text,
-        letterSpacing: -0.3,
+            child: const Text('Find Outfits'),
+          ),
+        ],
       ),
     );
   }
@@ -132,24 +145,56 @@ class _ParameterScreenState extends State<ParameterScreen> {
           label: Text(
             opt[0].toUpperCase() + opt.substring(1),
             style: TextStyle(
-              color: isSelected
-                  ? AppColors.text
-                  : AppColors.text.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
+              color: isSelected ? AppColors.background : AppColors.text,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
           selected: isSelected,
           onSelected: (val) => onSelected(val ? opt : null),
-          backgroundColor: AppColors.lightMint,
-          selectedColor: AppColors.mint,
+          backgroundColor: AppColors.paper,
+          selectedColor: AppColors.primary,
           side: BorderSide(
-            color: isSelected ? AppColors.mint : AppColors.lightMint,
+            color: isSelected ? AppColors.primary : AppColors.divider,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(999),
           ),
+          showCheckmark: false,
         );
       }).toList(),
+    );
+  }
+}
+
+class _ParameterSection extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _ParameterSection({
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
     );
   }
 }

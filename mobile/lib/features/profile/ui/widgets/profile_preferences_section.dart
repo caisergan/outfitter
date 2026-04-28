@@ -17,11 +17,11 @@ class ProfilePreferencesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,20 +31,13 @@ class ProfilePreferencesSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Style Preferences',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               TextButton.icon(
                 onPressed: onEdit,
-                icon: const Icon(Icons.tune, size: 18, color: AppColors.blush),
-                label: const Text(
-                  'Edit',
-                  style: TextStyle(color: AppColors.text),
-                ),
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Edit'),
               ),
             ],
           ),
@@ -52,10 +45,9 @@ class ProfilePreferencesSection extends StatelessWidget {
           if (preferences.isEmpty)
             Text(
               'Set favorite occasions, seasons, and palettes for better outfit suggestions.',
-              style: TextStyle(
-                color: AppColors.text.withValues(alpha: 0.68),
-                height: 1.3,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.secondaryText,
+                  ),
             )
           else
             Wrap(
@@ -115,24 +107,22 @@ class _PreferencePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.cream,
+        color: AppColors.paper,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.mint),
+        border: Border.all(color: AppColors.divider),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: AppColors.blush),
+          Icon(icon, size: 15, color: AppColors.primary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontSize: 12,
+                ),
           ),
         ],
       ),

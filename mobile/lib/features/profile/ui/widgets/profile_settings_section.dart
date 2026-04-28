@@ -17,22 +17,18 @@ class ProfileSettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
             child: Text(
               'Notification & Privacy',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
           _SettingsSwitchTile(
@@ -94,25 +90,27 @@ class _SettingsSwitchTile extends StatelessWidget {
     return SwitchListTile.adaptive(
       value: value,
       onChanged: onChanged,
-      activeThumbColor: AppColors.blush,
-      activeTrackColor: AppColors.mint,
-      secondary: Icon(icon, color: AppColors.blush),
+      secondary: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 18),
+      ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.text,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
-        ),
+        style: Theme.of(context).textTheme.titleSmall,
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          color: AppColors.text.withValues(alpha: 0.68),
-          height: 1.25,
-        ),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.secondaryText,
+            ),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
     );
   }
 }

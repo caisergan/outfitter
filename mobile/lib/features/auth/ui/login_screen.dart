@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_provider.dart';
-import '../../../core/utils/error_helpers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/error_helpers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -45,141 +45,128 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 64),
-
-                Text(
-                  'Welcome back',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.text,
-                      ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  'Sign in to continue',
-                  style: TextStyle(
-                    color: AppColors.text.withValues(alpha: 0.6),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // EMAIL
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: AppColors.text),
-                  decoration: InputDecoration(
-                    hintText: 'Email',
-                    hintStyle: TextStyle(
-                      color: AppColors.text.withValues(alpha: 0.4),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            children: [
+              Text(
+                'OUTFITTER',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppColors.secondaryText,
+                      letterSpacing: 2.6,
                     ),
-                    prefixIcon:
-                        const Icon(Icons.email_outlined, color: AppColors.text),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Enter your email';
-                    if (!v.contains('@')) return 'Enter a valid email';
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 12),
-
-                // PASSWORD
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  style: const TextStyle(color: AppColors.text),
-                  decoration: InputDecoration(
-                    hintText: 'Password',
-                    hintStyle: TextStyle(
-                      color: AppColors.text.withValues(alpha: 0.4),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                'Welcome back',
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Sign in to continue curating your wardrobe and saved looks.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.secondaryText,
                     ),
-                    prefixIcon:
-                        const Icon(Icons.lock_outlined, color: AppColors.text),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.text,
-                      ),
-                      onPressed: () => setState(
-                        () => _obscurePassword = !_obscurePassword,
-                      ),
-                    ),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Enter your password';
-                    if (v.length < 6) return 'Password too short';
-                    return null;
-                  },
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.divider),
                 ),
-
-                const SizedBox(height: 24),
-
-                // BUTTON
-                ElevatedButton(
-                  onPressed: _loading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blush,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: _loading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Sign In',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // SIGNUP
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      "Don't have an account? ",
-                      style: TextStyle(
-                        color: AppColors.text.withValues(alpha: 0.6),
-                      ),
+                      'Sign in',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    TextButton(
-                      onPressed: () => context.go('/signup'),
-                      child: const Text(
-                        'Sign up',
-                        style: TextStyle(
-                          color: AppColors.blush,
-                          fontWeight: FontWeight.w600,
+                    const SizedBox(height: 6),
+                    Text(
+                      'Use your account details to continue.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.secondaryText,
+                          ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(color: AppColors.text),
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'name@example.com',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Enter your email';
+                        if (!v.contains('@')) return 'Enter a valid email';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      style: const TextStyle(color: AppColors.text),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Enter your password',
+                        prefixIcon: const Icon(Icons.lock_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Enter your password';
+                        if (v.length < 6) return 'Password too short';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    ElevatedButton(
+                      onPressed: _loading ? null : _submit,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                color: AppColors.background,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('Sign In'),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account? ",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.secondaryText,
+                        ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/signup'),
+                    child: const Text('Sign up'),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

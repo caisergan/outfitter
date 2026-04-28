@@ -26,17 +26,20 @@ class CachedItemImage extends StatelessWidget {
       height: height,
       fit: fit,
       placeholder: (_, __) => Container(
-        color: const Color(0xFFF0EDEA),
+        color: const Color(0xFFF8F4EC),
         width: width,
         height: height,
       ),
       errorWidget: (_, __, ___) => Container(
-        color: const Color(0xFFF0EDEA),
+        color: const Color(0xFFF8F4EC),
         width: width,
         height: height,
         child: const Center(
-          child:
-              Icon(Icons.broken_image_outlined, color: Colors.grey, size: 24),
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: Color(0xFF7A736A),
+            size: 24,
+          ),
         ),
       ),
     );
@@ -66,7 +69,7 @@ class FilterChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: options.map((opt) {
           final isSelected = selected.contains(opt);

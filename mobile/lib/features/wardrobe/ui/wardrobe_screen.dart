@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
-import 'package:fashion_app/features/wardrobe/data/wardrobe_repository.dart';
-import 'package:fashion_app/core/widgets/error_view.dart';
 import 'package:fashion_app/core/utils/error_helpers.dart';
-import 'widgets/wardrobe_item_card.dart';
-import 'widgets/tag_confirmation_sheet.dart';
+import 'package:fashion_app/core/widgets/error_view.dart';
+import 'package:fashion_app/features/wardrobe/data/wardrobe_repository.dart';
+import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
+
 import '/core/theme/app_colors.dart';
+import 'widgets/tag_confirmation_sheet.dart';
+import 'widgets/wardrobe_item_card.dart';
 
 class WardrobeScreen extends ConsumerStatefulWidget {
   const WardrobeScreen({super.key});
@@ -48,59 +49,68 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
 
   void _refresh() {
     final cat =
-    _tabController.index == 0 ? null : _categories[_tabController.index];
+        _tabController.index == 0 ? null : _categories[_tabController.index];
     ref.read(wardrobeNotifierProvider.notifier).fetch(category: cat);
   }
 
   Future<ImageSource?> _selectImageSource() {
     return showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => SafeArea(
         child: Wrap(
           children: [
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               child: Text(
                 'Add Item',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             ListTile(
               leading: Container(
-                padding: const EdgeInsets.all(8),
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.lightMint.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider),
                 ),
-                child: const Icon(Icons.camera_alt_outlined,
-                    color: AppColors.blush),
+                child: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: AppColors.primary,
+                ),
               ),
-              title: const Text('Take a photo',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600, color: AppColors.text)),
+              title: const Text('Take a photo'),
+              subtitle: const Text('Capture a new wardrobe item.'),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: Container(
-                padding: const EdgeInsets.all(8),
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.lightMint.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider),
                 ),
-                child: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.blush),
+                child: const Icon(
+                  Icons.photo_library_outlined,
+                  color: AppColors.primary,
+                ),
               ),
-              title: const Text('Choose from gallery',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600, color: AppColors.text)),
+              title: const Text('Choose from gallery'),
+              subtitle: const Text('Import an item you already photographed.'),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             const SizedBox(height: 8),
@@ -158,58 +168,51 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
         foregroundColor: AppColors.text,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'My Wardrobe',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-            color: AppColors.text,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('My Wardrobe'),
+            Text(
+              'A quieter archive of what you own',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(44),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: AppColors.blush,
-            unselectedLabelColor: AppColors.text.withOpacity(0.45),
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
+          preferredSize: const Size.fromHeight(52),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              indicatorSize: TabBarIndicatorSize.label,
+              tabs: _categories
+                  .map((c) => Tab(text: c[0].toUpperCase() + c.substring(1)))
+                  .toList(),
             ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 13,
-            ),
-            indicatorColor: AppColors.mint,
-            indicatorWeight: 2.5,
-            dividerColor: Colors.transparent,
-            tabs: _categories
-                .map((c) =>
-                Tab(text: c[0].toUpperCase() + c.substring(1)))
-                .toList(),
           ),
         ),
       ),
       body: wardrobeState.when(
         data: (items) => items.isEmpty
-            ? _buildEmptyState()
+            ? _buildEmptyState(context)
             : GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.72,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) =>
-              WardrobeItemCard(item: items[index]),
-        ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 18,
+                  childAspectRatio: 0.68,
+                ),
+                itemCount: items.length,
+                itemBuilder: (context, index) =>
+                    WardrobeItemCard(item: items[index]),
+              ),
         loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.mint),
+          child: CircularProgressIndicator(),
         ),
         error: (e, __) => ErrorView(
           message: dioErrorToMessage(e),
@@ -218,49 +221,56 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
-        backgroundColor: AppColors.blush,
-        foregroundColor: Colors.white,
-        elevation: 4,
         child: const Icon(Icons.add_a_photo_outlined),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.lightMint.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.door_sliding_outlined,
-              size: 48,
-              color: AppColors.mint,
-            ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: AppColors.divider),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Your wardrobe is empty.',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.text,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: AppColors.paper,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: const Icon(
+                  Icons.door_sliding_outlined,
+                  size: 34,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Your wardrobe is empty.',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Add your first item to start building outfits.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.secondaryText,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Add your first item to start building outfits!',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.text.withOpacity(0.5),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
