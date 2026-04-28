@@ -36,14 +36,14 @@ async def generate_outfit_image(
     quality: str,
     n: int,
 ) -> list[str]:
-    """Send reference images + prompt to the proxy's /images/edits endpoint.
-
-    Returns a list of ``data:image/png;base64,...`` strings.
-    """
     async with httpx.AsyncClient() as client:
-        image_bytes = await asyncio.gather(
-            *(_download(url, client) for url in reference_urls)
-        )
+        try:
+            image_bytes = await asyncio.gather(
+                *(_download(url, client) for url in reference_urls)
+            )
+        except httpx.HTTPError as exc:
+            logger.exception("Reference image download failed")
+            raise ReferenceImageError(str(exc)) from exc
 
         files = [("image[]", (f"ref-{i}.png", b, "image/png")) for i, b in enumerate(image_bytes)]
         data = {
@@ -54,14 +54,23 @@ async def generate_outfit_image(
             "n": str(n),
         }
 
-        response = await client.post(
-            f"{settings.CODEX_PROXY_URL}/images/edits",
-            headers={"Authorization": f"Bearer {settings.CODEX_PROXY_API_KEY}"},
-            files=files,
-            data=data,
-            timeout=_PROXY_TIMEOUT,
-        )
-        response.raise_for_status()
+        try:
+            response = await client.post(
+                f"{settings.CODEX_PROXY_URL}/images/edits",
+                headers={"Authorization": f"Bearer {settings.CODEX_PROXY_API_KEY}"},
+                files=files,
+                data=data,
+                timeout=_PROXY_TIMEOUT,
+            )
+            response.raise_for_status()
+        except (httpx.TimeoutException, httpx.ReadTimeout) as exc:
+            raise CodexProxyTimeout(str(exc)) from exc
+        except httpx.HTTPStatusError as exc:
+            detail = exc.response.text[:500] if exc.response is not None else str(exc)
+            raise CodexProxyError(f"{exc.response.status_code}: {detail}") from exc
+        except httpx.HTTPError as exc:
+            raise CodexProxyError(str(exc)) from exc
+
         body = response.json()
 
     return [f"data:image/png;base64,{item['b64_json']}" for item in body.get("data", [])]
