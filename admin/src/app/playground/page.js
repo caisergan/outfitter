@@ -122,7 +122,13 @@ export default function PlaygroundPage() {
             toast.error("Pick at least one catalog item");
             return;
         }
-        if (!prompt.trim()) {
+        const cleanPrompt = prompt
+            .split("\n")
+            .map((line) => line.replace(/[ \t]+$/g, ""))
+            .join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+        if (!cleanPrompt) {
             toast.error("Prompt cannot be empty");
             return;
         }
@@ -130,7 +136,7 @@ export default function PlaygroundPage() {
         try {
             const data = await generatePlaygroundImage({
                 catalog_item_ids: Array.from(selected.keys()),
-                prompt,
+                prompt: cleanPrompt,
                 size,
                 quality,
                 n: count,
@@ -152,10 +158,17 @@ export default function PlaygroundPage() {
         link.click();
     }
 
+    const normalizedPrompt = prompt
+        .split("\n")
+        .map((line) => line.replace(/[ \t]+$/g, ""))
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
     const total = results?.total ?? 0;
     const totalPages = Math.ceil(total / LIMIT);
     const currentPage = Math.floor(offset / LIMIT) + 1;
-    const canGenerate = selected.size > 0 && prompt.trim().length > 0 && !generating;
+    const canGenerate = selected.size > 0 && normalizedPrompt.length > 0 && !generating;
 
     return (
         <div className="space-y-6">
@@ -335,7 +348,14 @@ export default function PlaygroundPage() {
                     placeholder="Describe how to render the selected items. e.g. 'Place these clothes on a young woman walking down a Paris street, photorealistic, golden hour.'"
                     className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 resize-none"
                 />
-                <p className="text-xs text-slate-500">{prompt.length} / 2000</p>
+                <p className="text-xs text-slate-500">
+                    {normalizedPrompt.length} / 32000
+                    {prompt.length !== normalizedPrompt.length && (
+                        <span className="ml-2 text-slate-600">
+                            ({prompt.length - normalizedPrompt.length} chars of whitespace will be stripped)
+                        </span>
+                    )}
+                </p>
             </Card>
 
             {/* Advanced */}
