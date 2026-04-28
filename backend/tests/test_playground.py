@@ -69,3 +69,117 @@ async def test_playground_generate_happy_path(client: AsyncClient, db, monkeypat
     assert kwargs["size"] == "1024x1536"
     assert kwargs["quality"] == "high"
     assert kwargs["n"] == 1
+
+
+@pytest.mark.asyncio
+async def test_playground_unauthorized(client: AsyncClient):
+    response = await client.post(
+        "/playground/generate-image",
+        json={
+            "catalog_item_ids": [str(uuid.uuid4())],
+            "prompt": "x",
+        },
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_playground_unknown_item_id(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="unknown@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+    bogus = uuid.uuid4()
+
+    response = await client.post(
+        "/playground/generate-image",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"catalog_item_ids": [str(bogus)], "prompt": "x"},
+    )
+    assert response.status_code == 404
+    assert str(bogus) in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_playground_validation_empty_prompt(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="empty@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+    item = await _seed_item(db)
+
+    response = await client.post(
+        "/playground/generate-image",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"catalog_item_ids": [str(item.id)], "prompt": ""},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_playground_validation_no_items(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="noitems@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    response = await client.post(
+        "/playground/generate-image",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"catalog_item_ids": [], "prompt": "x"},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_playground_validation_too_many_items(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="toomany@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    response = await client.post(
+        "/playground/generate-image",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "catalog_item_ids": [str(uuid.uuid4()) for _ in range(17)],
+            "prompt": "x",
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_playground_proxy_error_maps_to_502(client: AsyncClient, db, monkeypatch):
+    from app.services.codex_image_service import CodexProxyError
+
+    signup_resp = await _signup(client, email="proxyerr@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+    item = await _seed_item(db)
+
+    async def boom(**_kwargs):
+        raise CodexProxyError("500: upstream blew up")
+
+    monkeypatch.setattr("app.routers.playground.generate_outfit_image", boom)
+
+    response = await client.post(
+        "/playground/generate-image",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"catalog_item_ids": [str(item.id)], "prompt": "x"},
+    )
+    assert response.status_code == 502
+    assert "Image generation failed" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_playground_timeout_maps_to_504(client: AsyncClient, db, monkeypatch):
+    from app.services.codex_image_service import CodexProxyTimeout
+
+    signup_resp = await _signup(client, email="timeout@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+    item = await _seed_item(db)
+
+    async def slow(**_kwargs):
+        raise CodexProxyTimeout("read timeout")
+
+    monkeypatch.setattr("app.routers.playground.generate_outfit_image", slow)
+
+    response = await client.post(
+        "/playground/generate-image",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"catalog_item_ids": [str(item.id)], "prompt": "x"},
+    )
+    assert response.status_code == 504
+    assert response.json()["detail"] == "Image generation timed out"
