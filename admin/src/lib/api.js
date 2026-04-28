@@ -162,3 +162,11 @@ export async function submitTryOn(data) {
 export async function getTryOnStatus(jobId) {
   return apiFetch(`/tryon/status/${jobId}`);
 }
+
+// ── Playground ───────────────────────────────────────────────────────────────
+
+export async function generatePlaygroundImage(payload) {
+  // payload: { catalog_item_ids: string[], prompt: string,
+  //            size?: string, quality?: string, n?: number }
+  return apiFetch("/playground/generate-image", { method: "POST", body: payload });
+}
