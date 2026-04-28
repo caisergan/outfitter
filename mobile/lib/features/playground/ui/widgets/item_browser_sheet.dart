@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/core/models/catalog_item.dart';
+import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/discover/data/catalog_repository.dart';
@@ -73,47 +73,31 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Shop catalog',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    Text(
-                      'Garment Selection',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Spacer(),
-                    Icon(Icons.tune,
-                        color: AppColors.text.withValues(alpha: 0.5)),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  'Browse by category and place pieces directly onto the canvas.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              // Category Filters
-              _buildCategoryFilters(),
-              const SizedBox(height: 16),
-              // Grid View
-              Expanded(child: _buildItemGrid(scrollController)),
-            ],
+                const SizedBox(height: 18),
+                _buildCategoryFilters(),
+                const SizedBox(height: 14),
+                Expanded(child: _buildItemGrid(scrollController)),
+              ],
+            ),
           ),
         );
       },
@@ -123,34 +107,24 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   Widget _buildCategoryFilters() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: _categoryFilters.map((filter) {
           final isSelected =
               _selectedCategory.backendCategory == filter.backendCategory;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => _selectCategory(filter),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.text : AppColors.lightMint,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSelected ? AppColors.text : AppColors.lightMint,
-                  ),
-                ),
-                child: Text(
-                  filter.label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.text,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                ),
+            child: ChoiceChip(
+              label: Text(filter.label),
+              selected: isSelected,
+              onSelected: (_) => _selectCategory(filter),
+              selectedColor: AppColors.surfaceAlt,
+              backgroundColor: AppColors.surface,
+              side: BorderSide(
+                color: isSelected ? AppColors.borderStrong : AppColors.border,
               ),
+              labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: isSelected ? AppColors.text : AppColors.textMuted,
+                  ),
             ),
           );
         }).toList(),
@@ -171,13 +145,12 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
         }
 
         if (snapshot.hasError) {
-          return const Center(
+          return Center(
             child: Text(
               'Could not load garments.',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
             ),
           );
         }
@@ -185,25 +158,24 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
         final items = snapshot.data ?? [];
 
         if (items.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No garments found for this category.',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
             ),
           );
         }
 
         return GridView.builder(
           controller: scrollController,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.only(top: 6, bottom: 24),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 20,
-            childAspectRatio: 0.75,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 18,
+            childAspectRatio: 0.68,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -213,9 +185,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
             return GestureDetector(
               onTap: () {
                 if (widget.updateSlotOnSelect && widget.type != null) {
-                  ref
-                      .read(slotBuilderProvider.notifier)
-                      .setSlot(widget.type!, item);
+                  ref.read(slotBuilderProvider.notifier).setSlot(widget.type!, item);
                 }
                 widget.onItemSelected(item);
                 Navigator.pop(context);
@@ -224,38 +194,22 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(16),
-                            border: isSelected
-                                ? Border.all(
-                                    color: const Color(0xFF1D5CE0), width: 2)
-                                : null,
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: CachedItemImage(url: item.imageUrl),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.borderStrong
+                              : Colors.transparent,
+                          width: 1.5,
                         ),
-                        if (isSelected)
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1D5CE0),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: CachedItemImage(
+                        url: item.imageUrl,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -263,15 +217,11 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                     item.name.toUpperCase(),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.left,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight:
-                          isSelected ? FontWeight.w900 : FontWeight.w700,
-                      color:
-                          isSelected ? const Color(0xFF1D5CE0) : Colors.black87,
-                      letterSpacing: 0.5,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color:
+                              isSelected ? AppColors.text : AppColors.textMuted,
+                          letterSpacing: 0.8,
+                        ),
                   ),
                 ],
               ),

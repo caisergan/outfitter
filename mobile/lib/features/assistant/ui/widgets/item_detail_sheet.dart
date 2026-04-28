@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:fashion_app/core/models/outfit_models.dart';
+import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 
 class ItemDetailSheet extends StatelessWidget {
@@ -13,10 +14,10 @@ class ItemDetailSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
         ),
       ),
       child: Column(
@@ -29,8 +30,8 @@ class ItemDetailSheet extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.surfaceAlt,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: CachedItemImage(url: item.imageUrl),
@@ -41,14 +42,13 @@ class ItemDetailSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(item.brand,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.w500)),
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: AppColors.textMuted,
+                              letterSpacing: 0.8,
+                            )),
                     const SizedBox(height: 4),
                     Text(item.name,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700)),
+                        style: Theme.of(context).textTheme.titleLarge),
                   ],
                 ),
               ),

@@ -24,49 +24,34 @@ class WardrobeBrowserSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'My wardrobe',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    Text(
-                      'My Wardrobe',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.checkroom_outlined,
-                      color: AppColors.text.withValues(alpha: 0.5),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  'Select a saved piece and place it onto the current look.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _WardrobeGrid(
-                  scrollController: scrollController,
-                  onItemSelected: onItemSelected,
+                const SizedBox(height: 16),
+                Expanded(
+                  child: _WardrobeGrid(
+                    scrollController: scrollController,
+                    onItemSelected: onItemSelected,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -106,38 +91,36 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
         }
 
         if (snapshot.hasError) {
-          return const Center(
+          return Center(
             child: Text(
               'Could not load your wardrobe.',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
             ),
           );
         }
 
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'Your wardrobe is empty.',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
             ),
           );
         }
 
         return GridView.builder(
           controller: widget.scrollController,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.only(top: 6, bottom: 24),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 20,
-            childAspectRatio: 0.75,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 18,
+            childAspectRatio: 0.68,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -153,12 +136,14 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.lightMint.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.lightMint),
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: CachedItemImage(url: item.imageUrl),
+                      padding: const EdgeInsets.all(10),
+                      child: CachedItemImage(
+                        url: item.imageUrl,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -166,12 +151,10 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
                     _wardrobeItemLabel(item).toUpperCase(),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: AppColors.textMuted,
+                          letterSpacing: 0.8,
+                        ),
                   ),
                 ],
               ),

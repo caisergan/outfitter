@@ -12,44 +12,64 @@ class MainScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final currentIndex = _tabs.indexWhere((t) => location.startsWith(t));
+    final showBottomNav = currentIndex >= 0;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: child,
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: AppColors.cream,
-        indicatorColor: AppColors.mint,
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        selectedIndex: currentIndex < 0 ? 0 : currentIndex,
-        onDestinationSelected: (i) => context.go(_tabs[i]),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.explore, color: AppColors.text),
-            label: 'Discover',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.checkroom_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.checkroom, color: AppColors.text),
-            label: 'Playground',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.auto_awesome, color: AppColors.text),
-            label: 'Assistant',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.door_sliding_outlined, color: AppColors.text),
-            selectedIcon: Icon(Icons.door_sliding, color: AppColors.text),
-            label: 'Wardrobe',
-          ),
-        ],
-      ),
+      bottomNavigationBar: showBottomNav
+          ? Container(
+              color: AppColors.cream,
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    indicatorColor: AppColors.surfaceAlt,
+                    labelBehavior:
+                        NavigationDestinationLabelBehavior.alwaysShow,
+                    selectedIndex: currentIndex,
+                    onDestinationSelected: (i) => context.go(_tabs[i]),
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.explore_outlined),
+                        selectedIcon: Icon(Icons.explore),
+                        label: 'Discover',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.checkroom_outlined),
+                        selectedIcon: Icon(Icons.checkroom),
+                        label: 'Playground',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.auto_awesome_outlined),
+                        selectedIcon: Icon(Icons.auto_awesome),
+                        label: 'Stylist',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.door_sliding_outlined),
+                        selectedIcon: Icon(Icons.door_sliding),
+                        label: 'Wardrobe',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

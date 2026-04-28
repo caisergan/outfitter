@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/assistant_provider.dart';
 import '../../../core/models/outfit_models.dart';
-import 'widgets/parameter_screen.dart';
+import '../../../core/theme/app_colors.dart';
+import '../providers/assistant_provider.dart';
 import 'swipe_outfits_screen.dart';
+import 'widgets/parameter_screen.dart';
 
 class AssistantScreen extends ConsumerStatefulWidget {
   final String? anchorItemId;
+
   const AssistantScreen({this.anchorItemId, super.key});
 
   @override
@@ -20,9 +22,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   Future<void> _handleFindOutfits(AssistantParams params) async {
     setState(() => _loading = true);
 
-    await ref
-        .read(assistantNotifierProvider.notifier)
-        .suggest(params);
+    await ref.read(assistantNotifierProvider.notifier).suggest(params);
 
     final state = ref.read(assistantNotifierProvider);
 
@@ -43,8 +43,24 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.cream,
       appBar: AppBar(
-        title: const Text('AI Stylist'),
+        toolbarHeight: 76,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'AI Stylist',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            Text(
+              'Build a brief and let the app curate the outfit direction.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+            ),
+          ],
+        ),
       ),
       body: Stack(
         children: [
@@ -52,12 +68,33 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             onFind: _handleFindOutfits,
             initialAnchorItemId: widget.anchorItemId,
           ),
-
           if (_loading)
-            const ColoredBox(
-              color: Colors.black26,
+            ColoredBox(
+              color: Colors.black.withValues(alpha: 0.22),
               child: Center(
-                child: CircularProgressIndicator(),
+                child: Container(
+                  width: 180,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 20,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Creating looks...',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
         ],

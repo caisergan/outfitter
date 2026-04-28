@@ -91,8 +91,8 @@ class _OutfitPreviewCard extends StatelessWidget {
     return SizedBox(
       width: 132,
       child: Material(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -106,10 +106,10 @@ class _OutfitPreviewCard extends StatelessWidget {
                     outfit.generatedImageUrl != null
                         ? CachedItemImage(url: outfit.generatedImageUrl!)
                         : Container(
-                            color: AppColors.lightMint,
+                            color: AppColors.surfaceAlt,
                             child: const Icon(
                               Icons.checkroom_outlined,
-                              color: AppColors.text,
+                              color: AppColors.textMuted,
                               size: 32,
                             ),
                           ),
@@ -117,7 +117,7 @@ class _OutfitPreviewCard extends StatelessWidget {
                       top: 8,
                       right: 8,
                       child: Material(
-                        color: AppColors.cream.withValues(alpha: 0.92),
+                        color: AppColors.surface.withValues(alpha: 0.94),
                         shape: const CircleBorder(),
                         child: InkWell(
                           customBorder: const CircleBorder(),
@@ -214,20 +214,20 @@ class _EmptyOutfitState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.mint,
-              borderRadius: BorderRadius.circular(14),
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceAlt,
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: AppColors.text),
+            child: Icon(icon, color: AppColors.blush),
           ),
           const SizedBox(width: 14),
           Expanded(

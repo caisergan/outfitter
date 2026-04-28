@@ -139,21 +139,23 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
-        titleSpacing: 20,
-        centerTitle: false,
+        toolbarHeight: 82,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Playground'),
             Text(
-              canvas.activeOutfitId == null ? 'Styling Canvas' : canvas.title,
+              'Studio',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            Text(
+              canvas.activeOutfitId == null
+                  ? 'Compose a look with wardrobe and catalog pieces.'
+                  : canvas.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
             ),
           ],
         ),
@@ -194,21 +196,13 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
               child: Row(
                 children: [
                   Expanded(
                     child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.text,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
                       icon: const Icon(Icons.add),
-                      label: const Text('Add garment'),
+                      label: const Text('Add Piece'),
                       onPressed: _openGarmentSourcePicker,
                     ),
                   ),
@@ -223,7 +217,7 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
             ),
             const Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: _StylingCanvasSurface(),
               ),
             ),
@@ -253,12 +247,12 @@ class _StylingCanvasSurface extends ConsumerWidget {
               ref.read(stylingCanvasProvider.notifier).selectGarment(null),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFEFA),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.lightMint),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.border),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(28),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -356,15 +350,17 @@ class _CanvasGarmentWidgetState extends ConsumerState<_CanvasGarmentWidget> {
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(18),
                 border: widget.isSelected
-                    ? Border.all(color: AppColors.blush, width: 2)
-                    : Border.all(color: Colors.white.withValues(alpha: 0)),
+                    ? Border.all(color: AppColors.borderStrong, width: 1.5)
+                    : Border.all(color: AppColors.surfaceAlt),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.text.withValues(alpha: 0.10),
-                    blurRadius: widget.isSelected ? 18 : 10,
+                    color: Colors.black.withValues(
+                      alpha: widget.isSelected ? 0.11 : 0.06,
+                    ),
+                    blurRadius: widget.isSelected ? 22 : 12,
                     offset: const Offset(0, 8),
                   ),
                 ],
@@ -399,23 +395,24 @@ class _SelectionInspector extends ConsumerWidget {
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.lightMint,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border),
         ),
         child: selected == null
             ? Row(
                 children: [
-                  const Icon(Icons.touch_app_outlined, color: AppColors.text),
+                  const Icon(
+                    Icons.touch_app_outlined,
+                    color: AppColors.blush,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '${canvas.garments.length} garments on canvas',
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      '${canvas.garments.length} pieces on canvas',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
                   _ToolbarIconButton(
@@ -445,11 +442,10 @@ class _SelectionInspector extends ConsumerWidget {
                           selected.item.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontSize: 15,
+                                  ),
                         ),
                       ),
                     ],
@@ -526,36 +522,28 @@ class _GarmentSourceSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+          Text(
+            'Add piece from',
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Add garment from',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose whether you want to pull from the shop catalog or your own wardrobe.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textMuted,
+                ),
           ),
           const SizedBox(height: 16),
           _GarmentSourceTile(
             icon: Icons.public,
-            title: 'Online Platform',
+            title: 'Shop Catalog',
             onTap: () => Navigator.pop(context, _GarmentSource.onlinePlatform),
           ),
           const SizedBox(height: 10),
@@ -589,34 +577,30 @@ class _GarmentSourceTile extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.lightMint.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.lightMint),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
             Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceAlt,
+                shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.text),
+              child: Icon(icon, color: AppColors.blush),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: AppColors.text),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
           ],
         ),
       ),
@@ -635,31 +619,18 @@ class _LayerOrderSheet extends ConsumerWidget {
       height: MediaQuery.sizeOf(context).height * 0.62,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.layers_outlined, color: AppColors.text),
-              SizedBox(width: 10),
+              const Icon(Icons.layers_outlined, color: AppColors.blush),
+              const SizedBox(width: 10),
               Text(
                 'Layers',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
             ],
           ),
@@ -731,31 +702,18 @@ class _SavedOutfitsSheet extends ConsumerWidget {
       height: MediaQuery.sizeOf(context).height * 0.62,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.folder_open_outlined, color: AppColors.text),
-              SizedBox(width: 10),
+              const Icon(Icons.folder_open_outlined, color: AppColors.blush),
+              const SizedBox(width: 10),
               Text(
                 'Saved outfits',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
             ],
           ),
@@ -829,8 +787,8 @@ class _OutfitPreview extends StatelessWidget {
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.lightMint.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const SizedBox.expand(),
           ),
@@ -862,14 +820,14 @@ class _EmptyCanvasPrompt extends StatelessWidget {
     return const Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.checkroom_outlined, color: AppColors.blush, size: 45),
-        SizedBox(height: 15),
+        Icon(Icons.checkroom_outlined, color: AppColors.blush, size: 42),
+        SizedBox(height: 16),
         Text(
-          'Add a garment',
+          'Add a piece to begin',
           style: TextStyle(
             color: AppColors.text,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -896,11 +854,12 @@ class _ToolbarIconButton extends StatelessWidget {
         dimension: 48,
         child: IconButton.filledTonal(
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.lightMint,
+            backgroundColor: AppColors.surface,
             foregroundColor: AppColors.text,
-            disabledBackgroundColor: AppColors.lightMint.withValues(alpha: 0.5),
+            disabledBackgroundColor: AppColors.surfaceAlt,
+            side: const BorderSide(color: AppColors.border),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
             ),
           ),
           icon: Icon(icon),
@@ -927,11 +886,17 @@ class _InspectorIconButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: SizedBox.square(
-        dimension: 38,
-        child: IconButton(
+        dimension: 40,
+        child: IconButton.filledTonal(
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.surfaceAlt,
+            foregroundColor: AppColors.text,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
           padding: EdgeInsets.zero,
           iconSize: 20,
-          color: AppColors.text,
           icon: Icon(icon),
           onPressed: onPressed,
         ),
@@ -944,9 +909,9 @@ class _CanvasGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.lightMint.withValues(alpha: 0.35)
+      ..color = AppColors.border.withValues(alpha: 0.45)
       ..strokeWidth = 1;
-    const spacing = 32.0;
+    const spacing = 40.0;
 
     for (var x = spacing; x < size.width; x += spacing) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);

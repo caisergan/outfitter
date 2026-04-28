@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 /// Generic error view with retry button. Used with AsyncValue.error states.
 class ErrorView extends StatelessWidget {
   final String message;
@@ -19,7 +21,19 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceAlt,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline,
+                size: 30,
+                color: AppColors.danger,
+              ),
+            ),
             const SizedBox(height: 16),
             Text(
               message,
@@ -27,7 +41,7 @@ class ErrorView extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: Colors.grey.shade600),
+                  ?.copyWith(color: AppColors.textMuted),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
@@ -62,7 +76,7 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (isVisible)
           Container(
-            color: Colors.black54,
+            color: Colors.black38,
             child: Center(
               child: Card(
                 shape: RoundedRectangleBorder(
@@ -73,7 +87,7 @@ class LoadingOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(),
+                      const CircularProgressIndicator(color: AppColors.blush),
                       if (message != null) ...[
                         const SizedBox(height: 16),
                         Text(message!,

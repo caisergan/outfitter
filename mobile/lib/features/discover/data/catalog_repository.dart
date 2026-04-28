@@ -9,6 +9,14 @@ class CatalogRepository {
   final Dio _dio;
   CatalogRepository(this._dio);
 
+  CatalogItem _catalogItemFromApi(Map<String, dynamic> json) {
+    return CatalogItem.fromJson({
+      ...json,
+      if (json['image_url'] == null && json['image_front_url'] != null)
+        'image_url': json['image_front_url'],
+    });
+  }
+
   Future<List<CatalogItem>> search({
     String? category,
     String? color,
@@ -31,7 +39,7 @@ class CatalogRepository {
       },
     );
     return (response.data['items'] as List)
-        .map((e) => CatalogItem.fromJson(e as Map<String, dynamic>))
+        .map((e) => _catalogItemFromApi(e as Map<String, dynamic>))
         .toList();
   }
 
@@ -45,7 +53,7 @@ class CatalogRepository {
       queryParameters: {'limit': limit, 'source': source},
     );
     return (response.data['items'] as List)
-        .map((e) => CatalogItem.fromJson(e as Map<String, dynamic>))
+        .map((e) => _catalogItemFromApi(e as Map<String, dynamic>))
         .toList();
   }
 }

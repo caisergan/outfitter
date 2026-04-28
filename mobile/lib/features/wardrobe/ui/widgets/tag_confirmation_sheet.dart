@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fashion_app/core/models/wardrobe_item.dart';
-import 'package:fashion_app/core/widgets/shared_widgets.dart';
+import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/utils/error_helpers.dart';
+import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
-import '/core/theme/app_colors.dart';
 
 class TagConfirmationSheet extends ConsumerStatefulWidget {
   final WardrobeTagResult initialTags;
@@ -65,166 +65,154 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.cream,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Stack(
-            children: [
-              Column(
+        return Column(
+          children: [
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
                 children: [
-                  // ── Drag handle ──────────────────────────────────────
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.lightMint.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                  Text(
+                    'Confirm the piece',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Review the detected details before adding this image to your wardrobe.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: CachedItemImage(
+                      url: widget.imageUrl,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  Expanded(
-                    child: ListView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 120),
+                  const SizedBox(height: 20),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
                       children: [
-                        const Text(
-                          'Confirm Details',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.text,
-                          ),
+                        _InfoRow(
+                          label: 'Category',
+                          value: _titleCase(_category),
                         ),
-                        const SizedBox(height: 20),
-
-                        // ── Image preview ──────────────────────────────
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            height: 200,
-                            color: Colors.white,
-                            padding: const EdgeInsets.all(12),
-                            child: CachedItemImage(
-                              url: widget.imageUrl,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+                        _InfoRow(
+                          label: 'Type',
+                          value: _subtype == null || _subtype!.isEmpty
+                              ? 'Not detected'
+                              : _titleCase(_subtype!),
                         ),
-                        const SizedBox(height: 28),
-
-                        // ── Details card ───────────────────────────────
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.lightMint.withOpacity(0.6),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildSection('Category',
-                                  _category[0].toUpperCase() +
-                                      _category.substring(1),
-                                  showDivider: true),
-                              _buildSection(
-                                  'Type', _subtype ?? '—',
-                                  showDivider: true),
-                              _buildSection('Colors', _color.join(', '),
-                                  showDivider: true),
-                              _buildSection(
-                                  'Tags', _styleTags.join(', '),showDivider: true),
-                            ],
-                          ),
+                        _InfoRow(
+                          label: 'Colors',
+                          value: _color.isEmpty
+                              ? 'Not detected'
+                              : _color.map(_titleCase).join(', '),
+                        ),
+                        _InfoRow(
+                          label: 'Style tags',
+                          value: _styleTags.isEmpty
+                              ? 'Not detected'
+                              : _styleTags.map(_titleCase).join(', '),
+                          isLast: true,
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-
-              // ── Save button (pinned) ───────────────────────────────────
-              Positioned(
-                bottom: 28,
-                left: 24,
-                right: 24,
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blush,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
                   onPressed: _isSaving ? null : _handleSave,
                   child: _isSaving
                       ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : const Text(
-                    'Add to Wardrobe',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Add to Wardrobe'),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildSection(String title, String value,
-      {bool showDivider = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: AppColors.text.withOpacity(0.4),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
+  String _titleCase(String value) {
+    return value
+        .split(' ')
+        .map((word) => word.isEmpty
+            ? word
+            : word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isLast;
+
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : const Border(
+                bottom: BorderSide(color: AppColors.border),
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
-              ),
-            ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 82,
+            child: Text(
+              label.toUpperCase(),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.9,
+                  ),
+            ),
           ),
-        ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            color: AppColors.lightMint.withOpacity(0.5),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }

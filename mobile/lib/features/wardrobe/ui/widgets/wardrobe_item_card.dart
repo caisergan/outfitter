@@ -12,59 +12,80 @@ class WardrobeItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/wardrobe/item/${item.id}'),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.lightMint.withOpacity(0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.mint.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            // ── Image — white container, BoxFit.contain so full item shows ──
-            Expanded(
-              flex: 4,
-              child: Container(
-                width: double.infinity,
-                color: Colors.white,
-                padding: const EdgeInsets.all(10),
-                child: CachedItemImage(
-                  url: item.imageUrl,
-                  fit: BoxFit.contain, // same as detail screen
-                ),
-              ),
-            ),
+    final colorLabel =
+        item.color.isEmpty ? null : _titleCase(item.color.first).trim();
+    final title = _titleCase(item.subtype ?? item.category);
 
-            // ── Label pill ───────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-              color: AppColors.lightMint,
-              child: Text(
-                '${item.color.isNotEmpty ? item.color.first[0].toUpperCase() + item.color.first.substring(1) : ''} ${item.subtype ?? item.category}'.trim(),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                  letterSpacing: 0.2,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: () => context.go('/wardrobe/item/${item.id}'),
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: CachedItemImage(
+                      url: item.imageUrl,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (colorLabel != null) ...[
+                      Text(
+                        colorLabel.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: AppColors.textMuted,
+                              letterSpacing: 1.0,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontSize: 21,
+                            height: 1.05,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  String _titleCase(String value) {
+    return value
+        .split(' ')
+        .map((word) => word.isEmpty
+            ? word
+            : word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 }

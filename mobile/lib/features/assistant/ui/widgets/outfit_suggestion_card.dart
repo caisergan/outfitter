@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:fashion_app/core/models/outfit_models.dart';
+import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/core/utils/error_helpers.dart';
 import 'package:fashion_app/features/assistant/data/outfit_repository.dart';
@@ -29,11 +30,6 @@ class OutfitSuggestionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -47,8 +43,10 @@ class OutfitSuggestionCard extends ConsumerWidget {
                   outfit.styleNote,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500, height: 1.4),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 22,
+                        height: 1.15,
+                      ),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -67,8 +65,12 @@ class OutfitSuggestionCard extends ConsumerWidget {
                       icon: const Icon(Icons.bookmark_border),
                       onPressed: () => _handleSave(context, ref),
                       style: IconButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14))),
+                        backgroundColor: AppColors.surfaceAlt,
+                        foregroundColor: AppColors.text,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
                     ),
                   ],
                 ),

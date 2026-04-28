@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
-import 'package:fashion_app/features/wardrobe/data/wardrobe_repository.dart';
-import 'package:fashion_app/core/widgets/error_view.dart';
 import 'package:fashion_app/core/utils/error_helpers.dart';
-import 'widgets/wardrobe_item_card.dart';
-import 'widgets/tag_confirmation_sheet.dart';
+import 'package:fashion_app/core/widgets/error_view.dart';
+import 'package:fashion_app/features/wardrobe/data/wardrobe_repository.dart';
+import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
 import '/core/theme/app_colors.dart';
+import 'widgets/tag_confirmation_sheet.dart';
+import 'widgets/wardrobe_item_card.dart';
 
 class WardrobeScreen extends ConsumerStatefulWidget {
   const WardrobeScreen({super.key});
@@ -47,64 +47,49 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
   }
 
   void _refresh() {
-    final cat =
-    _tabController.index == 0 ? null : _categories[_tabController.index];
-    ref.read(wardrobeNotifierProvider.notifier).fetch(category: cat);
+    final category =
+        _tabController.index == 0 ? null : _categories[_tabController.index];
+    ref.read(wardrobeNotifierProvider.notifier).fetch(category: category);
   }
 
   Future<ImageSource?> _selectImageSource() {
     return showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      useSafeArea: true,
       builder: (_) => SafeArea(
-        child: Wrap(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: Text(
-                'Add Item',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Add a new piece',
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.lightMint.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.camera_alt_outlined,
-                    color: AppColors.blush),
+              const SizedBox(height: 8),
+              Text(
+                'Start with a photo so the wardrobe stays image-led and easy to scan.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textMuted,
+                    ),
               ),
-              title: const Text('Take a photo',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600, color: AppColors.text)),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.lightMint.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.blush),
+              const SizedBox(height: 18),
+              _SourceTile(
+                icon: Icons.camera_alt_outlined,
+                title: 'Take a photo',
+                subtitle: 'Capture an item directly from the camera.',
+                onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
-              title: const Text('Choose from gallery',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600, color: AppColors.text)),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 10),
+              _SourceTile(
+                icon: Icons.photo_library_outlined,
+                title: 'Choose from gallery',
+                subtitle: 'Use an existing product or wardrobe image.',
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -120,8 +105,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
       imageQuality: 85,
       maxWidth: 1200,
     );
-    if (image == null) return;
-    if (!mounted) return;
+    if (image == null || !mounted) return;
 
     try {
       final repo = ref.read(wardrobeRepositoryProvider);
@@ -154,113 +138,186 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
-        backgroundColor: AppColors.cream,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'My Wardrobe',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-            color: AppColors.text,
-          ),
+        toolbarHeight: 82,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Wardrobe',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            Text(
+              'Your personal archive of pieces, ready for styling.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+            ),
+          ],
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(44),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: AppColors.blush,
-            unselectedLabelColor: AppColors.text.withOpacity(0.45),
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
+          preferredSize: const Size.fromHeight(56),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+              dividerColor: Colors.transparent,
+              indicatorPadding: const EdgeInsets.symmetric(vertical: 6),
+              tabs: _categories
+                  .map(
+                    (category) => Tab(
+                      height: 36,
+                      text: category[0].toUpperCase() + category.substring(1),
+                    ),
+                  )
+                  .toList(),
             ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 13,
-            ),
-            indicatorColor: AppColors.mint,
-            indicatorWeight: 2.5,
-            dividerColor: Colors.transparent,
-            tabs: _categories
-                .map((c) =>
-                Tab(text: c[0].toUpperCase() + c.substring(1)))
-                .toList(),
           ),
         ),
       ),
       body: wardrobeState.when(
         data: (items) => items.isEmpty
-            ? _buildEmptyState()
+            ? _buildEmptyState(context)
             : GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.72,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) =>
-              WardrobeItemCard(item: items[index]),
-        ),
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.mint),
-        ),
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 18,
+                  childAspectRatio: 0.68,
+                ),
+                itemCount: items.length,
+                itemBuilder: (context, index) =>
+                    WardrobeItemCard(item: items[index]),
+              ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, __) => ErrorView(
           message: dioErrorToMessage(e),
           onRetry: _refresh,
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _addItem,
-        backgroundColor: AppColors.blush,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        child: const Icon(Icons.add_a_photo_outlined),
+        icon: const Icon(Icons.add_a_photo_outlined),
+        label: const Text('Add Piece'),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.lightMint.withOpacity(0.3),
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceAlt,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.checkroom_outlined,
+                size: 36,
+                color: AppColors.blush,
+              ),
             ),
-            child: const Icon(
-              Icons.door_sliding_outlined,
-              size: 48,
-              color: AppColors.mint,
+            const SizedBox(height: 20),
+            Text(
+              'Your wardrobe is still empty.',
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first item to start building a calmer, more useful styling archive.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: 180,
+              child: OutlinedButton(
+                onPressed: _addItem,
+                child: const Text('Add First Piece'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SourceTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.border),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Your wardrobe is empty.',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.text,
-            ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceAlt,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.blush),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textMuted,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Add your first item to start building outfits!',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.text.withOpacity(0.5),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

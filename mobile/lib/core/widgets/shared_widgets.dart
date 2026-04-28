@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 /// Consistent cached image with a loading placeholder and broken-image fallback.
 class CachedItemImage extends StatelessWidget {
   final String url;
@@ -26,17 +28,20 @@ class CachedItemImage extends StatelessWidget {
       height: height,
       fit: fit,
       placeholder: (_, __) => Container(
-        color: const Color(0xFFF0EDEA),
+        color: AppColors.surfaceAlt,
         width: width,
         height: height,
       ),
       errorWidget: (_, __, ___) => Container(
-        color: const Color(0xFFF0EDEA),
+        color: AppColors.surfaceAlt,
         width: width,
         height: height,
         child: const Center(
-          child:
-              Icon(Icons.broken_image_outlined, color: Colors.grey, size: 24),
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: AppColors.textMuted,
+            size: 24,
+          ),
         ),
       ),
     );
@@ -66,17 +71,28 @@ class FilterChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: options.map((opt) {
           final isSelected = selected.contains(opt);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: Text(opt),
+              label: Text(
+                opt,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: isSelected
+                          ? AppColors.text
+                          : AppColors.textMuted,
+                    ),
+              ),
               selected: isSelected,
               onSelected: (val) => onChanged(opt, val),
               showCheckmark: false,
+              side: BorderSide(
+                color: isSelected ? AppColors.borderStrong : AppColors.border,
+              ),
+              selectedColor: AppColors.surfaceAlt,
             ),
           );
         }).toList(),

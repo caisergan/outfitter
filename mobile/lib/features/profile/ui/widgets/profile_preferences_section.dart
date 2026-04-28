@@ -19,9 +19,9 @@ class ProfilePreferencesSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,9 +117,8 @@ class _PreferencePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.cream,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.mint),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

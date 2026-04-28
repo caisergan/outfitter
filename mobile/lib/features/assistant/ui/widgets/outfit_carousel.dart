@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:fashion_app/core/models/outfit_models.dart';
+import 'package:fashion_app/core/theme/app_colors.dart';
 import 'outfit_suggestion_card.dart';
 
 class OutfitCarousel extends StatefulWidget {
@@ -31,7 +32,12 @@ class _OutfitCarouselState extends State<OutfitCarousel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('No outfits found for these parameters.'),
+            Text(
+              'No outfits found for these parameters.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
                 onPressed: widget.onRefresh, child: const Text('Try Again')),
@@ -68,8 +74,8 @@ class _OutfitCarouselState extends State<OutfitCarousel> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _currentPage == index
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.shade300,
+                    ? AppColors.blush
+                    : AppColors.border,
               ),
             ),
           ),
@@ -81,10 +87,6 @@ class _OutfitCarouselState extends State<OutfitCarousel> {
             icon: const Icon(Icons.refresh),
             label: const Text('Generate New Batch'),
             onPressed: widget.onRefresh,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Colors.grey.shade300),
-            ),
           ),
         ),
         const SizedBox(height: 48),

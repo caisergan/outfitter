@@ -25,20 +25,26 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
-        backgroundColor: AppColors.cream,
-        elevation: 0,
+        toolbarHeight: 76,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.text),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/discover'),
         ),
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Profile',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            Text(
+              'Your saved looks, preferences, and account details.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+            ),
+          ],
         ),
-        iconTheme: const IconThemeData(color: AppColors.text),
       ),
       body: profileState.when(
         data: (state) => RefreshIndicator(
@@ -110,16 +116,13 @@ class ProfileScreen extends ConsumerWidget {
                     .read(profileNotifierProvider.notifier)
                     .updateSettings(settings),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               OutlinedButton.icon(
                 onPressed: () => _logout(context, ref),
                 icon: const Icon(Icons.logout),
                 label: const Text('Log Out'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.text,
-                  backgroundColor: AppColors.lightMint.withValues(alpha: 0.35),
-                  side: const BorderSide(color: AppColors.blush),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  foregroundColor: AppColors.textMuted,
                 ),
               ),
             ],
@@ -280,33 +283,28 @@ class _ProfileStatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.blush, size: 20),
+          Icon(icon, color: AppColors.blush, size: 18),
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 24,
+                ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(
-              color: AppColors.text.withValues(alpha: 0.68),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                ),
           ),
         ],
       ),

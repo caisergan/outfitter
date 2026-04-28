@@ -21,9 +21,9 @@ class ProfileHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,8 +44,7 @@ class ProfileHeader extends StatelessWidget {
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: AppColors.text,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0,
+                                fontSize: 26,
                               ),
                     ),
                     const SizedBox(height: 4),
@@ -63,8 +62,7 @@ class ProfileHeader extends StatelessWidget {
               IconButton(
                 tooltip: 'Settings',
                 onPressed: onSettings,
-                icon:
-                    const Icon(Icons.settings_outlined, color: AppColors.text),
+                icon: const Icon(Icons.settings_outlined),
               ),
             ],
           ),
@@ -81,24 +79,18 @@ class ProfileHeader extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 18),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
               FilledButton.icon(
                 onPressed: onEdit,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.blush,
-                  foregroundColor: Colors.white,
-                ),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text('Edit Profile'),
               ),
               const SizedBox(width: 10),
               OutlinedButton.icon(
                 onPressed: onSettings,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.text,
-                  side: const BorderSide(color: AppColors.mint),
-                ),
                 icon: const Icon(
                   Icons.privacy_tip_outlined,
                   color: AppColors.blush,
@@ -137,7 +129,7 @@ class _ProfileAvatar extends StatelessWidget {
       height: 76,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.mint,
+        color: AppColors.surfaceAlt,
       ),
       alignment: Alignment.center,
       child: Text(
