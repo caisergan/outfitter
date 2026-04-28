@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     KLING_API_KEY: str
 
+    # OpenAI-compatible proxy for gpt-image-2 (admin playground)
+    CODEX_PROXY_URL: str = "http://localhost:8317/v1"
+    CODEX_PROXY_API_KEY: str = "dummy"
+
     # Storage (AWS S3 or S3-compatible endpoint such as Cloudflare R2)
     R2_ENDPOINT_URL: str | None = None
     R2_ACCESS_KEY_ID: str
