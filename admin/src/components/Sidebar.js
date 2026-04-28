@@ -8,6 +8,7 @@ import {
     Shirt,
     Layers,
     Camera,
+    Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const navItems = [
     { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
     { href: "/outfits", label: "Outfits", icon: Layers },
     { href: "/tryon", label: "Try-On", icon: Camera },
+    { href: "/playground", label: "Playground", icon: Sparkles },
 ];
 
 export default function Sidebar() {
