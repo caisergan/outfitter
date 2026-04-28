@@ -138,3 +138,35 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     ) as ac:
         yield ac
     fastapi_app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# 4. Default-mock CLIP embedding so write-path tests don't hit the network
+# ---------------------------------------------------------------------------
+import sys as _sys  # noqa: E402
+
+import pytest  # noqa: E402
+
+# ``app.routers.__init__`` rebinds ``catalog`` to the APIRouter instance,
+# shadowing the submodule. Pull the actual module out of sys.modules so
+# monkeypatch can target ``_embed_catalog_image`` directly.
+import app.routers.catalog  # noqa: F401, E402
+
+_catalog_router_module = _sys.modules["app.routers.catalog"]
+
+
+@pytest.fixture(autouse=True)
+def _stub_catalog_clip_embedding(monkeypatch):
+    """Skip real httpx fetch + CLIP encode in catalog write tests.
+
+    The helper performs a network GET against ``image_front_url`` and runs
+    PyTorch on the bytes. Tests use placeholder URLs like ``cdn.example.com``
+    that don't resolve, so a real call would block for the full 10s timeout
+    every time and write noisy stack traces. By default the helper is replaced
+    with a coroutine that returns ``None``. Tests that exercise the embedding
+    flow override this with their own ``unittest.mock.patch``.
+    """
+    async def _stub(_url):  # noqa: ANN001, ANN202
+        return None
+
+    monkeypatch.setattr(_catalog_router_module, "_embed_catalog_image", _stub)

@@ -1,6 +1,10 @@
+import asyncio
+import logging
 import uuid
 from typing import Annotated
+from urllib.parse import urlparse
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import String, distinct, func, select, text
 from sqlalchemy.dialects.postgresql import array as pg_array
@@ -22,11 +26,15 @@ from app.schemas.catalog import (
     SimilarItemResponse,
     SimilarItemsResponse,
 )
+from app.services.clip_service import embed_image_async
 from app.services.storage_service import (
     IMAGE_UPLOAD_EXPIRES_IN,
     StorageError,
+    download_bytes,
     get_catalog_upload_target,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
@@ -34,32 +42,33 @@ DbDep = Annotated[AsyncSession, Depends(get_db)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
-# ---------------------------------------------------------------------------
-# CLIP embedding helper
-# TODO(clip): Implement this once embedding infrastructure is confirmed.
-#   - Import embed_image_async from app.services.clip_service
-#   - Fetch the image bytes via httpx before calling embed_image_async
-#   - Handle HTTP/timeout errors and raise HTTPException(502) on failure
-#   - Wire into create_catalog_item, bulk_create_catalog_items, update_catalog_item
-# ---------------------------------------------------------------------------
-async def _embed_catalog_image(image_front_url: str) -> list[float] | None:  # noqa: ARG001
-    """Fetch image from ``image_front_url`` and return a CLIP embedding vector.
+async def _embed_catalog_image(image_front_url: str | None) -> list[float] | None:
+    """Fetch a catalog front image and return its 512-d CLIP embedding.
 
-    TODO(clip): Replace this stub with a real implementation:
-
-        import httpx
-        from app.services.clip_service import embed_image_async
-
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get(image_front_url)
-            response.raise_for_status()
-        return await embed_image_async(response.content)
-
-    Returns None until the implementation is complete so existing create/update
-    paths continue to work without raising errors.
+    Mirrors the wardrobe write-path: when the URL points at the project bucket
+    (``catalog/...`` key), bytes are pulled directly via ``download_bytes`` to
+    skip the public CDN round-trip; otherwise an httpx GET is used. Any failure
+    (network, decode, model) is logged and ``None`` is returned so item
+    creation is never blocked by ML-side issues. The embedding can be filled
+    in later via the backfill script.
     """
-    # TODO(clip): Remove this stub return once embedding is implemented.
-    return None
+    if not image_front_url:
+        return None
+
+    try:
+        path = urlparse(image_front_url).path.lstrip("/")
+        if "catalog/" in path:
+            image_bytes = await asyncio.to_thread(download_bytes, path)
+        else:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(image_front_url)
+                response.raise_for_status()
+                image_bytes = response.content
+
+        return await embed_image_async(image_bytes)
+    except Exception:
+        logger.exception("Failed to compute CLIP embedding for %s", image_front_url)
+        return None
 
 
 def _array_has_any(column, values: list[str], dialect_name: str):
@@ -272,9 +281,7 @@ async def create_catalog_item(
     _: CurrentUserDep,
 ) -> CatalogItemResponse:
     item = CatalogItem(**body.model_dump())
-    # TODO(clip): Compute and persist clip_embedding at write time when image_front_url is present.
-    #   embedding = await _embed_catalog_image(body.image_front_url)
-    #   item.clip_embedding = embedding
+    item.clip_embedding = await _embed_catalog_image(body.image_front_url)
     db.add(item)
     await db.flush()
     await db.refresh(item)
@@ -293,10 +300,7 @@ async def bulk_create_catalog_items(
     for index, item_data in enumerate(body):
         try:
             item = CatalogItem(**item_data.model_dump())
-            # TODO(clip): Compute clip_embedding per item here and collect embedding errors
-            #   into the BulkInsertError list so callers can resubmit failing items.
-            #   embedding = await _embed_catalog_image(item_data.image_front_url)
-            #   item.clip_embedding = embedding
+            item.clip_embedding = await _embed_catalog_image(item_data.image_front_url)
             db.add(item)
             await db.flush()
             await db.refresh(item)
@@ -347,10 +351,8 @@ async def update_catalog_item(
     for field, value in update_data.items():
         setattr(item, field, value)
 
-    # TODO(clip): Recompute clip_embedding only when image_front_url changed.
-    #   if image_front_url_changed and item.image_front_url:
-    #       item.clip_embedding = await _embed_catalog_image(item.image_front_url)
-    _ = image_front_url_changed  # remove once TODO(clip) is implemented
+    if image_front_url_changed:
+        item.clip_embedding = await _embed_catalog_image(item.image_front_url)
 
     await db.flush()
     await db.refresh(item)

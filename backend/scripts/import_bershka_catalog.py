@@ -121,6 +121,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Preview the prepared rows without touching S3 or the database",
     )
+    parser.add_argument(
+        "--skip-embed",
+        action="store_true",
+        help="Skip CLIP embedding generation (use scripts/backfill_catalog_embeddings.py later)",
+    )
     return parser.parse_args()
 
 
@@ -340,7 +345,26 @@ def _upload_all_images(
     return urls
 
 
-async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: int) -> None:
+def _embed_front_image(images: ImagePaths) -> list[float] | None:
+    """Embed the front image (preferred) or fall back to back, from local bytes."""
+    from app.services.clip_service import embed_image
+
+    source = images.front or images.back
+    if source is None:
+        return None
+    try:
+        return embed_image(source.read_bytes())
+    except Exception as exc:  # noqa: BLE001
+        print(f"  WARN embed failed for {source}: {exc}")
+        return None
+
+
+async def run_import(
+    rows: list[PreparedCatalogRow],
+    brand: str,
+    commit_every: int,
+    skip_embed: bool = False,
+) -> None:
     os.chdir(BACKEND_ROOT)
     if str(BACKEND_ROOT) not in sys.path:
         sys.path.insert(0, str(BACKEND_ROOT))
@@ -360,6 +384,7 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
 
         created = 0
         updated = 0
+        embedded = 0
 
         for index, row in enumerate(rows, start=1):
             urls = _upload_all_images(s3, settings.R2_BUCKET, row.images, brand, row.ref_code)
@@ -371,6 +396,10 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                     print(f"SKIP {row.ref_code}: no images uploaded")
                     continue
                 front_url = fallback
+
+            embedding = None if skip_embed else _embed_front_image(row.images)
+            if embedding is not None:
+                embedded += 1
 
             item = existing_by_ref.get(row.ref_code)
             if item is None:
@@ -386,6 +415,7 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                     image_front_url=front_url,
                     image_back_url=urls["image_back_url"],
                     product_url=row.product_url,
+                    clip_embedding=embedding,
                 )
                 session.add(item)
                 existing_by_ref[row.ref_code] = item
@@ -400,14 +430,22 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                 item.image_front_url = front_url
                 item.image_back_url = urls["image_back_url"]
                 item.product_url = row.product_url
+                if embedding is not None:
+                    item.clip_embedding = embedding
                 updated += 1
 
             if index % commit_every == 0:
                 await session.commit()
-                print(f"Committed {index}/{len(rows)} rows (created={created}, updated={updated})")
+                print(
+                    f"Committed {index}/{len(rows)} rows "
+                    f"(created={created}, updated={updated}, embedded={embedded})"
+                )
 
         await session.commit()
-        print(f"Import complete: created={created}, updated={updated}, total={len(rows)}")
+        print(
+            f"Import complete: created={created}, updated={updated}, "
+            f"embedded={embedded}, total={len(rows)}"
+        )
     finally:
         await session.close()
 
@@ -426,7 +464,9 @@ def main() -> None:
     if args.dry_run:
         return
 
-    asyncio.run(run_import(prepared_rows, args.brand, args.commit_every))
+    asyncio.run(
+        run_import(prepared_rows, args.brand, args.commit_every, skip_embed=args.skip_embed)
+    )
 
 
 if __name__ == "__main__":
