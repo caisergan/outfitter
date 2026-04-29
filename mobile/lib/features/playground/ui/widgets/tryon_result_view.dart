@@ -19,7 +19,7 @@ class TryOnResultView extends ConsumerWidget {
     try {
       await ref.read(outfitRepositoryProvider).save(
             source: 'playground',
-            slots: slots.slotIds,
+            slots: slots.slotPayloads,
             generatedImageUrl: imageUrl,
           );
       if (context.mounted) {

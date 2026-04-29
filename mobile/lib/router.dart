@@ -6,6 +6,7 @@ import 'features/auth/ui/login_screen.dart';
 import 'features/auth/ui/signup_screen.dart';
 import 'features/discover/ui/discover_screen.dart';
 import 'features/playground/ui/playground_screen.dart';
+import 'features/playground/ui/resolved_playground_screen.dart';
 import 'features/assistant/ui/assistant_screen.dart';
 import 'features/profile/ui/profile_screen.dart';
 import 'features/wardrobe/ui/wardrobe_screen.dart';
@@ -50,7 +51,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               final extra = state.extra as Map<String, dynamic>?;
               final slots = (extra?['slots'] as Map?)
                   ?.map((k, v) => MapEntry(k.toString(), v.toString()));
-              return PlaygroundScreen(prefilledSlots: slots);
+              if (slots != null && slots.isNotEmpty) {
+                return ResolvedPlaygroundScreen(rawSlots: slots);
+              }
+              return const PlaygroundScreen();
             },
           ),
           GoRoute(

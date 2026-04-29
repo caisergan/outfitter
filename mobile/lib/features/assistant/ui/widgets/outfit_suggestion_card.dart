@@ -16,7 +16,7 @@ class OutfitSuggestionCard extends ConsumerWidget {
     try {
       await ref.read(outfitRepositoryProvider).save(
             source: 'assistant',
-            slots: outfit.slots.map((k, v) => MapEntry(k, v.id)),
+            slots: outfit.slots.map((k, v) => MapEntry(k, v.toJson())),
           );
       if (context.mounted) {
         showSuccessSnackbar(context, 'Outfit saved to Lookbook!');
@@ -57,7 +57,8 @@ class OutfitSuggestionCard extends ConsumerWidget {
                       child: ElevatedButton(
                         onPressed: () => context.go('/playground', extra: {
                           'slots':
-                              outfit.slots.map((k, v) => MapEntry(k, v.id)),
+                              outfit.slots
+                                  .map((k, v) => MapEntry(k, v.imageUrl)),
                         }),
                         child: const Text('Try On'),
                       ),

@@ -8,6 +8,7 @@ class ApiEndpoints {
   // Catalog
   static const catalogSearch = '/catalog/search';
   static String catalogSimilar(String id) => '/catalog/similar/$id';
+  static String catalogItem(String id) => '/catalog/items/$id';
 
   // Wardrobe
   static const wardrobe = '/wardrobe';

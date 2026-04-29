@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 /// Generic error view with retry button. Used with AsyncValue.error states.
 class ErrorView extends StatelessWidget {
   final String message;
@@ -19,7 +21,11 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+            const Icon(
+              Icons.error_outline,
+              size: 44,
+              color: AppColors.textSoft,
+            ),
             const SizedBox(height: 16),
             Text(
               message,
@@ -27,7 +33,7 @@ class ErrorView extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: Colors.grey.shade600),
+                  ?.copyWith(color: AppColors.textMuted),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
@@ -62,7 +68,7 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (isVisible)
           Container(
-            color: Colors.black54,
+            color: AppColors.text.withValues(alpha: 0.2),
             child: Center(
               child: Card(
                 shape: RoundedRectangleBorder(

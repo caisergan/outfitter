@@ -9,6 +9,15 @@ class CatalogRepository {
   final Dio _dio;
   CatalogRepository(this._dio);
 
+  Future<CatalogItem?> getById(String itemId) async {
+    try {
+      final response = await _dio.get(ApiEndpoints.catalogItem(itemId));
+      return CatalogItem.fromJson(response.data as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<CatalogItem>> search({
     String? category,
     String? color,

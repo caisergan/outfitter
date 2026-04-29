@@ -17,9 +17,9 @@ class ProfileSettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.backgroundElevated,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,8 +95,8 @@ class _SettingsSwitchTile extends StatelessWidget {
       value: value,
       onChanged: onChanged,
       activeThumbColor: AppColors.blush,
-      activeTrackColor: AppColors.mint,
-      secondary: Icon(icon, color: AppColors.blush),
+      activeTrackColor: AppColors.blush,
+      secondary: Icon(icon, color: AppColors.textMuted),
       title: Text(
         title,
         style: const TextStyle(

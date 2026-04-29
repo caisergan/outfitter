@@ -135,25 +135,26 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
   @override
   Widget build(BuildContext context) {
     final canvas = ref.watch(stylingCanvasProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
-        titleSpacing: 20,
-        centerTitle: false,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Playground'),
+            Text(
+              'CANVAS STUDIO',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.textMuted,
+                letterSpacing: 2,
+              ),
+            ),
             Text(
               canvas.activeOutfitId == null ? 'Styling Canvas' : canvas.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleLarge,
             ),
           ],
         ),
@@ -194,36 +195,77 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.text,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundElevated,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 430;
+                    final actions = Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add garment'),
+                          onPressed: _openGarmentSourcePicker,
                         ),
-                      ),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add garment'),
-                      onPressed: _openGarmentSourcePicker,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  _ToolbarIconButton(
-                    icon: Icons.layers_outlined,
-                    tooltip: 'Layers',
-                    onPressed: canvas.garments.isEmpty ? null : _openLayers,
-                  ),
-                ],
+                        _ToolbarIconButton(
+                          icon: Icons.layers_outlined,
+                          tooltip: 'Layers',
+                          onPressed:
+                              canvas.garments.isEmpty ? null : _openLayers,
+                        ),
+                      ],
+                    );
+
+                    final info = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${canvas.garments.length} garments on canvas',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          canvas.activeOutfitId == null
+                              ? 'Layer pieces, adjust scale, and save the look when it feels right.'
+                              : 'Editing ${canvas.title.toLowerCase()}.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+
+                    if (isCompact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          info,
+                          const SizedBox(height: 14),
+                          actions,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: info),
+                        const SizedBox(width: 12),
+                        actions,
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
             const Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: _StylingCanvasSurface(),
               ),
             ),
@@ -253,12 +295,12 @@ class _StylingCanvasSurface extends ConsumerWidget {
               ref.read(stylingCanvasProvider.notifier).selectGarment(null),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFEFA),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.lightMint),
+              color: AppColors.backgroundElevated,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: AppColors.line),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(32),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -356,16 +398,18 @@ class _CanvasGarmentWidgetState extends ConsumerState<_CanvasGarmentWidget> {
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
                 border: widget.isSelected
-                    ? Border.all(color: AppColors.blush, width: 2)
-                    : Border.all(color: Colors.white.withValues(alpha: 0)),
+                    ? Border.all(color: AppColors.lineStrong, width: 1.8)
+                    : Border.all(
+                        color: AppColors.surface.withValues(alpha: 0),
+                      ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.text.withValues(alpha: 0.10),
-                    blurRadius: widget.isSelected ? 18 : 10,
-                    offset: const Offset(0, 8),
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: widget.isSelected ? 22 : 14,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -398,24 +442,37 @@ class _SelectionInspector extends ConsumerWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        margin: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.lightMint,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.backgroundElevated,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: AppColors.line),
         ),
         child: selected == null
             ? Row(
                 children: [
-                  const Icon(Icons.touch_app_outlined, color: AppColors.text),
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.lightMint,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.touch_app_outlined,
+                      color: AppColors.text,
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '${canvas.garments.length} garments on canvas',
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      canvas.garments.isEmpty
+                          ? 'No garments on canvas yet.'
+                          : '${canvas.garments.length} garments on canvas',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ),
                   _ToolbarIconButton(
@@ -445,11 +502,10 @@ class _SelectionInspector extends ConsumerWidget {
                           selected.item.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.text,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ),
                     ],
@@ -526,31 +582,25 @@ class _GarmentSourceSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          const SheetHandle(),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Add garment from',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose a source and place the piece onto the canvas.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textMuted,
+                ),
           ),
           const SizedBox(height: 16),
           _GarmentSourceTile(
@@ -584,14 +634,14 @@ class _GarmentSourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(24),
       onTap: onTap,
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.lightMint.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.lightMint),
+          color: AppColors.backgroundElevated,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
@@ -599,8 +649,8 @@ class _GarmentSourceTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.lightMint,
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: AppColors.text),
             ),
@@ -608,15 +658,11 @@ class _GarmentSourceTile extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: AppColors.text),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
           ],
         ),
       ),
@@ -635,31 +681,20 @@ class _LayerOrderSheet extends ConsumerWidget {
       height: MediaQuery.sizeOf(context).height * 0.62,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          const SheetHandle(),
           const SizedBox(height: 18),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.layers_outlined, color: AppColors.text),
-              SizedBox(width: 10),
+              const Icon(Icons.layers_outlined, color: AppColors.text),
+              const SizedBox(width: 10),
               Text(
                 'Layers',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ],
           ),
@@ -731,31 +766,20 @@ class _SavedOutfitsSheet extends ConsumerWidget {
       height: MediaQuery.sizeOf(context).height * 0.62,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          const SheetHandle(),
           const SizedBox(height: 18),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.folder_open_outlined, color: AppColors.text),
-              SizedBox(width: 10),
+              const Icon(Icons.folder_open_outlined, color: AppColors.text),
+              const SizedBox(width: 10),
               Text(
                 'Saved outfits',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ],
           ),
@@ -829,8 +853,8 @@ class _OutfitPreview extends StatelessWidget {
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.lightMint.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.lightMint,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: const SizedBox.expand(),
           ),
@@ -859,18 +883,32 @@ class _EmptyCanvasPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.checkroom_outlined, color: AppColors.blush, size: 45),
-        SizedBox(height: 15),
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: AppColors.lightMint,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: const Icon(
+            Icons.checkroom_outlined,
+            color: AppColors.text,
+            size: 34,
+          ),
+        ),
+        const SizedBox(height: 18),
         Text(
           'Add a garment',
-          style: TextStyle(
-            color: AppColors.text,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Use the canvas to layer pieces and refine proportions.',
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -900,7 +938,7 @@ class _ToolbarIconButton extends StatelessWidget {
             foregroundColor: AppColors.text,
             disabledBackgroundColor: AppColors.lightMint.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
             ),
           ),
           icon: Icon(icon),
@@ -928,10 +966,9 @@ class _InspectorIconButton extends StatelessWidget {
       message: tooltip,
       child: SizedBox.square(
         dimension: 38,
-        child: IconButton(
+        child: IconButton.filledTonal(
           padding: EdgeInsets.zero,
-          iconSize: 20,
-          color: AppColors.text,
+          iconSize: 18,
           icon: Icon(icon),
           onPressed: onPressed,
         ),
@@ -944,7 +981,7 @@ class _CanvasGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.lightMint.withValues(alpha: 0.35)
+      ..color = AppColors.line.withValues(alpha: 0.55)
       ..strokeWidth = 1;
     const spacing = 32.0;
 

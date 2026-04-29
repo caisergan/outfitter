@@ -73,20 +73,13 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
           child: Column(
             children: [
               const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              const SheetHandle(),
               const SizedBox(height: 24),
               // Header
               Padding(
@@ -96,8 +89,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                     Text(
                       'Garment Selection',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(width: 12),
@@ -136,18 +128,18 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.text : AppColors.lightMint,
-                  borderRadius: BorderRadius.circular(8),
+                  color: isSelected ? AppColors.blush : AppColors.lightMint,
+                  borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: isSelected ? AppColors.text : AppColors.lightMint,
+                    color: isSelected ? AppColors.blush : AppColors.line,
                   ),
                 ),
                 child: Text(
                   filter.label,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.text,
+                    color: isSelected ? AppColors.surface : AppColors.text,
                     fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
               ),
@@ -228,12 +220,12 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                       children: [
                         Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(16),
+                            color: AppColors.backgroundElevated,
+                            borderRadius: BorderRadius.circular(20),
                             border: isSelected
                                 ? Border.all(
-                                    color: const Color(0xFF1D5CE0), width: 2)
-                                : null,
+                                    color: AppColors.lineStrong, width: 1.8)
+                                : Border.all(color: AppColors.line),
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: CachedItemImage(url: item.imageUrl),
@@ -245,7 +237,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                             child: Container(
                               padding: const EdgeInsets.all(2),
                               decoration: const BoxDecoration(
-                                color: Color(0xFF1D5CE0),
+                                color: AppColors.blush,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -267,9 +259,9 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight:
-                          isSelected ? FontWeight.w900 : FontWeight.w700,
+                          isSelected ? FontWeight.w800 : FontWeight.w700,
                       color:
-                          isSelected ? const Color(0xFF1D5CE0) : Colors.black87,
+                          isSelected ? AppColors.blush : AppColors.text,
                       letterSpacing: 0.5,
                     ),
                   ),

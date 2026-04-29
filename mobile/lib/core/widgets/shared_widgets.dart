@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 /// Consistent cached image with a loading placeholder and broken-image fallback.
 class CachedItemImage extends StatelessWidget {
   final String url;
@@ -26,17 +28,20 @@ class CachedItemImage extends StatelessWidget {
       height: height,
       fit: fit,
       placeholder: (_, __) => Container(
-        color: const Color(0xFFF0EDEA),
+        color: AppColors.surfaceMuted,
         width: width,
         height: height,
       ),
       errorWidget: (_, __, ___) => Container(
-        color: const Color(0xFFF0EDEA),
+        color: AppColors.surfaceMuted,
         width: width,
         height: height,
         child: const Center(
-          child:
-              Icon(Icons.broken_image_outlined, color: Colors.grey, size: 24),
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: AppColors.textSoft,
+            size: 24,
+          ),
         ),
       ),
     );
@@ -46,6 +51,24 @@ class CachedItemImage extends StatelessWidget {
     }
 
     return image;
+  }
+}
+
+class SheetHandle extends StatelessWidget {
+  const SheetHandle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 44,
+        height: 4,
+        decoration: BoxDecoration(
+          color: AppColors.lineStrong,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
   }
 }
 

@@ -12,54 +12,60 @@ class WardrobeItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final subtitle =
+        '${item.color.isNotEmpty ? item.color.first : ''} ${item.subtype ?? item.category}'
+            .trim();
+
     return GestureDetector(
       onTap: () => context.go('/wardrobe/item/${item.id}'),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.lightMint.withOpacity(0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.mint.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColors.backgroundElevated,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.line),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Image — white container, BoxFit.contain so full item shows ──
             Expanded(
-              flex: 4,
               child: Container(
                 width: double.infinity,
-                color: Colors.white,
-                padding: const EdgeInsets.all(10),
+                color: AppColors.surface,
+                padding: const EdgeInsets.all(18),
                 child: CachedItemImage(
                   url: item.imageUrl,
-                  fit: BoxFit.contain, // same as detail screen
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
-
-            // ── Label pill ───────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-              color: AppColors.lightMint,
-              child: Text(
-                '${item.color.isNotEmpty ? item.color.first[0].toUpperCase() + item.color.first.substring(1) : ''} ${item.subtype ?? item.category}'.trim(),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                  letterSpacing: 0.2,
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (item.subtype ?? item.category).toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textMuted,
+                      letterSpacing: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle.isEmpty ? 'Wardrobe item' : subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

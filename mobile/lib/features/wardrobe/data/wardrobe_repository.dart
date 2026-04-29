@@ -9,6 +9,14 @@ class WardrobeRepository {
   final Dio _dio;
   WardrobeRepository(this._dio);
 
+  Future<WardrobeItem?> getById(String id) async {
+    final items = await fetchAll(limit: 200);
+    for (final item in items) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
   Future<List<WardrobeItem>> fetchAll({
     String? category,
     String sort = 'recent',

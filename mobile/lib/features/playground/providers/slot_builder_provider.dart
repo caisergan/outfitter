@@ -22,6 +22,19 @@ class OutfitSlots {
           if (entry.value != null) entry.key.categoryString: entry.value!.id,
       };
 
+  Map<String, Map<String, dynamic>> get slotPayloads => {
+        for (final entry in slots.entries)
+          if (entry.value != null)
+            entry.key.categoryString: {
+              'id': entry.value!.id,
+              'name': entry.value!.name,
+              'brand': entry.value!.brand,
+              'image_url': entry.value!.imageUrl,
+              if (entry.value!.productUrl != null)
+                'product_url': entry.value!.productUrl,
+            },
+      };
+
   static OutfitSlots empty() => OutfitSlots({
         for (final type in SlotType.values) type: null,
       });

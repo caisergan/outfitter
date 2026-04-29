@@ -31,12 +31,21 @@ class ProfileScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back, color: AppColors.text),
           onPressed: () => context.go('/discover'),
         ),
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.w800,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PROFILE',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textMuted,
+                    letterSpacing: 2,
+                  ),
+            ),
+            Text(
+              'Profile',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ],
         ),
         iconTheme: const IconThemeData(color: AppColors.text),
       ),
@@ -117,8 +126,8 @@ class ProfileScreen extends ConsumerWidget {
                 label: const Text('Log Out'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.text,
-                  backgroundColor: AppColors.lightMint.withValues(alpha: 0.35),
-                  side: const BorderSide(color: AppColors.blush),
+                  backgroundColor: AppColors.backgroundElevated,
+                  side: const BorderSide(color: AppColors.lineStrong),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
@@ -282,13 +291,13 @@ class _ProfileStatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.lightMint.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.mint),
+        color: AppColors.backgroundElevated,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.blush, size: 20),
+          Icon(icon, color: AppColors.textMuted, size: 20),
           const SizedBox(height: 8),
           Text(
             value,
@@ -353,7 +362,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 24,
         right: 24,

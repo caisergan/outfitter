@@ -24,20 +24,13 @@ class WardrobeBrowserSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
           child: Column(
             children: [
               const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              const SheetHandle(),
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -153,9 +146,9 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.lightMint.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.lightMint),
+                        color: AppColors.backgroundElevated,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.line),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: CachedItemImage(url: item.imageUrl),
