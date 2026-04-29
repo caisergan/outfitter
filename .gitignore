@@ -16,6 +16,7 @@ dist/
 build/
 *.bak
 *.swp
+.start.sh.api-build-hash
 .vscode/
 output/
 

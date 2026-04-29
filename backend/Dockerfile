@@ -22,6 +22,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /install /usr/local
 COPY . .
 
+# Pre-download the CLIP model weights into the image so containers start fast
+# and do not need network access at runtime to embed catalog items.
+# XDG_CACHE_HOME steers torch / huggingface / open_clip caches into a path the
+# runtime user (appuser) actually reads, instead of /root/.cache where they
+# would land by default during this RUN.
+ENV XDG_CACHE_HOME=/home/appuser/.cache
+RUN mkdir -p "$XDG_CACHE_HOME" && \
+    python -c "import open_clip; open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')" && \
+    chown -R appuser:appuser /home/appuser
+
 RUN chown -R appuser:appuser /app
 USER appuser
 

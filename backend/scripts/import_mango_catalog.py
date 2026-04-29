@@ -196,13 +196,13 @@ def canonical_category(source_category: str) -> str:
 def _classify_mango_image(path: Path) -> str | None:
     """Classify a mango image into front or back (no-bg only).
 
-    Mango naming: _R = front, _B = back, _no_bg = background removed.
+    Mango naming: _B = front (standalone garment shot), _R = back (model rear view).
     We only import no-bg variants; with-bg images are ignored.
     """
     name = path.name
-    if "_R_no_bg." in name:
-        return "front"
     if "_B_no_bg." in name:
+        return "front"
+    if "_R_no_bg." in name:
         return "back"
     return None
 
