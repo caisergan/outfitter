@@ -10,13 +10,22 @@ logger = logging.getLogger(__name__)
 TAGGING_PROMPT = """Analyze the clothing item in this image and return ONLY a valid JSON object with these exact fields:
 {
   "category": "one of: top, bottom, shoes, accessory, outerwear, bag",
-  "subtype": "specific garment type e.g. t-shirt hoodie sneaker",
+  "subtype": "specific garment type e.g. t-shirt hoodie sneaker blazer",
   "color": ["list", "of", "dominant", "colors"],
   "pattern": "one of: solid striped floral plaid graphic animal other",
   "fit": "one of: fitted relaxed oversized a-line straight",
+  "season": ["list of applicable seasons: spring, summer, autumn, winter"],
+  "material": ["list of detected materials: cotton, denim, leather, wool, silk, linen, polyester, knit, velvet, satin, chiffon, nylon, suede"],
+  "occasion": ["list of suitable occasions: casual, work, formal, party, date, gym, outdoor, beach"],
+  "primary_style": "one of: minimalist, classic, streetwear, bohemian, vintage, sporty, elegant, preppy, grunge, romantic",
   "style_tags": ["2", "to", "4", "style", "words"],
   "confidence": 0.95
 }
+Rules:
+- season: judge by fabric weight and garment type. A thick wool coat is autumn/winter. A linen shirt is spring/summer.
+- material: identify from texture, sheen, and visual cues. List the primary material first.
+- occasion: consider formality level and typical use context. A blazer suits work/formal. A hoodie suits casual.
+- primary_style: pick the single best-fitting style category for this garment.
 Return ONLY the JSON object. No markdown, no explanation."""
 
 
