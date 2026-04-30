@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/playground_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../discover/data/catalog_repository.dart';
 import '../data/playground_repository.dart';
 import '../models/styling_canvas_models.dart';
 import '../providers/playground_draft_provider.dart';
@@ -13,6 +14,7 @@ import '../providers/playground_library_provider.dart';
 import '../providers/playground_runs_provider.dart';
 import '../providers/styling_canvas_provider.dart';
 import 'widgets/item_browser_sheet.dart';
+import 'widgets/recent_runs_sheet.dart';
 import 'widgets/style_picker_sheet.dart';
 import 'widgets/wardrobe_browser_sheet.dart';
 
@@ -151,6 +153,72 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
     );
   }
 
+  Future<void> _openRecentRuns() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => RecentRunsSheet(onReproduce: _reproduceRun),
+    );
+  }
+
+  /// Refills the canvas + draft from a past run's snapshot. Catalog items
+  /// that have since been deleted are silently skipped with a single
+  /// snackbar mentioning the count. After reproducing, the user can tap
+  /// AI Try On to see the rehydrated state.
+  Future<void> _reproduceRun(PlaygroundRun run) async {
+    final canvasNotifier = ref.read(stylingCanvasProvider.notifier);
+    final draftNotifier = ref.read(playgroundDraftProvider.notifier);
+    final library = ref.read(playgroundLibraryProvider).valueOrNull;
+    final catalog = ref.read(catalogRepositoryProvider);
+
+    canvasNotifier.newCanvas();
+
+    int missing = 0;
+    for (final id in run.catalogItemIds) {
+      try {
+        final item = await catalog.getItem(id);
+        if (item == null) {
+          missing++;
+        } else {
+          canvasNotifier.addGarment(item);
+        }
+      } catch (_) {
+        missing++;
+      }
+    }
+
+    final persona = library?.allPersonas
+        .where((p) => p.id == run.personaId)
+        .firstOrNull;
+    final template = library?.templates
+        .where((t) => t.id == run.templateId)
+        .firstOrNull;
+    final gender = persona?.gender ?? 'female';
+    final composed = composeUserPrompt(template: template, persona: persona);
+
+    draftNotifier.applyRunSnapshot(
+      templateId: run.templateId,
+      personaId: run.personaId,
+      gender: gender,
+      systemPromptText: run.systemPromptText,
+      userPromptText: run.userPromptText,
+      composedFromDropdowns: composed,
+    );
+
+    if (!mounted) return;
+    final shortId = run.id.substring(0, 8);
+    final tail =
+        missing > 0 ? ' · $missing item(s) no longer exist' : '';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Reproduced run $shortId$tail'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final canvas = ref.watch(stylingCanvasProvider);
@@ -193,6 +261,13 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
             child: IconButton(
               icon: const Icon(Icons.folder_open_outlined),
               onPressed: _openSavedOutfits,
+            ),
+          ),
+          Tooltip(
+            message: 'Recent runs',
+            child: IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: _openRecentRuns,
             ),
           ),
           Tooltip(
