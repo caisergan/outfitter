@@ -72,6 +72,10 @@ class PlaygroundRepository {
       final res = await _dio.post(
         ApiEndpoints.playgroundGenerate,
         data: req.toJson(),
+        // gpt-image-2 takes 30-60s typical, sometimes longer; the global Dio
+        // receiveTimeout is 30s so we override it here. Matches the backend
+        // proxy ceiling (CodexImageService._PROXY_TIMEOUT = 300s).
+        options: Options(receiveTimeout: const Duration(minutes: 5)),
       );
       return GenerateResponse.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {

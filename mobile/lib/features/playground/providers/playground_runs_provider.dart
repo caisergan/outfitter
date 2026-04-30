@@ -38,7 +38,11 @@ class PlaygroundRunsNotifier extends Notifier<PlaygroundRunsState> {
 
   @override
   PlaygroundRunsState build() {
-    refresh();
+    // Kick off the first fetch on the next microtask so we don't touch
+    // `state` before build() has returned (which would otherwise blow up
+    // with a "Tried to read the state of an uninitialized provider" error
+    // on cold start).
+    Future.microtask(refresh);
     return const PlaygroundRunsState(loading: true);
   }
 
