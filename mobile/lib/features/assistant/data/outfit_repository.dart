@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fashion_app/core/api/api_client.dart';
 import 'package:fashion_app/core/api/api_endpoints.dart';
 import 'package:fashion_app/core/models/outfit_models.dart';
-import '/features/assistant/ui/mew.dart';
+import '/features/assistant/ui/mock_data.dart';
 
 class OutfitRepository {
   final Dio _dio;

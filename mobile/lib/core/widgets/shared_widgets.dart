@@ -26,29 +26,52 @@ class CachedItemImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = CachedNetworkImage(
-      imageUrl: url,
-      width: width,
-      height: height,
-      fit: fit,
-      placeholder: (_, __) => Container(
-        color: placeholderColor,
+    Widget image;
+
+    if (url.startsWith('http')) {
+      image = CachedNetworkImage(
+        imageUrl: url,
         width: width,
         height: height,
-      ),
-      errorWidget: (_, __, ___) => Container(
-        color: errorBackgroundColor,
-        width: width,
-        height: height,
-        child: const Center(
-          child: Icon(
-            Icons.broken_image_outlined,
-            color: AppColors.textMuted,
-            size: 24,
+        fit: fit,
+        placeholder: (_, __) => Container(
+          color: placeholderColor,
+          width: width,
+          height: height,
+        ),
+        errorWidget: (_, __, ___) => Container(
+          color: errorBackgroundColor,
+          width: width,
+          height: height,
+          child: const Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              color: AppColors.textMuted,
+              size: 24,
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      image = Image.asset(
+        url,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Container(
+          color: errorBackgroundColor,
+          width: width,
+          height: height,
+          child: const Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              color: AppColors.textMuted,
+              size: 24,
+            ),
+          ),
+        ),
+      );
+    }
 
     if (borderRadius != null) {
       image = ClipRRect(borderRadius: borderRadius!, child: image);

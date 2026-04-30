@@ -55,9 +55,7 @@ class OutfitCard extends StatelessWidget {
   }
 
   Widget _itemBox(SlotItem? item) {
-    if (item == null) {
-      return const SizedBox();
-    }
+    if (item == null) return const SizedBox();
 
     return Container(
       margin: const EdgeInsets.all(6),
@@ -65,7 +63,9 @@ class OutfitCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         color: Colors.grey[200],
       ),
-      child: Image.network(item.imageUrl, fit: BoxFit.cover),
+      child: item.imageUrl.startsWith('http')
+          ? Image.network(item.imageUrl, fit: BoxFit.cover)
+          : Image.asset(item.imageUrl, fit: BoxFit.cover),
     );
   }
 }
