@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.admin import require_admin
 from app.auth.jwt import get_current_user
 from app.config import settings
 from app.database import get_db
@@ -23,11 +24,16 @@ from app.models.user import User
 from app.schemas.playground import (
     GenerateRequest,
     GenerateResponse,
+    PersonaCreate,
     PersonaOut,
+    PersonaUpdate,
     RunListOut,
     RunOut,
     SystemPromptOut,
+    SystemPromptUpdate,
+    TemplateCreate,
     TemplateOut,
+    TemplateUpdate,
 )
 from app.services import storage_service
 from app.services.codex_image_service import (
@@ -43,6 +49,7 @@ router = APIRouter(prefix="/playground", tags=["playground"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+AdminDep = Annotated[User, Depends(require_admin)]
 
 
 # ---------------------------------------------------------------------------
@@ -209,18 +216,19 @@ async def get_active_system_prompt(
 @router.get("/templates", response_model=list[TemplateOut])
 async def list_templates(
     db: DbDep,
-    _: CurrentUserDep,
+    current_user: CurrentUserDep,
+    include_inactive: Annotated[bool, Query()] = False,
 ) -> list[TemplateOut]:
-    rows = (
-        (
-            await db.execute(
-                select(UserPromptTemplate)
-                .where(UserPromptTemplate.is_active.is_(True))
-                .order_by(UserPromptTemplate.label)
-            )
+    if include_inactive and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="include_inactive requires admin role",
         )
-        .scalars()
-        .all()
+    q = select(UserPromptTemplate)
+    if not include_inactive:
+        q = q.where(UserPromptTemplate.is_active.is_(True))
+    rows = (
+        (await db.execute(q.order_by(UserPromptTemplate.label))).scalars().all()
     )
     return [TemplateOut.model_validate(r) for r in rows]
 
@@ -228,10 +236,18 @@ async def list_templates(
 @router.get("/personas", response_model=list[PersonaOut])
 async def list_personas(
     db: DbDep,
-    _: CurrentUserDep,
+    current_user: CurrentUserDep,
     gender: Annotated[Literal["female", "male"] | None, Query()] = None,
+    include_inactive: Annotated[bool, Query()] = False,
 ) -> list[PersonaOut]:
-    q = select(ModelPersona).where(ModelPersona.is_active.is_(True))
+    if include_inactive and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="include_inactive requires admin role",
+        )
+    q = select(ModelPersona)
+    if not include_inactive:
+        q = q.where(ModelPersona.is_active.is_(True))
     if gender is not None:
         q = q.where(ModelPersona.gender == gender)
     rows = (
@@ -240,6 +256,199 @@ async def list_personas(
         .all()
     )
     return [PersonaOut.model_validate(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Admin write endpoints — system prompt, templates, personas
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/system-prompt", response_model=SystemPromptOut)
+async def update_system_prompt(
+    body: SystemPromptUpdate,
+    db: DbDep,
+    _: AdminDep,
+) -> SystemPromptOut:
+    row = (
+        await db.execute(
+            select(SystemPrompt)
+            .where(SystemPrompt.is_active.is_(True))
+            .order_by(SystemPrompt.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active system prompt configured",
+        )
+    if body.content is not None:
+        row.content = body.content
+    if body.label is not None:
+        row.label = body.label
+    await db.commit()
+    await db.refresh(row)
+    return SystemPromptOut.model_validate(row)
+
+
+@router.post(
+    "/templates",
+    response_model=TemplateOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_template(
+    body: TemplateCreate,
+    db: DbDep,
+    _: AdminDep,
+) -> TemplateOut:
+    existing = (
+        await db.execute(
+            select(UserPromptTemplate).where(UserPromptTemplate.slug == body.slug)
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Template with slug '{body.slug}' already exists",
+        )
+    row = UserPromptTemplate(
+        slug=body.slug,
+        label=body.label,
+        description=body.description,
+        body=body.body,
+        is_active=True,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return TemplateOut.model_validate(row)
+
+
+@router.patch("/templates/{template_id}", response_model=TemplateOut)
+async def update_template(
+    template_id: uuid.UUID,
+    body: TemplateUpdate,
+    db: DbDep,
+    _: AdminDep,
+) -> TemplateOut:
+    row = (
+        await db.execute(
+            select(UserPromptTemplate).where(UserPromptTemplate.id == template_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template not found",
+        )
+    data = body.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(row, key, value)
+    await db.commit()
+    await db.refresh(row)
+    return TemplateOut.model_validate(row)
+
+
+@router.delete(
+    "/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_template(
+    template_id: uuid.UUID,
+    db: DbDep,
+    _: AdminDep,
+) -> None:
+    row = (
+        await db.execute(
+            select(UserPromptTemplate).where(UserPromptTemplate.id == template_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template not found",
+        )
+    row.is_active = False
+    await db.commit()
+
+
+@router.post(
+    "/personas",
+    response_model=PersonaOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_persona(
+    body: PersonaCreate,
+    db: DbDep,
+    _: AdminDep,
+) -> PersonaOut:
+    existing = (
+        await db.execute(
+            select(ModelPersona).where(ModelPersona.slug == body.slug)
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Persona with slug '{body.slug}' already exists",
+        )
+    row = ModelPersona(
+        slug=body.slug,
+        label=body.label,
+        gender=body.gender,
+        description=body.description,
+        is_active=True,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return PersonaOut.model_validate(row)
+
+
+@router.patch("/personas/{persona_id}", response_model=PersonaOut)
+async def update_persona(
+    persona_id: uuid.UUID,
+    body: PersonaUpdate,
+    db: DbDep,
+    _: AdminDep,
+) -> PersonaOut:
+    row = (
+        await db.execute(
+            select(ModelPersona).where(ModelPersona.id == persona_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Persona not found",
+        )
+    data = body.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(row, key, value)
+    await db.commit()
+    await db.refresh(row)
+    return PersonaOut.model_validate(row)
+
+
+@router.delete(
+    "/personas/{persona_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_persona(
+    persona_id: uuid.UUID,
+    db: DbDep,
+    _: AdminDep,
+) -> None:
+    row = (
+        await db.execute(
+            select(ModelPersona).where(ModelPersona.id == persona_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Persona not found",
+        )
+    row.is_active = False
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------

@@ -27,6 +27,27 @@ async def _signup(
     )
 
 
+async def _signup_admin(
+    client: AsyncClient, db, email: str = "admin@outfitter.dev"
+) -> str:
+    """Create a user and promote them to admin via direct DB update.
+
+    Returns the access token.
+    """
+    from app.models.user import User
+
+    resp = await client.post(
+        "/auth/signup", json={"email": email, "password": "supersecret99"}
+    )
+    token = resp.json()["access_token"]
+    user = (
+        await db.execute(select(User).where(User.email == email))
+    ).scalar_one()
+    user.role = "admin"
+    await db.commit()
+    return token
+
+
 async def _seed_item(db, **overrides) -> CatalogItem:
     defaults = dict(
         brand="Mango",
@@ -901,3 +922,239 @@ async def test_list_runs_cursor_pagination(
     page2 = resp2.json()
     assert len(page2["items"]) == 5
     assert page2["next_cursor"] is None
+
+
+# ---------------------------------------------------------------------------
+# Admin write endpoints — system prompt / templates / personas
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_admin_patch_system_prompt(client: AsyncClient, db):
+    sp = await _seed_system_prompt(db, content="OLD", label="Old label")
+    token = await _signup_admin(client, db, email="admin1@outfitter.dev")
+
+    resp = await client.patch(
+        "/playground/system-prompt",
+        headers=_auth_headers(token),
+        json={"content": "NEW", "label": "New label"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["content"] == "NEW"
+    assert body["label"] == "New label"
+    assert body["id"] == str(sp.id)
+
+
+@pytest.mark.asyncio
+async def test_non_admin_patch_system_prompt_403(client: AsyncClient, db):
+    await _seed_system_prompt(db)
+    token = (await _signup(client, email="user1@outfitter.dev")).json()[
+        "access_token"
+    ]
+
+    resp = await client.patch(
+        "/playground/system-prompt",
+        headers=_auth_headers(token),
+        json={"content": "NEW"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_create_template(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin2@outfitter.dev")
+
+    resp = await client.post(
+        "/playground/templates",
+        headers=_auth_headers(token),
+        json={
+            "slug": "my_new_tpl",
+            "label": "My New Template",
+            "description": "Created from API",
+            "body": "Render {{MODEL}} in studio.",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["slug"] == "my_new_tpl"
+    assert body["is_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_template_bad_slug_pattern_422(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin3@outfitter.dev")
+
+    resp = await client.post(
+        "/playground/templates",
+        headers=_auth_headers(token),
+        json={
+            "slug": "Has-Caps",
+            "label": "x",
+            "body": "{{MODEL}}",
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_template_duplicate_slug_409(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin4@outfitter.dev")
+    await _seed_template(db, slug="dupe")
+
+    resp = await client.post(
+        "/playground/templates",
+        headers=_auth_headers(token),
+        json={"slug": "dupe", "label": "x", "body": "{{MODEL}}"},
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_non_admin_create_template_403(client: AsyncClient, db):
+    token = (await _signup(client, email="user2@outfitter.dev")).json()[
+        "access_token"
+    ]
+
+    resp = await client.post(
+        "/playground/templates",
+        headers=_auth_headers(token),
+        json={"slug": "x_y_z", "label": "x", "body": "{{MODEL}}"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_patch_template(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin5@outfitter.dev")
+    tpl = await _seed_template(db, slug="patchme", body="old body")
+
+    resp = await client.patch(
+        f"/playground/templates/{tpl.id}",
+        headers=_auth_headers(token),
+        json={"body": "new body", "label": "new label"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["body"] == "new body"
+    assert body["label"] == "new label"
+
+
+@pytest.mark.asyncio
+async def test_admin_soft_delete_and_restore_template(
+    client: AsyncClient, db
+):
+    token = await _signup_admin(client, db, email="admin6@outfitter.dev")
+    tpl = await _seed_template(db, slug="killme")
+
+    resp = await client.delete(
+        f"/playground/templates/{tpl.id}",
+        headers=_auth_headers(token),
+    )
+    assert resp.status_code == 204
+
+    # Hidden from default list
+    listing = await client.get(
+        "/playground/templates", headers=_auth_headers(token)
+    )
+    assert all(r["slug"] != "killme" for r in listing.json())
+
+    # Visible with include_inactive (admin only)
+    listing_all = await client.get(
+        "/playground/templates?include_inactive=true",
+        headers=_auth_headers(token),
+    )
+    assert any(
+        r["slug"] == "killme" and r["is_active"] is False
+        for r in listing_all.json()
+    )
+
+    # Restore via PATCH
+    resp = await client.patch(
+        f"/playground/templates/{tpl.id}",
+        headers=_auth_headers(token),
+        json={"is_active": True},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_include_inactive_requires_admin(client: AsyncClient, db):
+    token = (await _signup(client, email="user3@outfitter.dev")).json()[
+        "access_token"
+    ]
+
+    resp = await client.get(
+        "/playground/templates?include_inactive=true",
+        headers=_auth_headers(token),
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_create_persona(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin7@outfitter.dev")
+
+    resp = await client.post(
+        "/playground/personas",
+        headers=_auth_headers(token),
+        json={
+            "slug": "f_test",
+            "label": "Test Persona",
+            "gender": "female",
+            "description": "- mid-20s\n- tan skin",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["slug"] == "f_test"
+    assert body["gender"] == "female"
+    assert body["is_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_persona_gender_immutable_on_patch(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin8@outfitter.dev")
+    p = await _seed_persona(db, slug="immutable", gender="female")
+
+    # PersonaUpdate has no gender field, so this is a 422 (extra field forbidden
+    # by Pydantic v2 by default? Actually default is to ignore. Test expectation:
+    # extras silently ignored, gender stays female).
+    resp = await client.patch(
+        f"/playground/personas/{p.id}",
+        headers=_auth_headers(token),
+        json={"gender": "male", "label": "Renamed"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["gender"] == "female"  # unchanged
+    assert body["label"] == "Renamed"  # changed
+
+
+@pytest.mark.asyncio
+async def test_admin_soft_delete_persona(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin9@outfitter.dev")
+    p = await _seed_persona(db, slug="dyingpersona")
+
+    resp = await client.delete(
+        f"/playground/personas/{p.id}",
+        headers=_auth_headers(token),
+    )
+    assert resp.status_code == 204
+
+    listing = await client.get(
+        "/playground/personas", headers=_auth_headers(token)
+    )
+    assert all(r["slug"] != "dyingpersona" for r in listing.json())
+
+
+@pytest.mark.asyncio
+async def test_user_role_in_auth_me(client: AsyncClient, db):
+    token = await _signup_admin(client, db, email="admin10@outfitter.dev")
+
+    resp = await client.get(
+        "/auth/me", headers=_auth_headers(token)
+    )
+    assert resp.status_code == 200
+    assert resp.json()["role"] == "admin"

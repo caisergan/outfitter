@@ -8,6 +8,11 @@ import {
     fetchPlaygroundSystemPrompt,
     fetchPlaygroundTemplates,
     fetchPlaygroundPersonas,
+    fetchPlaygroundRuns,
+    fetchPlaygroundRun,
+    getCatalogItem,
+    getMe,
+    createPlaygroundTemplate,
 } from "@/lib/api";
 import {
     GLOBAL_SYSTEM_PROMPT,
@@ -23,6 +28,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import {
     Sparkles,
     Search,
     Loader2,
@@ -37,6 +49,11 @@ import {
     Image as ImageIcon,
     RotateCcw,
     Copy,
+    History,
+    Eye,
+    RefreshCw,
+    Bookmark,
+    Save,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -67,6 +84,19 @@ const QUALITY_OPTIONS = [
     { value: "low", label: "Low" },
 ];
 
+const TIMESTAMP_FMT = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+});
+
+function excerpt(text, max = 90) {
+    if (!text) return "";
+    const firstLine = text.split("\n").find((l) => l.trim()) ?? "";
+    return firstLine.length > max ? firstLine.slice(0, max - 1) + "…" : firstLine;
+}
+
 export default function PlaygroundPage() {
     // catalog
     const [filters, setFilters] = useState({});
@@ -83,7 +113,9 @@ export default function PlaygroundPage() {
     // prompt library (server-fetched)
     const [serverSystemPrompt, setServerSystemPrompt] = useState(GLOBAL_SYSTEM_PROMPT);
     const [templates, setTemplates] = useState(null);
-    const [personas, setPersonas] = useState(null);
+    // All personas fetched once. Gender filter is client-side so reproduce
+    // can resolve a persona's gender from its id without a network round trip.
+    const [allPersonas, setAllPersonas] = useState(null);
     const [gender, setGender] = useState("female");
     const [templateId, setTemplateId] = useState(null);
     const [personaId, setPersonaId] = useState(null);
@@ -107,11 +139,92 @@ export default function PlaygroundPage() {
     const [generatedImages, setGeneratedImages] = useState([]);
     const [genError, setGenError] = useState(null);
 
+    // recent runs
+    const [runs, setRuns] = useState(null);
+    const [runsCursor, setRunsCursor] = useState(null);
+    const [runsLoading, setRunsLoading] = useState(false);
+    const [reproducing, setReproducing] = useState(false);
+    const [viewingRunId, setViewingRunId] = useState(null);
+    const [viewingRun, setViewingRun] = useState(null);
+    const [viewingRunLoading, setViewingRunLoading] = useState(false);
+
+    // current user (for admin gates)
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // save-as-template dialog
+    const [savingTemplate, setSavingTemplate] = useState(false);
+    const [saveAsOpen, setSaveAsOpen] = useState(false);
+    const [saveAsForm, setSaveAsForm] = useState({
+        slug: "",
+        label: "",
+        description: "",
+    });
+
     useEffect(() => {
         getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
     }, []);
 
-    // Mount-only: load the active system prompt + templates from the API.
+    // Mount-only: fetch the current user so we can gate admin-only affordances.
+    useEffect(() => {
+        getMe()
+            .then(setCurrentUser)
+            .catch(() => setCurrentUser(null));
+    }, []);
+
+    // Mount-only: load the user's recent runs.
+    useEffect(() => {
+        let cancelled = false;
+        setRunsLoading(true);
+        fetchPlaygroundRuns({ limit: 10 })
+            .then((data) => {
+                if (cancelled) return;
+                setRuns(data.items);
+                setRunsCursor(data.next_cursor);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                console.error("Failed to load recent runs:", err);
+                setRuns([]);
+            })
+            .finally(() => {
+                if (!cancelled) setRunsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // When the View Full modal opens, fetch the full run snapshot. Re-fetches
+    // even if the run is in the list because /runs/{id} returns fresh signed
+    // URLs (the list may have older URLs that have already expired).
+    useEffect(() => {
+        if (!viewingRunId) {
+            setViewingRun(null);
+            return;
+        }
+        let cancelled = false;
+        setViewingRunLoading(true);
+        fetchPlaygroundRun(viewingRunId)
+            .then((data) => {
+                if (cancelled) return;
+                setViewingRun(data);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                toast.error(err.message);
+                setViewingRunId(null);
+            })
+            .finally(() => {
+                if (!cancelled) setViewingRunLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [viewingRunId]);
+
+    // Mount-only: load the active system prompt, templates, and personas.
+    // Personas are fetched without a gender filter so the full library is
+    // available client-side for filtering and for reproducing past runs.
     // Falls back to the local GLOBAL_SYSTEM_PROMPT constant if the API is
     // unreachable so the panel stays usable offline.
     useEffect(() => {
@@ -119,13 +232,17 @@ export default function PlaygroundPage() {
         Promise.all([
             fetchPlaygroundSystemPrompt(),
             fetchPlaygroundTemplates(),
+            fetchPlaygroundPersonas(),
         ])
-            .then(([sp, ts]) => {
+            .then(([sp, ts, ps]) => {
                 if (cancelled) return;
                 setServerSystemPrompt(sp.content);
                 setSystemPrompt(sp.content);
                 setTemplates(ts);
                 setTemplateId((prev) => prev ?? ts[0]?.id ?? null);
+                setAllPersonas(ps);
+                const firstFemale = ps.find((p) => p.gender === "female");
+                setPersonaId((prev) => prev ?? firstFemale?.id ?? ps[0]?.id ?? null);
             })
             .catch((err) => {
                 if (cancelled) return;
@@ -134,32 +251,22 @@ export default function PlaygroundPage() {
                     "Could not load playground config; using local defaults",
                 );
                 setTemplates([]);
+                setAllPersonas([]);
             });
         return () => {
             cancelled = true;
         };
     }, []);
 
-    // Personas are gendered; refetch when gender changes (and on mount).
+    // Whenever gender changes, snap personaId to the first persona of that
+    // gender if the current pick doesn't match. No network round trip.
     useEffect(() => {
-        let cancelled = false;
-        fetchPlaygroundPersonas(gender)
-            .then((rows) => {
-                if (cancelled) return;
-                setPersonas(rows);
-                setPersonaId(rows[0]?.id ?? null);
-            })
-            .catch((err) => {
-                if (cancelled) return;
-                console.error("Failed to load personas:", err);
-                toast.error(err.message);
-                setPersonas([]);
-                setPersonaId(null);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [gender]);
+        if (!allPersonas) return;
+        const current = allPersonas.find((p) => p.id === personaId);
+        if (current && current.gender === gender) return;
+        const firstOfGender = allPersonas.find((p) => p.gender === gender);
+        setPersonaId(firstOfGender?.id ?? null);
+    }, [gender, allPersonas, personaId]);
 
     useEffect(() => {
         const timer = setTimeout(
@@ -253,6 +360,7 @@ export default function PlaygroundPage() {
                     ? ` · ${data.daily_used}/${data.daily_limit} today`
                     : "";
             toast.success(`Generated ${data.images.length} image(s) in ${data.elapsed_ms}ms${usage}`);
+            refreshRunsAfterGenerate();
         } catch (err) {
             if (
                 err.status === 429 &&
@@ -271,9 +379,160 @@ export default function PlaygroundPage() {
             } else {
                 setGenError(err.message);
                 toast.error(err.message);
+                // Failed runs are still persisted server-side; refresh so the
+                // recent runs list reflects the failed-status row.
+                if (err.status !== 429) {
+                    refreshRunsAfterGenerate();
+                }
             }
         } finally {
             setGenerating(false);
+        }
+    }
+
+    async function loadMoreRuns() {
+        if (!runsCursor || runsLoading) return;
+        setRunsLoading(true);
+        try {
+            const data = await fetchPlaygroundRuns({
+                limit: 10,
+                cursor: runsCursor,
+            });
+            setRuns((prev) => [...(prev ?? []), ...data.items]);
+            setRunsCursor(data.next_cursor);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setRunsLoading(false);
+        }
+    }
+
+    async function refreshRunsAfterGenerate() {
+        try {
+            const data = await fetchPlaygroundRuns({ limit: 10 });
+            setRuns(data.items);
+            setRunsCursor(data.next_cursor);
+        } catch (err) {
+            console.error("Failed to refresh runs:", err);
+        }
+    }
+
+    async function reproduceRun(run) {
+        setReproducing(true);
+        try {
+            // Scalars + size/quality/n
+            setSize(run.size);
+            setQuality(run.quality);
+            setCount(run.n);
+
+            // System prompt — assignment marks "modified" if it diverges from
+            // the current server default.
+            setSystemPrompt(run.system_prompt_text);
+
+            // Template — only set if still in our cached active list.
+            const tplExists = templates?.some((t) => t.id === run.template_id);
+            setTemplateId(tplExists ? run.template_id : null);
+
+            // Persona — resolve via cached allPersonas; switch gender first
+            // so the visible list contains the picked persona.
+            if (run.persona_id) {
+                const p = allPersonas?.find((x) => x.id === run.persona_id);
+                if (p) {
+                    setGender(p.gender);
+                    setPersonaId(p.id);
+                } else {
+                    setPersonaId(null);
+                }
+            } else {
+                setPersonaId(null);
+            }
+
+            // User prompt — set to snapshot. The dirty badge then reflects
+            // whether the snapshot still matches the (now-restored) dropdown
+            // composition, which is the right answer either way.
+            setPrompt(run.user_prompt_text);
+
+            // Catalog selection — fetch each item by id; tolerate deletions.
+            const items = await Promise.all(
+                (run.catalog_item_ids || []).map((id) =>
+                    getCatalogItem(id).catch(() => null),
+                ),
+            );
+            const resolved = items.filter(Boolean);
+            setSelected(new Map(resolved.map((i) => [i.id, i])));
+            const missing = (run.catalog_item_ids?.length ?? 0) - resolved.length;
+            if (missing > 0) {
+                toast(`${missing} catalog item(s) no longer exist`, {
+                    description: "Reproduced selection without them.",
+                });
+            }
+
+            toast.success(`Reproduced run ${run.id.slice(0, 8)}`);
+        } catch (err) {
+            console.error("Reproduce failed:", err);
+            toast.error(`Reproduce failed: ${err.message}`);
+        } finally {
+            setReproducing(false);
+        }
+    }
+
+    function openSaveAsTemplate() {
+        // Auto-suggest a slug from the current template's slug if available, else
+        // a timestamped fallback. User can edit before submitting.
+        const baseSlug = template?.slug ?? "custom";
+        const suffix = Math.random().toString(36).slice(2, 6);
+        setSaveAsForm({
+            slug: `${baseSlug}_${suffix}`,
+            label: template?.label ? `${template.label} (custom)` : "Custom template",
+            description: "",
+        });
+        setSaveAsOpen(true);
+    }
+
+    async function submitSaveAsTemplate() {
+        const slug = saveAsForm.slug.trim();
+        if (!/^[a-z0-9_]+$/.test(slug)) {
+            toast.error("Slug must be lowercase letters, digits, or underscores");
+            return;
+        }
+        if (!saveAsForm.label.trim()) {
+            toast.error("Label required");
+            return;
+        }
+        if (!prompt.trim()) {
+            toast.error("Variation notes are empty");
+            return;
+        }
+        setSavingTemplate(true);
+        try {
+            const created = await createPlaygroundTemplate({
+                slug,
+                label: saveAsForm.label,
+                description: saveAsForm.description || null,
+                body: prompt,
+            });
+            // Refresh the templates list and switch the dropdown to the new row.
+            const fresh = await fetchPlaygroundTemplates();
+            setTemplates(fresh);
+            setTemplateId(created.id);
+            // The new template's body equals the current prompt, so the next
+            // sync useEffect will see lastApplied differing and won't overwrite.
+            // Force lastApplied to match so the dirty badge clears.
+            lastAppliedComposed.current = composeUserPrompt({
+                template: created,
+                persona,
+            });
+            setPrompt(lastAppliedComposed.current);
+            toast.success(`Saved as template "${created.slug}"`);
+            setSaveAsOpen(false);
+        } catch (err) {
+            if (err.status === 409) {
+                toast.error("Slug already exists; pick a different one");
+            } else {
+                toast.error(err.message);
+            }
+        } finally {
+            setSavingTemplate(false);
         }
     }
 
@@ -308,8 +567,12 @@ export default function PlaygroundPage() {
         [templates, templateId],
     );
     const persona = useMemo(
-        () => personas?.find((p) => p.id === personaId) ?? null,
-        [personas, personaId],
+        () => allPersonas?.find((p) => p.id === personaId) ?? null,
+        [allPersonas, personaId],
+    );
+    const visiblePersonas = useMemo(
+        () => allPersonas?.filter((p) => p.gender === gender) ?? null,
+        [allPersonas, gender],
     );
     const composedUserPrompt = useMemo(
         () => composeUserPrompt({ template, persona }),
@@ -575,19 +838,19 @@ export default function PlaygroundPage() {
                     {/* Persona */}
                     <div className="space-y-1">
                         <Label className="text-xs text-slate-400">Persona</Label>
-                        {personas === null ? (
+                        {visiblePersonas === null ? (
                             <Skeleton className="h-9 w-full bg-slate-800 rounded-md" />
                         ) : (
                             <select
                                 value={personaId ?? ""}
                                 onChange={(e) => setPersonaId(e.target.value || null)}
                                 className="w-full h-9 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                disabled={personas.length === 0}
+                                disabled={visiblePersonas.length === 0}
                             >
-                                {personas.length === 0 && (
+                                {visiblePersonas.length === 0 && (
                                     <option value="">No personas</option>
                                 )}
-                                {personas.map((p) => (
+                                {visiblePersonas.map((p) => (
                                     <option key={p.id} value={p.id}>{p.label}</option>
                                 ))}
                             </select>
@@ -676,14 +939,26 @@ export default function PlaygroundPage() {
                         )}
                     </div>
                     {isUserPromptDirty && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={resetUserPrompt}
-                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
-                        >
-                            <RotateCcw className="w-3 h-3 mr-1" /> Reset
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            {currentUser?.role === "admin" && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={openSaveAsTemplate}
+                                    className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                                >
+                                    <Bookmark className="w-3 h-3 mr-1" /> Save as template
+                                </Button>
+                            )}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={resetUserPrompt}
+                                className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                            >
+                                <RotateCcw className="w-3 h-3 mr-1" /> Reset
+                            </Button>
+                        </div>
                     )}
                 </div>
                 <Textarea
@@ -846,6 +1121,320 @@ export default function PlaygroundPage() {
                     )}
                 </Card>
             )}
+
+            {/* Recent runs — persisted history scoped to the current user */}
+            <Card className="bg-slate-900 border-slate-800 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Recent runs
+                    </CardTitle>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={refreshRunsAfterGenerate}
+                        disabled={runsLoading}
+                        className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                    >
+                        <RefreshCw className={`w-3 h-3 mr-1 ${runsLoading ? "animate-spin" : ""}`} />
+                        Refresh
+                    </Button>
+                </div>
+
+                {runs === null ? (
+                    <div className="space-y-2">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton key={i} className="h-20 w-full bg-slate-800 rounded-md" />
+                        ))}
+                    </div>
+                ) : runs.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">
+                        No runs yet. Generate something to see it here.
+                    </p>
+                ) : (
+                    <ul className="divide-y divide-slate-800">
+                        {runs.map((run) => {
+                            const tplLabel =
+                                templates?.find((t) => t.id === run.template_id)?.label;
+                            const personaRow = allPersonas?.find((p) => p.id === run.persona_id);
+                            const ts = TIMESTAMP_FMT.format(new Date(run.created_at));
+                            const isFailed = run.status === "failed";
+                            return (
+                                <li key={run.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                                    <div className="shrink-0 w-16 h-20 rounded border border-slate-700 bg-slate-800 overflow-hidden flex items-center justify-center">
+                                        {run.images?.[0] ? (
+                                            <img
+                                                src={run.images[0]}
+                                                alt={`Run ${run.id.slice(0, 8)}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <ImageIcon className="w-5 h-5 text-slate-600" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <Badge
+                                                variant="outline"
+                                                className={
+                                                    isFailed
+                                                        ? "border-red-800 text-red-400 text-[10px]"
+                                                        : "border-emerald-800 text-emerald-400 text-[10px]"
+                                                }
+                                            >
+                                                {run.status}
+                                            </Badge>
+                                            <span className="text-slate-400">{ts}</span>
+                                            <span className="text-slate-600">·</span>
+                                            <span className="text-slate-500">{run.size} · {run.quality} · n={run.n}</span>
+                                        </div>
+                                        {isFailed ? (
+                                            <p className="text-xs text-red-300 truncate">
+                                                {run.error_message || "Generation failed"}
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-slate-300 truncate">
+                                                {excerpt(run.user_prompt_text) ||
+                                                    excerpt(run.system_prompt_text)}
+                                            </p>
+                                        )}
+                                        <p className="text-[11px] text-slate-500 truncate">
+                                            {tplLabel ?? "—"}
+                                            {personaRow && (
+                                                <>
+                                                    {" · "}
+                                                    {personaRow.gender === "female" ? "F" : "M"}
+                                                    {" · "}
+                                                    {personaRow.label}
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div className="shrink-0 flex flex-col gap-1">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => reproduceRun(run)}
+                                            disabled={reproducing}
+                                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7 text-xs"
+                                        >
+                                            <RotateCcw className="w-3 h-3 mr-1" />
+                                            Reproduce
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setViewingRunId(run.id)}
+                                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7 text-xs"
+                                        >
+                                            <Eye className="w-3 h-3 mr-1" />
+                                            View
+                                        </Button>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+
+                {runsCursor && (
+                    <div className="pt-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={loadMoreRuns}
+                            disabled={runsLoading}
+                            className="border-slate-700 text-slate-300 hover:bg-slate-800 w-full"
+                        >
+                            {runsLoading ? (
+                                <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Loading…</>
+                            ) : (
+                                "Load more"
+                            )}
+                        </Button>
+                    </div>
+                )}
+            </Card>
+
+            {/* Save as template — admin-only, opens from variation-notes card */}
+            <Dialog
+                open={saveAsOpen}
+                onOpenChange={(open) => !open && !savingTemplate && setSaveAsOpen(false)}
+            >
+                <DialogContent className="bg-slate-900 border-slate-800 max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-100 flex items-center gap-2">
+                            <Bookmark className="w-4 h-4" /> Save as template
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 text-xs">
+                            Persists the current variation notes as a new active template.
+                            The body is taken verbatim from the textarea — keep
+                            {" {{MODEL}}"} in the body so persona swaps still work.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Slug</Label>
+                            <Input
+                                value={saveAsForm.slug}
+                                onChange={(e) =>
+                                    setSaveAsForm((f) => ({ ...f, slug: e.target.value }))
+                                }
+                                placeholder="lowercase_with_underscores"
+                                className="bg-slate-800 border-slate-700 text-slate-100"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Label</Label>
+                            <Input
+                                value={saveAsForm.label}
+                                onChange={(e) =>
+                                    setSaveAsForm((f) => ({ ...f, label: e.target.value }))
+                                }
+                                className="bg-slate-800 border-slate-700 text-slate-100"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Description</Label>
+                            <Input
+                                value={saveAsForm.description}
+                                onChange={(e) =>
+                                    setSaveAsForm((f) => ({ ...f, description: e.target.value }))
+                                }
+                                placeholder="Optional one-line summary"
+                                className="bg-slate-800 border-slate-700 text-slate-100"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Body (from textarea)</Label>
+                            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-950 border border-slate-800 rounded-md p-3 max-h-40 overflow-auto">
+                                {prompt || "(empty)"}
+                            </pre>
+                            {!prompt.includes("{{MODEL}}") && (
+                                <p className="text-[11px] text-amber-400">
+                                    Note: body has no {"{{MODEL}}"} placeholder; persona
+                                    swaps will not change this template's output.
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSaveAsOpen(false)}
+                                disabled={savingTemplate}
+                                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={submitSaveAsTemplate}
+                                disabled={savingTemplate}
+                                className="bg-indigo-600 hover:bg-indigo-700"
+                            >
+                                {savingTemplate ? (
+                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Saving…</>
+                                ) : (
+                                    <><Save className="w-3 h-3 mr-1" /> Create template</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* View full run modal — fetches fresh signed URLs each open */}
+            <Dialog
+                open={viewingRunId !== null}
+                onOpenChange={(open) => {
+                    if (!open) setViewingRunId(null);
+                }}
+            >
+                <DialogContent className="bg-slate-900 border-slate-800 max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-100 flex items-center gap-2">
+                            <Eye className="w-4 h-4" /> Run snapshot
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 text-xs">
+                            {viewingRunId && `Run ${viewingRunId.slice(0, 8)}`}
+                            {viewingRun && (
+                                <>
+                                    {" · "}
+                                    {TIMESTAMP_FMT.format(new Date(viewingRun.created_at))}
+                                    {" · "}
+                                    <span className={viewingRun.status === "failed" ? "text-red-400" : "text-emerald-400"}>
+                                        {viewingRun.status}
+                                    </span>
+                                    {" · "}
+                                    {viewingRun.size} · {viewingRun.quality} · n={viewingRun.n}
+                                    {" · "}
+                                    {viewingRun.elapsed_ms}ms
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {viewingRunLoading || !viewingRun ? (
+                        <div className="space-y-3">
+                            <Skeleton className="h-24 w-full bg-slate-800" />
+                            <Skeleton className="h-32 w-full bg-slate-800" />
+                            <Skeleton className="h-32 w-full bg-slate-800" />
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {viewingRun.images?.length > 0 && (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {viewingRun.images.map((url, i) => (
+                                        <a
+                                            key={i}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="block rounded border border-slate-700 overflow-hidden hover:border-slate-500"
+                                        >
+                                            <img src={url} alt={`Image ${i + 1}`} className="w-full" />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                            {viewingRun.error_message && (
+                                <Alert variant="destructive" className="bg-red-950 border-red-800">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertDescription>{viewingRun.error_message}</AlertDescription>
+                                </Alert>
+                            )}
+                            <div className="space-y-1">
+                                <Label className="text-xs text-slate-400">System prompt</Label>
+                                <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-950 border border-slate-800 rounded-md p-3 max-h-48 overflow-auto">
+                                    {viewingRun.system_prompt_text}
+                                </pre>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs text-slate-400">User prompt</Label>
+                                <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-950 border border-slate-800 rounded-md p-3 max-h-48 overflow-auto">
+                                    {viewingRun.user_prompt_text || "(empty)"}
+                                </pre>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        const r = viewingRun;
+                                        setViewingRunId(null);
+                                        reproduceRun(r);
+                                    }}
+                                    disabled={reproducing}
+                                    className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                                >
+                                    <RotateCcw className="w-3 h-3 mr-1" /> Reproduce
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -203,3 +203,45 @@ export async function fetchPlaygroundRuns({ limit, cursor } = {}) {
 export async function fetchPlaygroundRun(runId) {
   return apiFetch(`/playground/runs/${runId}`);
 }
+
+export async function getCatalogItem(itemId) {
+  return apiFetch(`/catalog/items/${itemId}`);
+}
+
+// ── Admin: prompt library CRUD ──────────────────────────────────────────────
+
+export async function patchPlaygroundSystemPrompt(payload) {
+  return apiFetch("/playground/system-prompt", { method: "PATCH", body: payload });
+}
+
+export async function listPlaygroundTemplatesAdmin() {
+  return apiFetch("/playground/templates?include_inactive=true");
+}
+
+export async function createPlaygroundTemplate(payload) {
+  return apiFetch("/playground/templates", { method: "POST", body: payload });
+}
+
+export async function patchPlaygroundTemplate(id, payload) {
+  return apiFetch(`/playground/templates/${id}`, { method: "PATCH", body: payload });
+}
+
+export async function deletePlaygroundTemplate(id) {
+  return apiFetch(`/playground/templates/${id}`, { method: "DELETE" });
+}
+
+export async function listPlaygroundPersonasAdmin() {
+  return apiFetch("/playground/personas?include_inactive=true");
+}
+
+export async function createPlaygroundPersona(payload) {
+  return apiFetch("/playground/personas", { method: "POST", body: payload });
+}
+
+export async function patchPlaygroundPersona(id, payload) {
+  return apiFetch(`/playground/personas/${id}`, { method: "PATCH", body: payload });
+}
+
+export async function deletePlaygroundPersona(id) {
+  return apiFetch(`/playground/personas/${id}`, { method: "DELETE" });
+}
