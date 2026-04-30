@@ -9,6 +9,7 @@ import {
     Layers,
     Camera,
     Sparkles,
+    Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const navItems = [
     { href: "/outfits", label: "Outfits", icon: Layers },
     { href: "/tryon", label: "Try-On", icon: Camera },
     { href: "/playground", label: "Playground", icon: Sparkles },
+    { href: "/admin/system-prompt", label: "Admin", icon: Settings },
 ];
 
 export default function Sidebar() {
