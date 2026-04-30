@@ -99,6 +99,7 @@ import app.models.user  # noqa: F401, E402
 import app.models.catalog  # noqa: F401, E402
 import app.models.wardrobe  # noqa: F401, E402
 import app.models.outfit  # noqa: F401, E402
+import app.models.playground  # noqa: F401, E402
 
 # ---------------------------------------------------------------------------
 # 3. Async SQLite engine (one per session; tables recreated per test)

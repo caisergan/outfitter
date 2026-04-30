@@ -162,3 +162,37 @@ export async function submitTryOn(data) {
 export async function getTryOnStatus(jobId) {
   return apiFetch(`/tryon/status/${jobId}`);
 }
+
+// ── Playground ───────────────────────────────────────────────────────────────
+
+export async function generatePlaygroundImage(payload) {
+  // payload: { catalog_item_ids: string[], system_prompt: string, user_prompt?: string,
+  //            template_id?: string, persona_id?: string,
+  //            size?: string, quality?: string, n?: number }
+  return apiFetch("/playground/generate-image", { method: "POST", body: payload });
+}
+
+export async function fetchPlaygroundSystemPrompt() {
+  return apiFetch("/playground/system-prompt");
+}
+
+export async function fetchPlaygroundTemplates() {
+  return apiFetch("/playground/templates");
+}
+
+export async function fetchPlaygroundPersonas(gender) {
+  const q = gender ? `?gender=${encodeURIComponent(gender)}` : "";
+  return apiFetch(`/playground/personas${q}`);
+}
+
+export async function fetchPlaygroundRuns({ limit, cursor } = {}) {
+  const q = new URLSearchParams();
+  if (limit) q.set("limit", limit);
+  if (cursor) q.set("cursor", cursor);
+  const qs = q.toString();
+  return apiFetch(`/playground/runs${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchPlaygroundRun(runId) {
+  return apiFetch(`/playground/runs/${runId}`);
+}
