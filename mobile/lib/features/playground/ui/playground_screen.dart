@@ -3,11 +3,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/playground_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../data/playground_repository.dart';
 import '../models/styling_canvas_models.dart';
+import '../providers/playground_draft_provider.dart';
+import '../providers/playground_library_provider.dart';
+import '../providers/playground_runs_provider.dart';
 import '../providers/styling_canvas_provider.dart';
 import 'widgets/item_browser_sheet.dart';
+import 'widgets/style_picker_sheet.dart';
 import 'widgets/wardrobe_browser_sheet.dart';
 
 class PlaygroundScreen extends ConsumerStatefulWidget {
@@ -274,8 +280,78 @@ class _StudioTryOnSheet extends ConsumerStatefulWidget {
 }
 
 class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
+  bool _generating = false;
+  GenerateResponse? _result;
+  PlaygroundCapException? _capError;
+  Object? _error;
+
+  Future<void> _openStylePicker() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const StylePickerSheet(),
+    );
+  }
+
+  Future<void> _generate() async {
+    final draft = ref.read(playgroundDraftProvider);
+    final ids = widget.garments
+        .map((g) => g.item.id)
+        .toList(growable: false);
+    if (ids.isEmpty) return;
+    setState(() {
+      _generating = true;
+      _error = null;
+      _capError = null;
+    });
+    try {
+      final response = await ref.read(playgroundRepositoryProvider).generate(
+            GenerateRequest(
+              catalogItemIds: ids,
+              systemPrompt: draft.systemPromptText,
+              userPrompt: draft.userPromptText,
+              templateId: draft.templateId,
+              personaId: draft.personaId,
+            ),
+          );
+      if (!mounted) return;
+      setState(() {
+        _result = response;
+        _generating = false;
+      });
+      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Generated · ${response.dailyUsed}/${response.dailyLimit} today',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on PlaygroundCapException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _capError = e;
+        _generating = false;
+      });
+      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _generating = false;
+      });
+      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final draft = ref.watch(playgroundDraftProvider);
+    final libraryAsync = ref.watch(playgroundLibraryProvider);
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.94,
@@ -303,7 +379,7 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'A dedicated result surface for the AI try-on image, styled to match Studio.',
+                          'Render this outfit on a model. Pick a style or use the defaults.',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppColors.textMuted,
@@ -323,16 +399,131 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _TryOnPreviewState(
-                  garments: widget.garments,
+              const SizedBox(height: 12),
+              libraryAsync.when(
+                loading: () => const SizedBox(
+                  height: 36,
+                  child: Center(child: LinearProgressIndicator()),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (lib) => _StylePillRow(
+                  draft: draft,
+                  library: lib,
+                  onTap: _openStylePicker,
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
+              Expanded(
+                child: _TryOnPreview(
+                  generating: _generating,
+                  result: _result,
+                  capError: _capError,
+                  error: _error,
+                ),
+              ),
+              const SizedBox(height: 14),
               _TryOnLookStrip(garments: widget.garments),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                icon: _generating
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.surface,
+                        ),
+                      )
+                    : const Icon(Icons.auto_awesome_rounded),
+                label: Text(_generating
+                    ? 'Generating…'
+                    : (_result == null ? 'Generate' : 'Generate again')),
+                onPressed: (_generating || widget.garments.isEmpty)
+                    ? null
+                    : _generate,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.blush,
+                  foregroundColor: AppColors.surface,
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StylePillRow extends StatelessWidget {
+  final PlaygroundDraft draft;
+  final PlaygroundLibrary library;
+  final VoidCallback onTap;
+
+  const _StylePillRow({
+    required this.draft,
+    required this.library,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final template = library.templates.firstWhere(
+      (t) => t.id == draft.templateId,
+      orElse: () => library.templates.isNotEmpty
+          ? library.templates.first
+          : const PlaygroundTemplate(
+              id: '',
+              slug: '',
+              label: '—',
+              body: '',
+              isActive: false,
+            ),
+    );
+    final persona = library.allPersonas.firstWhere(
+      (p) => p.id == draft.personaId,
+      orElse: () => const PlaygroundPersona(
+        id: '',
+        slug: '',
+        label: '—',
+        gender: 'female',
+        description: '',
+        isActive: false,
+      ),
+    );
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.palette_outlined,
+                size: 16, color: AppColors.blush),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${template.label} · ${draft.gender == 'female' ? 'F' : 'M'} · ${persona.label}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.edit_outlined,
+                size: 16, color: AppColors.textMuted),
+          ],
         ),
       ),
     );
@@ -373,109 +564,185 @@ class _TryOnLookStrip extends StatelessWidget {
   }
 }
 
-class _TryOnPreviewState extends StatelessWidget {
-  static const _mockTryOnImage = 'assets/mockdata/TryOnModel.jpeg';
-  static const _mockTryOnAspectRatio = 1024 / 1536;
+class _TryOnPreview extends StatelessWidget {
+  // 1024x1536 = portrait aspect for gpt-image-2 default size
+  static const _aspectRatio = 1024 / 1536;
 
-  final List<CanvasGarment> garments;
+  final bool generating;
+  final GenerateResponse? result;
+  final PlaygroundCapException? capError;
+  final Object? error;
 
-  const _TryOnPreviewState({
-    required this.garments,
+  const _TryOnPreview({
+    required this.generating,
+    required this.result,
+    required this.capError,
+    required this.error,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final frameWidth =
-                  (constraints.maxHeight * _mockTryOnAspectRatio)
-                      .clamp(0.0, constraints.maxWidth)
-                      .toDouble();
-
-              return Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: frameWidth,
-                  height: constraints.maxHeight,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.blush.withValues(alpha: 0.08),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          _mockTryOnImage,
-                          fit: BoxFit.cover,
-                          filterQuality: FilterQuality.medium,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: AppColors.surfaceAlt,
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.broken_image_outlined,
-                              color: AppColors.textMuted,
-                              size: 28,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 16,
-                          top: 16,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface.withValues(alpha: 0.92),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.auto_awesome_rounded,
-                                  color: AppColors.blush,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Try On',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelMedium
-                                      ?.copyWith(
-                                        color: AppColors.text,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final frameWidth = (constraints.maxHeight * _aspectRatio)
+            .clamp(0.0, constraints.maxWidth)
+            .toDouble();
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: frameWidth,
+            height: constraints.maxHeight,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.blush.withValues(alpha: 0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
-                ),
-              );
-            },
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _buildContent(context),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    if (generating) {
+      return Container(
+        color: AppColors.surfaceAlt,
+        alignment: Alignment.center,
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 14),
+            Text('Generating…',
+                style: TextStyle(color: AppColors.textMuted)),
+          ],
+        ),
+      );
+    }
+    if (capError != null) {
+      return _StatusCard(
+        icon: Icons.timer_outlined,
+        tone: AppColors.danger,
+        title: 'Daily limit reached',
+        body:
+            'Used ${capError!.used}/${capError!.limit} today. Resets at ${_formatResetTime(capError!.resetAt)}.',
+      );
+    }
+    if (error != null) {
+      return _StatusCard(
+        icon: Icons.error_outline,
+        tone: AppColors.danger,
+        title: 'Generation failed',
+        body: error.toString(),
+      );
+    }
+    final url = result?.images.firstOrNull;
+    if (url != null) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, __, ___) => Container(
+          color: AppColors.surfaceAlt,
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.broken_image_outlined,
+            color: AppColors.textMuted,
+            size: 28,
           ),
         ),
-      ],
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Container(
+            color: AppColors.surfaceAlt,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(),
+          );
+        },
+      );
+    }
+    return Container(
+      color: AppColors.surfaceAlt,
+      alignment: Alignment.center,
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.auto_awesome_rounded,
+                size: 36, color: AppColors.blush),
+            const SizedBox(height: 12),
+            Text(
+              'Tap Generate',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Renders this outfit on the chosen persona using the editorial style.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatResetTime(DateTime? resetAt) {
+    if (resetAt == null) return 'tomorrow';
+    final local = resetAt.toLocal();
+    final h = local.hour.toString().padLeft(2, '0');
+    final m = local.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  final IconData icon;
+  final Color tone;
+  final String title;
+  final String body;
+  const _StatusCard({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.surfaceAlt,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 36, color: tone),
+          const SizedBox(height: 12),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
