@@ -132,6 +132,19 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
     );
   }
 
+  Future<void> _openTryOnExperience() async {
+    final canvas = ref.read(stylingCanvasProvider);
+    if (canvas.garments.isEmpty) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _StudioTryOnSheet(garments: canvas.garments),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final canvas = ref.watch(stylingCanvasProvider);
@@ -207,6 +220,26 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.auto_awesome_rounded),
+                      label: const Text('AI Try On'),
+                      onPressed: canvas.garments.isEmpty
+                          ? null
+                          : _openTryOnExperience,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.blush,
+                        foregroundColor: AppColors.surface,
+                        disabledBackgroundColor: AppColors.surfaceMuted,
+                        disabledForegroundColor: AppColors.textMuted,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   _ToolbarIconButton(
                     icon: Icons.layers_outlined,
                     tooltip: 'Layers',
@@ -225,6 +258,214 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StudioTryOnSheet extends ConsumerStatefulWidget {
+  final List<CanvasGarment> garments;
+
+  const _StudioTryOnSheet({
+    required this.garments,
+  });
+
+  @override
+  ConsumerState<_StudioTryOnSheet> createState() => _StudioTryOnSheetState();
+}
+
+class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.94,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Studio Try On',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'A dedicated result surface for the AI try-on image, styled to match Studio.',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.textMuted,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton.filledTonal(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.surfaceAlt,
+                      foregroundColor: AppColors.text,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _TryOnLookStrip(garments: widget.garments),
+              const SizedBox(height: 18),
+              Expanded(
+                child: _TryOnPreviewState(
+                  garments: widget.garments,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TryOnLookStrip extends StatelessWidget {
+  final List<CanvasGarment> garments;
+
+  const _TryOnLookStrip({required this.garments});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 74,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: garments.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final garment = garments[index];
+          return Container(
+            width: 74,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: CachedItemImage(
+              url: garment.item.imageUrl,
+              fit: BoxFit.contain,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TryOnPreviewState extends StatelessWidget {
+  static const _mockTryOnImage = 'assets/mockdata/TryOnModel.jpeg';
+
+  final List<CanvasGarment> garments;
+
+  const _TryOnPreviewState({
+    required this.garments,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.blush.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  _mockTryOnImage,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.medium,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: AppColors.surfaceAlt,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.textMuted,
+                      size: 28,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt.withValues(alpha: 0.0),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  top: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppColors.blush,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Try On',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(
+                                color: AppColors.text,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
