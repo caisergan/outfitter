@@ -97,10 +97,44 @@ class PlaygroundRepository {
           );
         }
       }
-      throw PlaygroundException(
-        e.response?.data?.toString() ?? e.message ?? 'Generation failed',
-      );
+      throw PlaygroundException(_humanError(e));
     }
+  }
+
+  /// Map a Dio failure to a short, human-readable message. Avoids dumping
+  /// raw HTML from gateway timeouts (Cloudflare 524, etc.) and prefers the
+  /// FastAPI structured `{ detail: ... }` shape when present.
+  static String _humanError(DioException e) {
+    final status = e.response?.statusCode;
+    final data = e.response?.data;
+
+    if (data is Map) {
+      final detail = data['detail'];
+      if (detail is String && detail.isNotEmpty) return detail;
+      if (detail is Map) {
+        final inner = detail['error'];
+        if (inner is Map && inner['message'] is String) {
+          return inner['message'] as String;
+        }
+      }
+    }
+
+    switch (status) {
+      case 504:
+      case 524:
+        return 'Generation timed out at the gateway. Try again in a moment.';
+      case 502:
+      case 503:
+        return 'Image generation service is unavailable. Try again.';
+      case 500:
+        return 'Image generation failed on the server. Try again.';
+    }
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Generation timed out. The model can take up to a minute — try again.';
+    }
+    return e.message ?? 'Generation failed';
   }
 
   Future<PlaygroundRunsPage> listRuns({int limit = 10, String? cursor}) async {

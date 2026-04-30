@@ -796,25 +796,34 @@ class _StatusCard extends StatelessWidget {
     required this.body,
   });
 
+  /// Hard cap so a runaway error (e.g. a gateway HTML page) still fits
+  /// inside the card without overflow even if the scroll machinery fails.
+  static const _maxBodyChars = 280;
+
   @override
   Widget build(BuildContext context) {
+    final clipped = body.length > _maxBodyChars
+        ? '${body.substring(0, _maxBodyChars)}…'
+        : body;
     return Container(
       color: AppColors.surfaceAlt,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 36, color: tone),
           const SizedBox(height: 12),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
-          Text(
-            body,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textMuted,
-                ),
-            textAlign: TextAlign.center,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Text(
+                clipped,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ],
       ),
