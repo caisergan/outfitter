@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     searchCatalog,
     getCatalogFilterOptions,
     generatePlaygroundImage,
 } from "@/lib/api";
+import {
+    GLOBAL_SYSTEM_PROMPT,
+    buildFinalPrompt,
+} from "@/lib/prompts/editorial";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,14 +31,19 @@ import {
     X,
     Download,
     Image as ImageIcon,
+    RotateCcw,
+    Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const LIMIT = 20;
 const MAX_SELECTED = 16;
+const PROMPT_CAP = 32000;
+const SEARCH_DEBOUNCE_MS = 300;
 
 const FILTER_FIELDS = [
     { key: "category", label: "Category", optionsKey: "categories" },
+    { key: "subtype",  label: "Subtype",  optionsKey: "__subtypes_by_category" },
     { key: "brand", label: "Brand", optionsKey: "brands" },
     { key: "gender", label: "Gender", optionsKey: "genders" },
     { key: "color", label: "Color", optionsKey: "colors" },
@@ -57,6 +66,8 @@ const QUALITY_OPTIONS = [
 export default function PlaygroundPage() {
     // catalog
     const [filters, setFilters] = useState({});
+    const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [filterOptions, setFilterOptions] = useState(null);
     const [results, setResults] = useState(null);
     const [offset, setOffset] = useState(0);
@@ -66,7 +77,10 @@ export default function PlaygroundPage() {
     const [selected, setSelected] = useState(new Map());
 
     // prompt + params
+    const [systemPrompt, setSystemPrompt] = useState(GLOBAL_SYSTEM_PROMPT);
+    const [systemPromptOpen, setSystemPromptOpen] = useState(false);
     const [prompt, setPrompt] = useState("");
+    const [previewOpen, setPreviewOpen] = useState(false);
     const [size, setSize] = useState("1024x1536");
     const [quality, setQuality] = useState("high");
     const [count, setCount] = useState(1);
@@ -78,21 +92,46 @@ export default function PlaygroundPage() {
     const [genError, setGenError] = useState(null);
 
     useEffect(() => {
-        runSearch(0);
         getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
     }, []);
 
-    async function runSearch(newOffset) {
-        setLoading(true);
-        try {
-            const data = await searchCatalog({ ...filters, limit: LIMIT, offset: newOffset });
-            setResults(data);
-            setOffset(newOffset);
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setLoading(false);
-        }
+    useEffect(() => {
+        const timer = setTimeout(
+            () => setDebouncedQuery(searchQuery.trim()),
+            SEARCH_DEBOUNCE_MS,
+        );
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const runSearch = useCallback(
+        async (newOffset) => {
+            setLoading(true);
+            try {
+                const params = { ...filters, limit: LIMIT, offset: newOffset };
+                if (debouncedQuery) params.q = debouncedQuery;
+                const data = await searchCatalog(params);
+                setResults(data);
+                setOffset(newOffset);
+            } catch (err) {
+                toast.error(err.message);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [filters, debouncedQuery],
+    );
+
+    useEffect(() => {
+        runSearch(0);
+    }, [runSearch]);
+
+    function handleFilterChange(key, value) {
+        setFilters((prev) => {
+            if (key === "category" && prev.category !== value) {
+                return { ...prev, category: value, subtype: "" };
+            }
+            return { ...prev, [key]: value };
+        });
     }
 
     function toggleSelect(item) {
@@ -122,32 +161,49 @@ export default function PlaygroundPage() {
             toast.error("Pick at least one catalog item");
             return;
         }
-        const cleanPrompt = prompt
-            .split("\n")
-            .map((line) => line.replace(/[ \t]+$/g, ""))
-            .join("\n")
-            .replace(/\n{3,}/g, "\n\n")
-            .trim();
-        if (!cleanPrompt) {
-            toast.error("Prompt cannot be empty");
+        if (!finalPrompt) {
+            toast.error("Prompt cannot be empty — system prompt or notes required");
+            return;
+        }
+        if (finalPrompt.length > PROMPT_CAP) {
+            toast.error(`Final prompt is ${finalPrompt.length} chars, max ${PROMPT_CAP}`);
             return;
         }
         setGenerating(true);
         try {
             const data = await generatePlaygroundImage({
                 catalog_item_ids: Array.from(selected.keys()),
-                prompt: cleanPrompt,
+                system_prompt: systemPrompt,
+                user_prompt: prompt,
                 size,
                 quality,
                 n: count,
             });
             setGeneratedImages(data.images);
-            toast.success(`Generated ${data.images.length} image(s) in ${data.elapsed_ms}ms`);
+            const usage =
+                typeof data.daily_used === "number" && typeof data.daily_limit === "number"
+                    ? ` · ${data.daily_used}/${data.daily_limit} today`
+                    : "";
+            toast.success(`Generated ${data.images.length} image(s) in ${data.elapsed_ms}ms${usage}`);
         } catch (err) {
             setGenError(err.message);
             toast.error(err.message);
         } finally {
             setGenerating(false);
+        }
+    }
+
+    function resetSystemPrompt() {
+        setSystemPrompt(GLOBAL_SYSTEM_PROMPT);
+        toast.success("System prompt reset to global default");
+    }
+
+    async function copyFinalPrompt() {
+        try {
+            await navigator.clipboard.writeText(finalPrompt);
+            toast.success("Final prompt copied");
+        } catch {
+            toast.error("Could not copy to clipboard");
         }
     }
 
@@ -158,17 +214,20 @@ export default function PlaygroundPage() {
         link.click();
     }
 
-    const normalizedPrompt = prompt
-        .split("\n")
-        .map((line) => line.replace(/[ \t]+$/g, ""))
-        .join("\n")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
+    const finalPrompt = buildFinalPrompt({
+        systemPrompt,
+        userPrompt: prompt,
+    });
+    const isSystemPromptDirty = systemPrompt !== GLOBAL_SYSTEM_PROMPT;
 
     const total = results?.total ?? 0;
     const totalPages = Math.ceil(total / LIMIT);
     const currentPage = Math.floor(offset / LIMIT) + 1;
-    const canGenerate = selected.size > 0 && normalizedPrompt.length > 0 && !generating;
+    const canGenerate =
+        selected.size > 0 &&
+        finalPrompt.length > 0 &&
+        finalPrompt.length <= PROMPT_CAP &&
+        !generating;
 
     return (
         <div className="space-y-6">
@@ -226,18 +285,37 @@ export default function PlaygroundPage() {
 
             {/* Catalog picker */}
             <Card className="bg-slate-900 border-slate-800 p-4 space-y-4">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    {loading && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-500" />
+                    )}
+                    <Input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search catalog by name…"
+                        className="pl-9 pr-9 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-10"
+                    />
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
                     {FILTER_FIELDS.map(({ key, label, optionsKey }) => {
-                        const options = filterOptions?.[optionsKey] ?? [];
+                        const options =
+                            optionsKey === "__subtypes_by_category"
+                                ? (filterOptions?.subtypes_by_category?.[filters.category] ?? [])
+                                : (filterOptions?.[optionsKey] ?? []);
+                        const isSubtype = key === "subtype";
+                        const isDisabled = isSubtype && !filters.category;
                         return (
                             <div key={key} className="space-y-1">
                                 <Label className="text-xs text-slate-400">{label}</Label>
                                 <select
                                     value={filters[key] || ""}
-                                    onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
-                                    className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    onChange={(e) => handleFilterChange(key, e.target.value)}
+                                    disabled={isDisabled}
+                                    className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <option value="">All</option>
+                                    <option value="">{isDisabled ? "Pick category" : "All"}</option>
                                     {options.map((opt) => (
                                         <option key={opt} value={opt}>{opt}</option>
                                     ))}
@@ -245,17 +323,6 @@ export default function PlaygroundPage() {
                             </div>
                         );
                     })}
-                    <div className="flex items-end">
-                        <Button
-                            size="sm"
-                            onClick={() => runSearch(0)}
-                            disabled={loading}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700"
-                        >
-                            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3 mr-1" />}
-                            Search
-                        </Button>
-                    </div>
                 </div>
 
                 {loading && (
@@ -338,24 +405,114 @@ export default function PlaygroundPage() {
                 )}
             </Card>
 
-            {/* Prompt */}
+            {/* System prompt — global default, editable for one-off tuning */}
             <Card className="bg-slate-900 border-slate-800 p-4 space-y-2">
-                <Label className="text-xs text-slate-400">Prompt</Label>
+                <div className="flex items-center justify-between gap-2">
+                    <button
+                        onClick={() => setSystemPromptOpen((v) => !v)}
+                        className="flex items-center gap-2 text-sm text-slate-300 hover:text-white"
+                        aria-expanded={systemPromptOpen}
+                    >
+                        {systemPromptOpen ? (
+                            <ChevronUp className="w-4 h-4" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4" />
+                        )}
+                        System prompt
+                        <Badge
+                            variant="outline"
+                            className={
+                                isSystemPromptDirty
+                                    ? "border-amber-700 text-amber-400 text-[10px]"
+                                    : "border-slate-700 text-slate-400 text-[10px]"
+                            }
+                        >
+                            {isSystemPromptDirty ? "modified" : "global default"}
+                        </Badge>
+                    </button>
+                    {isSystemPromptDirty && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={resetSystemPrompt}
+                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                        >
+                            <RotateCcw className="w-3 h-3 mr-1" /> Reset
+                        </Button>
+                    )}
+                </div>
+                <p className="text-xs text-slate-500">
+                    Style anchor sent on every generation. Keep it stable for consistent
+                    output; edit it to retune the look across many runs.
+                </p>
+                {systemPromptOpen && (
+                    <>
+                        <Textarea
+                            value={systemPrompt}
+                            onChange={(e) => setSystemPrompt(e.target.value)}
+                            rows={14}
+                            spellCheck={false}
+                            className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 resize-y font-mono text-xs"
+                        />
+                        <p className="text-xs text-slate-500">
+                            {systemPrompt.length} chars
+                        </p>
+                    </>
+                )}
+            </Card>
+
+            {/* Variation notes — appended to the system prompt before send */}
+            <Card className="bg-slate-900 border-slate-800 p-4 space-y-2">
+                <Label className="text-xs text-slate-400">Variation notes</Label>
                 <Textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    rows={6}
-                    placeholder="Describe how to render the selected items. e.g. 'Place these clothes on a young woman walking down a Paris street, photorealistic, golden hour.'"
+                    rows={4}
+                    placeholder="Optional. What's different this time? e.g. 'golden hour mood', 'outdoor stone wall instead of studio', 'arms crossed', 'older model'. Leave empty to use the preset as-is."
                     className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 resize-none"
                 />
                 <p className="text-xs text-slate-500">
-                    {normalizedPrompt.length} / 32000
-                    {prompt.length !== normalizedPrompt.length && (
-                        <span className="ml-2 text-slate-600">
-                            ({prompt.length - normalizedPrompt.length} chars of whitespace will be stripped)
-                        </span>
+                    Final prompt: {finalPrompt.length} / {PROMPT_CAP}
+                    {finalPrompt.length > PROMPT_CAP && (
+                        <span className="ml-2 text-red-400">over limit</span>
                     )}
                 </p>
+            </Card>
+
+            {/* Final prompt preview — exact string sent to gpt-image-2 */}
+            <Card className="bg-slate-900 border-slate-800 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                    <button
+                        onClick={() => setPreviewOpen((v) => !v)}
+                        className="flex items-center gap-2 text-sm text-slate-300 hover:text-white"
+                        aria-expanded={previewOpen}
+                    >
+                        {previewOpen ? (
+                            <ChevronUp className="w-4 h-4" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4" />
+                        )}
+                        Final prompt preview
+                        <Badge variant="outline" className="border-slate-700 text-slate-400 text-[10px]">
+                            {finalPrompt.length} chars
+                        </Badge>
+                    </button>
+                    {finalPrompt && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={copyFinalPrompt}
+                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                        >
+                            <Copy className="w-3 h-3 mr-1" /> Copy
+                        </Button>
+                    )}
+                </div>
+                {previewOpen && (
+                    <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-950 border border-slate-800 rounded-md p-3 max-h-96 overflow-auto">
+                        {finalPrompt || "(empty — pick items and/or write a system prompt)"}
+                    </pre>
+                )}
             </Card>
 
             {/* Advanced */}
