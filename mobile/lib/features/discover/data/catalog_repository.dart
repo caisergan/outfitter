@@ -10,10 +10,11 @@ class CatalogRepository {
   CatalogRepository(this._dio);
 
   CatalogItem _catalogItemFromApi(Map<String, dynamic> json) {
+    final imageFrontUrl = json['image_front_url'];
     return CatalogItem.fromJson({
       ...json,
-      if (json['image_url'] == null && json['image_front_url'] != null)
-        'image_url': json['image_front_url'],
+      if (imageFrontUrl is String && imageFrontUrl.isNotEmpty)
+        'image_url': imageFrontUrl,
     });
   }
 

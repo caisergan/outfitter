@@ -10,6 +10,8 @@ class CachedItemImage extends StatelessWidget {
   final double? height;
   final BoxFit fit;
   final BorderRadius? borderRadius;
+  final Color placeholderColor;
+  final Color errorBackgroundColor;
 
   const CachedItemImage({
     required this.url,
@@ -17,6 +19,8 @@ class CachedItemImage extends StatelessWidget {
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
+    this.placeholderColor = AppColors.surfaceAlt,
+    this.errorBackgroundColor = AppColors.surfaceAlt,
     super.key,
   });
 
@@ -28,12 +32,12 @@ class CachedItemImage extends StatelessWidget {
       height: height,
       fit: fit,
       placeholder: (_, __) => Container(
-        color: AppColors.surfaceAlt,
+        color: placeholderColor,
         width: width,
         height: height,
       ),
       errorWidget: (_, __, ___) => Container(
-        color: AppColors.surfaceAlt,
+        color: errorBackgroundColor,
         width: width,
         height: height,
         child: const Center(

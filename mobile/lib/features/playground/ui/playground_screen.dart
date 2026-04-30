@@ -346,30 +346,11 @@ class _CanvasGarmentWidgetState extends ConsumerState<_CanvasGarmentWidget> {
           angle: garment.rotation,
           child: Transform.scale(
             scale: garment.scale,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: widget.isSelected
-                    ? Border.all(color: AppColors.borderStrong, width: 1.5)
-                    : Border.all(color: AppColors.surfaceAlt),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: widget.isSelected ? 0.11 : 0.06,
-                    ),
-                    blurRadius: widget.isSelected ? 22 : 12,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: CachedItemImage(
-                url: garment.item.imageUrl,
-                fit: BoxFit.contain,
-              ),
+            child: CachedItemImage(
+              url: garment.item.imageUrl,
+              fit: BoxFit.contain,
+              placeholderColor: Colors.transparent,
+              errorBackgroundColor: Colors.transparent,
             ),
           ),
         ),

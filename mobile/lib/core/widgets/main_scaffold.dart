@@ -52,7 +52,7 @@ class MainScaffold extends StatelessWidget {
                       NavigationDestination(
                         icon: Icon(Icons.checkroom_outlined),
                         selectedIcon: Icon(Icons.checkroom),
-                        label: 'Playground',
+                        label: 'Studio',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.auto_awesome_outlined),
