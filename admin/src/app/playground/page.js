@@ -1,14 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     searchCatalog,
     getCatalogFilterOptions,
     generatePlaygroundImage,
+    fetchPlaygroundSystemPrompt,
+    fetchPlaygroundTemplates,
+    fetchPlaygroundPersonas,
 } from "@/lib/api";
 import {
     GLOBAL_SYSTEM_PROMPT,
     buildFinalPrompt,
+    composeUserPrompt,
 } from "@/lib/prompts/editorial";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +80,14 @@ export default function PlaygroundPage() {
     // selection
     const [selected, setSelected] = useState(new Map());
 
+    // prompt library (server-fetched)
+    const [serverSystemPrompt, setServerSystemPrompt] = useState(GLOBAL_SYSTEM_PROMPT);
+    const [templates, setTemplates] = useState(null);
+    const [personas, setPersonas] = useState(null);
+    const [gender, setGender] = useState("female");
+    const [templateId, setTemplateId] = useState(null);
+    const [personaId, setPersonaId] = useState(null);
+
     // prompt + params
     const [systemPrompt, setSystemPrompt] = useState(GLOBAL_SYSTEM_PROMPT);
     const [systemPromptOpen, setSystemPromptOpen] = useState(false);
@@ -86,6 +98,10 @@ export default function PlaygroundPage() {
     const [count, setCount] = useState(1);
     const [advancedOpen, setAdvancedOpen] = useState(false);
 
+    // tracks the last composed user-prompt we wrote to the textarea so we can
+    // tell whether the textarea has been manually edited (don't auto-overwrite)
+    const lastAppliedComposed = useRef("");
+
     // generation
     const [generating, setGenerating] = useState(false);
     const [generatedImages, setGeneratedImages] = useState([]);
@@ -94,6 +110,68 @@ export default function PlaygroundPage() {
     useEffect(() => {
         getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
     }, []);
+
+    // Mount-only: load the active system prompt + templates from the API.
+    // Falls back to the local GLOBAL_SYSTEM_PROMPT constant if the API is
+    // unreachable so the panel stays usable offline.
+    useEffect(() => {
+        let cancelled = false;
+        Promise.all([
+            fetchPlaygroundSystemPrompt(),
+            fetchPlaygroundTemplates(),
+        ])
+            .then(([sp, ts]) => {
+                if (cancelled) return;
+                setServerSystemPrompt(sp.content);
+                setSystemPrompt(sp.content);
+                setTemplates(ts);
+                setTemplateId((prev) => prev ?? ts[0]?.id ?? null);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                console.error("Failed to load playground config:", err);
+                toast.error(
+                    "Could not load playground config; using local defaults",
+                );
+                setTemplates([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // Personas are gendered; refetch when gender changes (and on mount).
+    useEffect(() => {
+        let cancelled = false;
+        fetchPlaygroundPersonas(gender)
+            .then((rows) => {
+                if (cancelled) return;
+                setPersonas(rows);
+                setPersonaId(rows[0]?.id ?? null);
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                console.error("Failed to load personas:", err);
+                toast.error(err.message);
+                setPersonas([]);
+                setPersonaId(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [gender]);
+
+    // Auto-update the user-prompt textarea when template/persona change, but
+    // only if the user hasn't manually edited (i.e. the textarea still matches
+    // the last composed value we wrote into it). Manual edits are preserved
+    // until the user explicitly hits "Reset".
+    useEffect(() => {
+        const next = composeUserPrompt({ template, persona });
+        setPrompt((prev) =>
+            prev === lastAppliedComposed.current ? next : prev,
+        );
+        lastAppliedComposed.current = next;
+    }, [template, persona]);
 
     useEffect(() => {
         const timer = setTimeout(
@@ -175,6 +253,8 @@ export default function PlaygroundPage() {
                 catalog_item_ids: Array.from(selected.keys()),
                 system_prompt: systemPrompt,
                 user_prompt: prompt,
+                template_id: templateId,
+                persona_id: personaId,
                 size,
                 quality,
                 n: count,
@@ -186,16 +266,37 @@ export default function PlaygroundPage() {
                     : "";
             toast.success(`Generated ${data.images.length} image(s) in ${data.elapsed_ms}ms${usage}`);
         } catch (err) {
-            setGenError(err.message);
-            toast.error(err.message);
+            if (
+                err.status === 429 &&
+                err.detail?.error?.code === "DAILY_LIMIT_REACHED"
+            ) {
+                const { used, limit, reset_at } = err.detail.error;
+                const resetTime = reset_at
+                    ? new Date(reset_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                      })
+                    : "tomorrow";
+                const message = `Daily limit reached (${used}/${limit}). Resets at ${resetTime}.`;
+                setGenError(message);
+                toast.error(message);
+            } else {
+                setGenError(err.message);
+                toast.error(err.message);
+            }
         } finally {
             setGenerating(false);
         }
     }
 
     function resetSystemPrompt() {
-        setSystemPrompt(GLOBAL_SYSTEM_PROMPT);
+        setSystemPrompt(serverSystemPrompt);
         toast.success("System prompt reset to global default");
+    }
+
+    function resetUserPrompt() {
+        setPrompt(composedUserPrompt);
+        lastAppliedComposed.current = composedUserPrompt;
     }
 
     async function copyFinalPrompt() {
@@ -214,11 +315,26 @@ export default function PlaygroundPage() {
         link.click();
     }
 
+    const template = useMemo(
+        () => templates?.find((t) => t.id === templateId) ?? null,
+        [templates, templateId],
+    );
+    const persona = useMemo(
+        () => personas?.find((p) => p.id === personaId) ?? null,
+        [personas, personaId],
+    );
+    const composedUserPrompt = useMemo(
+        () => composeUserPrompt({ template, persona }),
+        [template, persona],
+    );
+
     const finalPrompt = buildFinalPrompt({
         systemPrompt,
         userPrompt: prompt,
     });
-    const isSystemPromptDirty = systemPrompt !== GLOBAL_SYSTEM_PROMPT;
+    const isSystemPromptDirty = systemPrompt !== serverSystemPrompt;
+    const isUserPromptDirty =
+        composedUserPrompt.length > 0 && prompt !== composedUserPrompt;
 
     const total = results?.total ?? 0;
     const totalPages = Math.ceil(total / LIMIT);
@@ -405,6 +521,87 @@ export default function PlaygroundPage() {
                 )}
             </Card>
 
+            {/* Style — template + gender + persona dropdowns drive the user prompt */}
+            <Card className="bg-slate-900 border-slate-800 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs text-slate-400">Style</Label>
+                    <span className="text-[11px] text-slate-500">
+                        Drives the variation notes below. Manual edits are kept until you Reset.
+                    </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Template */}
+                    <div className="space-y-1">
+                        <Label className="text-xs text-slate-400">Template</Label>
+                        {templates === null ? (
+                            <Skeleton className="h-9 w-full bg-slate-800 rounded-md" />
+                        ) : (
+                            <select
+                                value={templateId ?? ""}
+                                onChange={(e) => setTemplateId(e.target.value || null)}
+                                className="w-full h-9 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                disabled={templates.length === 0}
+                            >
+                                {templates.length === 0 && (
+                                    <option value="">No templates</option>
+                                )}
+                                {templates.map((t) => (
+                                    <option key={t.id} value={t.id}>{t.label}</option>
+                                ))}
+                            </select>
+                        )}
+                        {template?.description && (
+                            <p className="text-[11px] text-slate-500 truncate">
+                                {template.description}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Gender */}
+                    <div className="space-y-1">
+                        <Label className="text-xs text-slate-400">Gender</Label>
+                        <select
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                            className="w-full h-9 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                            <option value="female">Female</option>
+                            <option value="male">Male</option>
+                        </select>
+                        <p className="text-[11px] text-slate-500">
+                            Filters which personas are available.
+                        </p>
+                    </div>
+
+                    {/* Persona */}
+                    <div className="space-y-1">
+                        <Label className="text-xs text-slate-400">Persona</Label>
+                        {personas === null ? (
+                            <Skeleton className="h-9 w-full bg-slate-800 rounded-md" />
+                        ) : (
+                            <select
+                                value={personaId ?? ""}
+                                onChange={(e) => setPersonaId(e.target.value || null)}
+                                className="w-full h-9 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                disabled={personas.length === 0}
+                            >
+                                {personas.length === 0 && (
+                                    <option value="">No personas</option>
+                                )}
+                                {personas.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.label}</option>
+                                ))}
+                            </select>
+                        )}
+                        {persona && (
+                            <p className="text-[11px] text-slate-500 line-clamp-2 whitespace-pre-line">
+                                {persona.description.split("\n").slice(0, 2).join(" · ")}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </Card>
+
             {/* System prompt — global default, editable for one-off tuning */}
             <Card className="bg-slate-900 border-slate-800 p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">
@@ -461,15 +658,41 @@ export default function PlaygroundPage() {
                 )}
             </Card>
 
-            {/* Variation notes — appended to the system prompt before send */}
+            {/* Variation notes — auto-composed from template + persona, hand-editable */}
             <Card className="bg-slate-900 border-slate-800 p-4 space-y-2">
-                <Label className="text-xs text-slate-400">Variation notes</Label>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <Label className="text-xs text-slate-400">Variation notes</Label>
+                        {composedUserPrompt.length > 0 && (
+                            <Badge
+                                variant="outline"
+                                className={
+                                    isUserPromptDirty
+                                        ? "border-amber-700 text-amber-400 text-[10px]"
+                                        : "border-slate-700 text-slate-400 text-[10px]"
+                                }
+                            >
+                                {isUserPromptDirty ? "modified" : "from style"}
+                            </Badge>
+                        )}
+                    </div>
+                    {isUserPromptDirty && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={resetUserPrompt}
+                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                        >
+                            <RotateCcw className="w-3 h-3 mr-1" /> Reset
+                        </Button>
+                    )}
+                </div>
                 <Textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    rows={4}
-                    placeholder="Optional. What's different this time? e.g. 'golden hour mood', 'outdoor stone wall instead of studio', 'arms crossed', 'older model'. Leave empty to use the preset as-is."
-                    className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 resize-none"
+                    rows={6}
+                    placeholder="Pick a template and persona above to auto-compose, or type your own variation notes."
+                    className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 resize-y"
                 />
                 <p className="text-xs text-slate-500">
                     Final prompt: {finalPrompt.length} / {PROMPT_CAP}
