@@ -43,8 +43,15 @@ async function apiFetch(path, options = {}) {
   const data = await res.json();
 
   if (!res.ok) {
-    const message = data?.detail || `HTTP ${res.status}`;
-    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+    const detail = data?.detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : detail?.error?.message || detail?.message || `HTTP ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.detail = detail ?? null;
+    throw err;
   }
 
   return data;
