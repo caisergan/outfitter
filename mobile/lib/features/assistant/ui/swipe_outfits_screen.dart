@@ -176,22 +176,49 @@ class _SwipeCardState extends State<SwipeCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(flex: 3, child: _item(slots['top'])),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final h = constraints.maxHeight;
+                          final w = constraints.maxWidth;
+                          return Stack(
                             children: [
-                              Expanded(child: _item(slots['bottom'])),
-                              const SizedBox(height: 10),
-                              Expanded(child: _item(slots['shoes'])),
+                              // BOTTOM (pants) — back layer
+                              Positioned(
+                                top: h * 0.30,
+                                left: 0,
+                                width: w,
+                                height: h * 0.65,
+                                child: CachedItemImage(
+                                  url: slots['bottom']!.imageUrl,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              // TOP — middle layer
+                              Positioned(
+                                top: h * 0.00,
+                                left: 0,
+                                width: w,
+                                height: h * 0.70,
+                                child: CachedItemImage(
+                                  url: slots['top']!.imageUrl,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              // SHOES — front layer
+                              Positioned(
+                                top: h * 0.70,
+                                left: 0,
+                                width: w,
+                                height: h * 0.32,
+                                child: CachedItemImage(
+                                  url: slots['shoes']!.imageUrl,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ],
-                          ),
-                        ),
-                      ],
-                    ),
+                          );
+                        },
+                      ),
                   ),
                   const SizedBox(height: 18),
                   Text(
@@ -305,60 +332,48 @@ class _LikedCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: CachedItemImage(
-                        url: slots['top']!.imageUrl,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceAlt,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            padding: const EdgeInsets.all(12),
-                            child: CachedItemImage(
-                              url: slots['bottom']!.imageUrl,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final h = constraints.maxHeight;
+                  final w = constraints.maxWidth;
+                  return Stack(
+                    children: [
+                      // BOTTOM (pants) — back layer
+                      Positioned(
+                        top: h * 0.30,
+                        left: 0,
+                        width: w,
+                        height: h * 0.65,
+                        child: CachedItemImage(
+                          url: slots['bottom']!.imageUrl,
+                          fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 10),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceAlt,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            padding: const EdgeInsets.all(12),
-                            child: CachedItemImage(
-                              url: accessories.isNotEmpty
-                                  ? accessories.first.imageUrl
-                                  : slots['shoes']!.imageUrl,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+                      ),
+                      // TOP — middle layer
+                      Positioned(
+                        top: h * 0.00,
+                        left: 0,
+                        width: w,
+                        height: h * 0.70,
+                        child: CachedItemImage(
+                          url: slots['top']!.imageUrl,
+                          fit: BoxFit.contain,
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                      // SHOES — front layer
+                      Positioned(
+                        top: h * 0.65,
+                        left: 0,
+                        width: w,
+                        height: h * 0.32,
+                        child: CachedItemImage(
+                          url: slots['shoes']!.imageUrl,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 18),
