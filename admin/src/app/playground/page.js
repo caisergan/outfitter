@@ -83,7 +83,9 @@ export default function PlaygroundPage() {
     // prompt library (server-fetched)
     const [serverSystemPrompt, setServerSystemPrompt] = useState(GLOBAL_SYSTEM_PROMPT);
     const [templates, setTemplates] = useState(null);
-    const [personas, setPersonas] = useState(null);
+    // All personas fetched once. Gender filter is client-side so reproduce
+    // can resolve a persona's gender from its id without a network round trip.
+    const [allPersonas, setAllPersonas] = useState(null);
     const [gender, setGender] = useState("female");
     const [templateId, setTemplateId] = useState(null);
     const [personaId, setPersonaId] = useState(null);
@@ -111,7 +113,9 @@ export default function PlaygroundPage() {
         getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
     }, []);
 
-    // Mount-only: load the active system prompt + templates from the API.
+    // Mount-only: load the active system prompt, templates, and personas.
+    // Personas are fetched without a gender filter so the full library is
+    // available client-side for filtering and for reproducing past runs.
     // Falls back to the local GLOBAL_SYSTEM_PROMPT constant if the API is
     // unreachable so the panel stays usable offline.
     useEffect(() => {
@@ -119,13 +123,17 @@ export default function PlaygroundPage() {
         Promise.all([
             fetchPlaygroundSystemPrompt(),
             fetchPlaygroundTemplates(),
+            fetchPlaygroundPersonas(),
         ])
-            .then(([sp, ts]) => {
+            .then(([sp, ts, ps]) => {
                 if (cancelled) return;
                 setServerSystemPrompt(sp.content);
                 setSystemPrompt(sp.content);
                 setTemplates(ts);
                 setTemplateId((prev) => prev ?? ts[0]?.id ?? null);
+                setAllPersonas(ps);
+                const firstFemale = ps.find((p) => p.gender === "female");
+                setPersonaId((prev) => prev ?? firstFemale?.id ?? ps[0]?.id ?? null);
             })
             .catch((err) => {
                 if (cancelled) return;
@@ -134,32 +142,22 @@ export default function PlaygroundPage() {
                     "Could not load playground config; using local defaults",
                 );
                 setTemplates([]);
+                setAllPersonas([]);
             });
         return () => {
             cancelled = true;
         };
     }, []);
 
-    // Personas are gendered; refetch when gender changes (and on mount).
+    // Whenever gender changes, snap personaId to the first persona of that
+    // gender if the current pick doesn't match. No network round trip.
     useEffect(() => {
-        let cancelled = false;
-        fetchPlaygroundPersonas(gender)
-            .then((rows) => {
-                if (cancelled) return;
-                setPersonas(rows);
-                setPersonaId(rows[0]?.id ?? null);
-            })
-            .catch((err) => {
-                if (cancelled) return;
-                console.error("Failed to load personas:", err);
-                toast.error(err.message);
-                setPersonas([]);
-                setPersonaId(null);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [gender]);
+        if (!allPersonas) return;
+        const current = allPersonas.find((p) => p.id === personaId);
+        if (current && current.gender === gender) return;
+        const firstOfGender = allPersonas.find((p) => p.gender === gender);
+        setPersonaId(firstOfGender?.id ?? null);
+    }, [gender, allPersonas, personaId]);
 
     useEffect(() => {
         const timer = setTimeout(
@@ -308,8 +306,12 @@ export default function PlaygroundPage() {
         [templates, templateId],
     );
     const persona = useMemo(
-        () => personas?.find((p) => p.id === personaId) ?? null,
-        [personas, personaId],
+        () => allPersonas?.find((p) => p.id === personaId) ?? null,
+        [allPersonas, personaId],
+    );
+    const visiblePersonas = useMemo(
+        () => allPersonas?.filter((p) => p.gender === gender) ?? null,
+        [allPersonas, gender],
     );
     const composedUserPrompt = useMemo(
         () => composeUserPrompt({ template, persona }),
@@ -575,19 +577,19 @@ export default function PlaygroundPage() {
                     {/* Persona */}
                     <div className="space-y-1">
                         <Label className="text-xs text-slate-400">Persona</Label>
-                        {personas === null ? (
+                        {visiblePersonas === null ? (
                             <Skeleton className="h-9 w-full bg-slate-800 rounded-md" />
                         ) : (
                             <select
                                 value={personaId ?? ""}
                                 onChange={(e) => setPersonaId(e.target.value || null)}
                                 className="w-full h-9 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                disabled={personas.length === 0}
+                                disabled={visiblePersonas.length === 0}
                             >
-                                {personas.length === 0 && (
+                                {visiblePersonas.length === 0 && (
                                     <option value="">No personas</option>
                                 )}
-                                {personas.map((p) => (
+                                {visiblePersonas.map((p) => (
                                     <option key={p.id} value={p.id}>{p.label}</option>
                                 ))}
                             </select>
