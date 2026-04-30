@@ -161,18 +161,6 @@ export default function PlaygroundPage() {
         };
     }, [gender]);
 
-    // Auto-update the user-prompt textarea when template/persona change, but
-    // only if the user hasn't manually edited (i.e. the textarea still matches
-    // the last composed value we wrote into it). Manual edits are preserved
-    // until the user explicitly hits "Reset".
-    useEffect(() => {
-        const next = composeUserPrompt({ template, persona });
-        setPrompt((prev) =>
-            prev === lastAppliedComposed.current ? next : prev,
-        );
-        lastAppliedComposed.current = next;
-    }, [template, persona]);
-
     useEffect(() => {
         const timer = setTimeout(
             () => setDebouncedQuery(searchQuery.trim()),
@@ -327,6 +315,17 @@ export default function PlaygroundPage() {
         () => composeUserPrompt({ template, persona }),
         [template, persona],
     );
+
+    // Auto-update the user-prompt textarea when template/persona change, but
+    // only if the user hasn't manually edited (i.e. the textarea still matches
+    // the last composed value we wrote into it). Manual edits are preserved
+    // until the user explicitly hits "Reset".
+    useEffect(() => {
+        setPrompt((prev) =>
+            prev === lastAppliedComposed.current ? composedUserPrompt : prev,
+        );
+        lastAppliedComposed.current = composedUserPrompt;
+    }, [composedUserPrompt]);
 
     const finalPrompt = buildFinalPrompt({
         systemPrompt,
