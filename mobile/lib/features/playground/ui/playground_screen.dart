@@ -375,6 +375,7 @@ class _TryOnLookStrip extends StatelessWidget {
 
 class _TryOnPreviewState extends StatelessWidget {
   static const _mockTryOnImage = 'assets/mockdata/TryOnModel.jpeg';
+  static const _mockTryOnAspectRatio = 1024 / 1536;
 
   final List<CanvasGarment> garments;
 
@@ -388,81 +389,90 @@ class _TryOnPreviewState extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: AppColors.border),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.blush.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  _mockTryOnImage,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.surfaceAlt,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.broken_image_outlined,
-                      color: AppColors.textMuted,
-                      size: 28,
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceAlt.withValues(alpha: 0.0),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 16,
-                  top: 16,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final frameWidth =
+                  (constraints.maxHeight * _mockTryOnAspectRatio)
+                      .clamp(0.0, constraints.maxWidth)
+                      .toDouble();
+
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: frameWidth,
+                  height: constraints.maxHeight,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(32),
                       border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome_rounded,
-                          color: AppColors.blush,
-                          size: 16,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.blush.withValues(alpha: 0.08),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Try On',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelMedium
-                              ?.copyWith(
-                                color: AppColors.text,
-                                fontWeight: FontWeight.w700,
-                              ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          _mockTryOnImage,
+                          fit: BoxFit.cover,
+                          filterQuality: FilterQuality.medium,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.surfaceAlt,
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.broken_image_outlined,
+                              color: AppColors.textMuted,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 16,
+                          top: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: AppColors.blush,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Try On',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelMedium
+                                      ?.copyWith(
+                                        color: AppColors.text,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],
