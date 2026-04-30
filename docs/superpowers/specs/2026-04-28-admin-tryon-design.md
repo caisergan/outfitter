@@ -1,4 +1,4 @@
-# Admin Playground — gpt-image-2 Outfit Visualizer
+# Admin TryOn — gpt-image-2 Outfit Visualizer
 
 **Date:** 2026-04-28
 **Status:** Approved (pending spec review)
@@ -9,7 +9,7 @@
 
 ## 1. Goal
 
-Add a single-page playground in the admin panel where the operator can:
+Add a single-page tryon in the admin panel where the operator can:
 
 1. Pick one or more catalog items (with their product images) from the existing DB.
 2. Type a free-form instruction prompt (called "system prompt" by the user; not persisted).
@@ -28,7 +28,7 @@ Primary use case: visualize how selected catalog items render on a virtual model
 
 ## 3. User Flow
 
-1. Operator navigates to `/playground` from the sidebar (new entry under Try-On).
+1. Operator navigates to `/tryon` from the sidebar (new entry under Try-On).
 2. Page loads with empty selection, prompt, and result area; default generation params (`size=1024x1536`, `quality=high`, `n=1`).
 3. Operator filters/searches the catalog grid (reusing the existing filter shape from `/catalog`).
 4. Operator clicks item cards to toggle selection. Selected items appear as a sticky chip rail at the top of the picker, with thumbnail and an `×` to deselect. Hard cap of **16 selections** (gpt-image-2 input limit).
@@ -43,20 +43,20 @@ Primary use case: visualize how selected catalog items render on a virtual model
 ### 4.1 Routes / Files
 
 **Backend (FastAPI):**
-- New router: `backend/app/routers/playground.py`
+- New router: `backend/app/routers/tryon.py`
 - New service: `backend/app/services/codex_image_service.py`
-- New schemas: `backend/app/schemas/playground.py`
+- New schemas: `backend/app/schemas/tryon.py`
 - Modified: `backend/app/main.py` (register router), `backend/app/config.py` (add proxy settings)
-- Tests: `backend/tests/test_playground.py`
+- Tests: `backend/tests/test_tryon.py`
 
 **Frontend (Next.js admin):**
-- New page: `admin/src/app/playground/page.js`
-- Modified: `admin/src/lib/api.js` (add `generatePlaygroundImage`), `admin/src/components/Sidebar.js` (add nav entry).
+- New page: `admin/src/app/tryon/page.js`
+- Modified: `admin/src/lib/api.js` (add `generateTryOnImage`), `admin/src/components/Sidebar.js` (add nav entry).
 
 ### 4.2 Endpoint Contract
 
 ```
-POST /playground/generate-image          (Bearer JWT)
+POST /tryon/generate-image          (Bearer JWT)
 
 Request:
 {
@@ -87,8 +87,8 @@ Errors:
 
 ```
 Admin UI
-  -> POST /playground/generate-image  (Bearer token, JSON body)
-Router (playground.py)
+  -> POST /tryon/generate-image  (Bearer token, JSON body)
+Router (tryon.py)
   - Pydantic validates body (size whitelist, quality whitelist, n in [1,4],
     prompt length, ids list size 1..16)
   - SELECT CatalogItem WHERE id IN (:ids)            (single query, async)
@@ -114,7 +114,7 @@ Service (codex_image_service.py, httpx.AsyncClient, 90s timeout)
   - parse response -> [f"data:image/png;base64,{d['b64_json']}" for d in resp["data"]]
 
 Router
-  - return PlaygroundGenerateResponse(images=..., model="gpt-image-2",
+  - return TryOnGenerateResponse(images=..., model="gpt-image-2",
                                        item_count=len(ids), elapsed_ms=...)
 ```
 
@@ -131,14 +131,14 @@ These can be overridden via `.env`. Defaults match the user's local OpenAI-compa
 
 ### 4.5 Reference image source
 
-`backend/app/models/catalog.py` exposes `image_front_url` (required, non-null) and `image_back_url` (optional). For v1 the playground uses `image_front_url` only — that is the canonical product shot. If a future migration adds `image_front_no_bg_url`, the resolver can be updated to prefer it (background-removed images are a cleaner reference for gpt-image-2), but no_bg columns do not exist today.
+`backend/app/models/catalog.py` exposes `image_front_url` (required, non-null) and `image_back_url` (optional). For v1 the tryon uses `image_front_url` only — that is the canonical product shot. If a future migration adds `image_front_no_bg_url`, the resolver can be updated to prefer it (background-removed images are a cleaner reference for gpt-image-2), but no_bg columns do not exist today.
 
 ## 5. Frontend Details
 
 ### 5.1 Page Layout
 
 ```
-+-- "Playground" header ------------------------------------+
++-- "TryOn" header ------------------------------------+
 | Test gpt-image-2 against catalog items.                   |
 +----------------------------------------------------------+
 | Selected items rail (sticky):                            |
@@ -196,7 +196,7 @@ const [advancedOpen, setAdvancedOpen]
 Add to `navItems` after the Try-On entry:
 
 ```javascript
-{ href: "/playground", label: "Playground", icon: Sparkles }
+{ href: "/tryon", label: "TryOn", icon: Sparkles }
 ```
 
 (Already imports `lucide-react`; `Sparkles` is part of that package.)
@@ -206,22 +206,22 @@ Add to `navItems` after the Try-On entry:
 ### 6.1 Schema
 
 ```python
-# backend/app/schemas/playground.py
+# backend/app/schemas/tryon.py
 from typing import Annotated
 from uuid import UUID
 from pydantic import BaseModel, Field, conlist
 
-PlaygroundSize    = Literal["1024x1024", "1024x1536", "1536x1024"]
-PlaygroundQuality = Literal["low", "medium", "high"]
+TryOnSize    = Literal["1024x1024", "1024x1536", "1536x1024"]
+TryOnQuality = Literal["low", "medium", "high"]
 
-class PlaygroundGenerateRequest(BaseModel):
+class TryOnGenerateRequest(BaseModel):
     catalog_item_ids: Annotated[list[UUID], Field(min_length=1, max_length=16)]
     prompt: Annotated[str, Field(min_length=1, max_length=2000)]
-    size: PlaygroundSize = "1024x1536"
-    quality: PlaygroundQuality = "high"
+    size: TryOnSize = "1024x1536"
+    quality: TryOnQuality = "high"
     n: Annotated[int, Field(ge=1, le=4)] = 1
 
-class PlaygroundGenerateResponse(BaseModel):
+class TryOnGenerateResponse(BaseModel):
     images: list[str]            # data URLs
     model: str
     item_count: int
@@ -252,13 +252,13 @@ async def generate_outfit_image(
 ### 6.3 Router
 
 ```python
-# backend/app/routers/playground.py
-@router.post("/generate-image", response_model=PlaygroundGenerateResponse)
+# backend/app/routers/tryon.py
+@router.post("/generate-image", response_model=TryOnGenerateResponse)
 async def generate_image(
-    body: PlaygroundGenerateRequest,
+    body: TryOnGenerateRequest,
     db: DbDep,
     _: CurrentUserDep,
-) -> PlaygroundGenerateResponse:
+) -> TryOnGenerateResponse:
     # 1. SELECT CatalogItem WHERE id IN (...)
     # 2. 404 if any id missing
     # 3. resolve reference URLs (no_bg first, then front)
@@ -283,7 +283,7 @@ The frontend never retries automatically. The user re-clicks Generate to retry.
 
 ## 8. Testing
 
-### 8.1 Backend (`backend/tests/test_playground.py`)
+### 8.1 Backend (`backend/tests/test_tryon.py`)
 
 - `test_generate_happy_path` — mocks `httpx` (both download and proxy), seeds two `CatalogItem`s, asserts:
   - response shape (`images` non-empty, `model == "gpt-image-2"`, `item_count == 2`)
@@ -316,14 +316,14 @@ Manual verification per project `CLAUDE.md` (run `admin` dev server):
 | Proxy doesn't actually accept `/v1/images/edits`        | Service is the only place to swap; UI/router stable. Fallback path documented (Approach B in brainstorming) |
 | Large reference images blow up multipart payload        | Catalog images are S3-hosted product shots, typically <500KB. Cap aside, no resizing on first pass; revisit if 413 from proxy |
 | `gpt-image-2` parameter names differ from `gpt-image-1` | If proxy rejects a param name, adjust in service only; spec lists OpenAI gpt-image-1 contract as reference |
-| Long generation times block the UI                      | 90s httpx timeout, button disabled, skeleton visible. Acceptable for a playground |
+| Long generation times block the UI                      | 90s httpx timeout, button disabled, skeleton visible. Acceptable for a tryon |
 | Base64 payload bloats response                          | n capped at 4 + size capped at 1536px; worst case ~8MB JSON; acceptable for admin-only local-dev tool |
 
 ## 10. Acceptance Criteria
 
-- New `Playground` entry visible in the admin sidebar.
-- `/playground` route renders the picker, prompt, advanced controls, generate button, and result area.
+- New `TryOn` entry visible in the admin sidebar.
+- `/tryon` route renders the picker, prompt, advanced controls, generate button, and result area.
 - Selecting 1–16 catalog items + non-empty prompt + clicking Generate produces at least one base64 image rendered inline within ~60s under normal proxy conditions.
 - Backend tests above all pass.
-- No DB writes occur during a playground generation (verified by absence of new rows after a run).
+- No DB writes occur during a tryon generation (verified by absence of new rows after a run).
 - Errors surface as toasts + inline alerts; the page never crashes on a backend failure.

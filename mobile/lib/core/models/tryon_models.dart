@@ -1,55 +1,55 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'playground_models.freezed.dart';
-part 'playground_models.g.dart';
+part 'tryon_models.freezed.dart';
+part 'tryon_models.g.dart';
 
 @freezed
-class PlaygroundSystemPrompt with _$PlaygroundSystemPrompt {
-  const factory PlaygroundSystemPrompt({
+class TryOnSystemPrompt with _$TryOnSystemPrompt {
+  const factory TryOnSystemPrompt({
     required String id,
     required String slug,
     required String label,
     required String content,
     @JsonKey(name: 'is_active') required bool isActive,
-  }) = _PlaygroundSystemPrompt;
+  }) = _TryOnSystemPrompt;
 
-  factory PlaygroundSystemPrompt.fromJson(Map<String, dynamic> json) =>
-      _$PlaygroundSystemPromptFromJson(json);
+  factory TryOnSystemPrompt.fromJson(Map<String, dynamic> json) =>
+      _$TryOnSystemPromptFromJson(json);
 }
 
 @freezed
-class PlaygroundTemplate with _$PlaygroundTemplate {
-  const factory PlaygroundTemplate({
+class TryOnTemplate with _$TryOnTemplate {
+  const factory TryOnTemplate({
     required String id,
     required String slug,
     required String label,
     String? description,
     required String body,
     @JsonKey(name: 'is_active') required bool isActive,
-  }) = _PlaygroundTemplate;
+  }) = _TryOnTemplate;
 
-  factory PlaygroundTemplate.fromJson(Map<String, dynamic> json) =>
-      _$PlaygroundTemplateFromJson(json);
+  factory TryOnTemplate.fromJson(Map<String, dynamic> json) =>
+      _$TryOnTemplateFromJson(json);
 }
 
 @freezed
-class PlaygroundPersona with _$PlaygroundPersona {
-  const factory PlaygroundPersona({
+class TryOnPersona with _$TryOnPersona {
+  const factory TryOnPersona({
     required String id,
     required String slug,
     required String label,
     required String gender,
     required String description,
     @JsonKey(name: 'is_active') required bool isActive,
-  }) = _PlaygroundPersona;
+  }) = _TryOnPersona;
 
-  factory PlaygroundPersona.fromJson(Map<String, dynamic> json) =>
-      _$PlaygroundPersonaFromJson(json);
+  factory TryOnPersona.fromJson(Map<String, dynamic> json) =>
+      _$TryOnPersonaFromJson(json);
 }
 
 @freezed
-class PlaygroundRun with _$PlaygroundRun {
-  const factory PlaygroundRun({
+class TryOnRun with _$TryOnRun {
+  const factory TryOnRun({
     required String id,
     @JsonKey(name: 'catalog_item_ids') required List<String> catalogItemIds,
     @JsonKey(name: 'system_prompt_id') String? systemPromptId,
@@ -68,26 +68,26 @@ class PlaygroundRun with _$PlaygroundRun {
     required String status,
     @JsonKey(name: 'error_message') String? errorMessage,
     @JsonKey(name: 'created_at') required DateTime createdAt,
-  }) = _PlaygroundRun;
+  }) = _TryOnRun;
 
-  factory PlaygroundRun.fromJson(Map<String, dynamic> json) =>
-      _$PlaygroundRunFromJson(json);
+  factory TryOnRun.fromJson(Map<String, dynamic> json) =>
+      _$TryOnRunFromJson(json);
 }
 
 @freezed
-class PlaygroundRunsPage with _$PlaygroundRunsPage {
-  const factory PlaygroundRunsPage({
-    required List<PlaygroundRun> items,
+class TryOnRunsPage with _$TryOnRunsPage {
+  const factory TryOnRunsPage({
+    required List<TryOnRun> items,
     @JsonKey(name: 'next_cursor') String? nextCursor,
-  }) = _PlaygroundRunsPage;
+  }) = _TryOnRunsPage;
 
-  factory PlaygroundRunsPage.fromJson(Map<String, dynamic> json) =>
-      _$PlaygroundRunsPageFromJson(json);
+  factory TryOnRunsPage.fromJson(Map<String, dynamic> json) =>
+      _$TryOnRunsPageFromJson(json);
 }
 
 @freezed
-class GenerateRequest with _$GenerateRequest {
-  const factory GenerateRequest({
+class TryOnGenerateRequest with _$TryOnGenerateRequest {
+  const factory TryOnGenerateRequest({
     @JsonKey(name: 'catalog_item_ids') required List<String> catalogItemIds,
     @JsonKey(name: 'system_prompt') required String systemPrompt,
     @JsonKey(name: 'user_prompt') @Default('') String userPrompt,
@@ -96,15 +96,15 @@ class GenerateRequest with _$GenerateRequest {
     @Default('1024x1536') String size,
     @Default('high') String quality,
     @Default(1) int n,
-  }) = _GenerateRequest;
+  }) = _TryOnGenerateRequest;
 
-  factory GenerateRequest.fromJson(Map<String, dynamic> json) =>
-      _$GenerateRequestFromJson(json);
+  factory TryOnGenerateRequest.fromJson(Map<String, dynamic> json) =>
+      _$TryOnGenerateRequestFromJson(json);
 }
 
 @freezed
-class GenerateResponse with _$GenerateResponse {
-  const factory GenerateResponse({
+class TryOnGenerateResponse with _$TryOnGenerateResponse {
+  const factory TryOnGenerateResponse({
     @JsonKey(name: 'run_id') required String runId,
     required String status,
     required List<String> images,
@@ -113,8 +113,8 @@ class GenerateResponse with _$GenerateResponse {
     @JsonKey(name: 'elapsed_ms') required int elapsedMs,
     @JsonKey(name: 'daily_used') required int dailyUsed,
     @JsonKey(name: 'daily_limit') required int dailyLimit,
-  }) = _GenerateResponse;
+  }) = _TryOnGenerateResponse;
 
-  factory GenerateResponse.fromJson(Map<String, dynamic> json) =>
-      _$GenerateResponseFromJson(json);
+  factory TryOnGenerateResponse.fromJson(Map<String, dynamic> json) =>
+      _$TryOnGenerateResponseFromJson(json);
 }

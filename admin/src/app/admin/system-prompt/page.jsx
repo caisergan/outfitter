@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-    fetchPlaygroundSystemPrompt,
-    patchPlaygroundSystemPrompt,
+    fetchTryOnSystemPrompt,
+    patchTryOnSystemPrompt,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default function AdminSystemPromptPage() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        fetchPlaygroundSystemPrompt()
+        fetchTryOnSystemPrompt()
             .then((sp) => {
                 setOriginal(sp);
                 setLabel(sp.label);
@@ -46,7 +46,7 @@ export default function AdminSystemPromptPage() {
             const payload = {};
             if (label !== original.label) payload.label = label;
             if (content !== original.content) payload.content = content;
-            const updated = await patchPlaygroundSystemPrompt(payload);
+            const updated = await patchTryOnSystemPrompt(payload);
             setOriginal(updated);
             setLabel(updated.label);
             setContent(updated.content);
@@ -73,7 +73,7 @@ export default function AdminSystemPromptPage() {
             <div>
                 <h1 className="text-2xl font-bold text-white">System prompt</h1>
                 <p className="text-slate-400 mt-1 text-sm">
-                    The active singleton sent on every playground generation. Slug
+                    The active singleton sent on every try-on generation. Slug
                     is immutable; edits to label and content take effect immediately.
                 </p>
             </div>

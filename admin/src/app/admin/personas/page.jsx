@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import {
-    listPlaygroundPersonasAdmin,
-    createPlaygroundPersona,
-    patchPlaygroundPersona,
-    deletePlaygroundPersona,
+    listTryOnPersonasAdmin,
+    createTryOnPersona,
+    patchTryOnPersona,
+    deleteTryOnPersona,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export default function AdminPersonasPage() {
 
     async function load() {
         try {
-            setRows(await listPlaygroundPersonasAdmin());
+            setRows(await listTryOnPersonasAdmin());
         } catch (err) {
             toast.error(err.message);
             setRows([]);
@@ -75,7 +75,7 @@ export default function AdminPersonasPage() {
     async function softDelete(row) {
         if (!confirm(`Soft-delete persona "${row.label}"?`)) return;
         try {
-            await deletePlaygroundPersona(row.id);
+            await deleteTryOnPersona(row.id);
             toast.success(`Archived ${row.slug}`);
             load();
         } catch (err) {
@@ -85,7 +85,7 @@ export default function AdminPersonasPage() {
 
     async function restore(row) {
         try {
-            await patchPlaygroundPersona(row.id, { is_active: true });
+            await patchTryOnPersona(row.id, { is_active: true });
             toast.success(`Restored ${row.slug}`);
             load();
         } catch (err) {
@@ -105,7 +105,7 @@ export default function AdminPersonasPage() {
             }
             setSaving(true);
             try {
-                await createPlaygroundPersona({
+                await createTryOnPersona({
                     slug: form.slug,
                     label: form.label,
                     gender: form.gender,
@@ -133,7 +133,7 @@ export default function AdminPersonasPage() {
         }
         setSaving(true);
         try {
-            await patchPlaygroundPersona(editing.id, payload);
+            await patchTryOnPersona(editing.id, payload);
             toast.success(`Updated ${editing.slug}`);
             close();
             load();

@@ -33,7 +33,7 @@ export default function OutfitsPage() {
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     // Create state
-    const [createForm, setCreateForm] = useState({ source: "playground", slots: "{}", generated_image_url: "" });
+    const [createForm, setCreateForm] = useState({ source: "tryon", slots: "{}", generated_image_url: "" });
     const [createLoading, setCreateLoading] = useState(false);
 
     async function loadOutfits() {
@@ -97,7 +97,7 @@ export default function OutfitsPage() {
                 ...(createForm.generated_image_url && { generated_image_url: createForm.generated_image_url }),
             });
             toast.success("Outfit saved");
-            setCreateForm({ source: "playground", slots: "{}", generated_image_url: "" });
+            setCreateForm({ source: "tryon", slots: "{}", generated_image_url: "" });
             await loadOutfits();
         } catch (err) {
             toast.error(err.message);
@@ -264,7 +264,7 @@ export default function OutfitsPage() {
                                     <Label className="text-xs text-slate-400">Source</Label>
                                     <select value={createForm.source} onChange={(e) => setCreateForm({ ...createForm, source: e.target.value })}
                                         className="w-full h-10 px-3 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100">
-                                        <option value="playground">Playground</option>
+                                        <option value="tryon">Try-On</option>
                                         <option value="assistant">Assistant</option>
                                     </select>
                                 </div>

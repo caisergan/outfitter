@@ -1,30 +1,30 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fashion_app/core/models/playground_models.dart';
-import 'package:fashion_app/features/playground/data/playground_repository.dart';
+import 'package:fashion_app/core/models/tryon_models.dart';
+import 'package:fashion_app/features/tryon/data/tryon_repository.dart';
 
-class PlaygroundRunsState {
-  final List<PlaygroundRun> items;
+class TryOnRunsState {
+  final List<TryOnRun> items;
   final String? nextCursor;
   final bool loading;
   final Object? error;
 
-  const PlaygroundRunsState({
+  const TryOnRunsState({
     this.items = const [],
     this.nextCursor,
     this.loading = false,
     this.error,
   });
 
-  PlaygroundRunsState copyWith({
-    List<PlaygroundRun>? items,
+  TryOnRunsState copyWith({
+    List<TryOnRun>? items,
     String? nextCursor,
     bool clearCursor = false,
     bool? loading,
     Object? error,
     bool clearError = false,
   }) {
-    return PlaygroundRunsState(
+    return TryOnRunsState(
       items: items ?? this.items,
       nextCursor: clearCursor ? null : (nextCursor ?? this.nextCursor),
       loading: loading ?? this.loading,
@@ -33,25 +33,25 @@ class PlaygroundRunsState {
   }
 }
 
-class PlaygroundRunsNotifier extends Notifier<PlaygroundRunsState> {
+class TryOnRunsNotifier extends Notifier<TryOnRunsState> {
   static const int _pageSize = 10;
 
   @override
-  PlaygroundRunsState build() {
+  TryOnRunsState build() {
     // Kick off the first fetch on the next microtask so we don't touch
     // `state` before build() has returned (which would otherwise blow up
     // with a "Tried to read the state of an uninitialized provider" error
     // on cold start).
     Future.microtask(refresh);
-    return const PlaygroundRunsState(loading: true);
+    return const TryOnRunsState(loading: true);
   }
 
   Future<void> refresh() async {
-    final repo = ref.read(playgroundRepositoryProvider);
+    final repo = ref.read(tryOnGenerationRepositoryProvider);
     state = state.copyWith(loading: true, clearError: true);
     try {
       final page = await repo.listRuns(limit: _pageSize);
-      state = PlaygroundRunsState(
+      state = TryOnRunsState(
         items: page.items,
         nextCursor: page.nextCursor,
         loading: false,
@@ -64,7 +64,7 @@ class PlaygroundRunsNotifier extends Notifier<PlaygroundRunsState> {
   Future<void> loadMore() async {
     final cursor = state.nextCursor;
     if (cursor == null || state.loading) return;
-    final repo = ref.read(playgroundRepositoryProvider);
+    final repo = ref.read(tryOnGenerationRepositoryProvider);
     state = state.copyWith(loading: true);
     try {
       final page = await repo.listRuns(limit: _pageSize, cursor: cursor);
@@ -85,7 +85,6 @@ class PlaygroundRunsNotifier extends Notifier<PlaygroundRunsState> {
   Future<void> refreshAfterGenerate() async => refresh();
 }
 
-final playgroundRunsProvider =
-    NotifierProvider<PlaygroundRunsNotifier, PlaygroundRunsState>(
-  PlaygroundRunsNotifier.new,
+final tryonRunsProvider = NotifierProvider<TryOnRunsNotifier, TryOnRunsState>(
+  TryOnRunsNotifier.new,
 );

@@ -37,7 +37,7 @@ class SuggestOutfitsResponse(BaseModel):
 
 
 class SaveOutfitRequest(BaseModel):
-    source: Literal["playground", "assistant"]
+    source: Literal["tryon", "assistant"]
     slots: dict
     generated_image_url: str | None = None
 

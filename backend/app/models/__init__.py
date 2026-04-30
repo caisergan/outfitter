@@ -2,11 +2,11 @@ from app.models.user import User
 from app.models.catalog import CatalogItem
 from app.models.wardrobe import WardrobeItem
 from app.models.outfit import SavedOutfit
-from app.models.playground import (
+from app.models.tryon import (
     SystemPrompt,
     UserPromptTemplate,
     ModelPersona,
-    PlaygroundRun,
+    TryOnRun,
 )
 
 __all__ = [
@@ -17,5 +17,5 @@ __all__ = [
     "SystemPrompt",
     "UserPromptTemplate",
     "ModelPersona",
-    "PlaygroundRun",
+    "TryOnRun",
 ]

@@ -160,48 +160,38 @@ export async function deleteOutfit(outfitId) {
   return apiFetch(`/outfits/${outfitId}`, { method: "DELETE" });
 }
 
-// ── Try-On ───────────────────────────────────────────────────────────────────
+// ── Try-On generation ────────────────────────────────────────────────────────
 
-export async function submitTryOn(data) {
-  return apiFetch("/tryon/submit", { method: "POST", body: data });
-}
-
-export async function getTryOnStatus(jobId) {
-  return apiFetch(`/tryon/status/${jobId}`);
-}
-
-// ── Playground ───────────────────────────────────────────────────────────────
-
-export async function generatePlaygroundImage(payload) {
+export async function generateTryOnImage(payload) {
   // payload: { catalog_item_ids: string[], system_prompt: string, user_prompt?: string,
   //            template_id?: string, persona_id?: string,
   //            size?: string, quality?: string, n?: number }
-  return apiFetch("/playground/generate-image", { method: "POST", body: payload });
+  return apiFetch("/tryon/generate-image", { method: "POST", body: payload });
 }
 
-export async function fetchPlaygroundSystemPrompt() {
-  return apiFetch("/playground/system-prompt");
+export async function fetchTryOnSystemPrompt() {
+  return apiFetch("/tryon/system-prompt");
 }
 
-export async function fetchPlaygroundTemplates() {
-  return apiFetch("/playground/templates");
+export async function fetchTryOnTemplates() {
+  return apiFetch("/tryon/templates");
 }
 
-export async function fetchPlaygroundPersonas(gender) {
+export async function fetchTryOnPersonas(gender) {
   const q = gender ? `?gender=${encodeURIComponent(gender)}` : "";
-  return apiFetch(`/playground/personas${q}`);
+  return apiFetch(`/tryon/personas${q}`);
 }
 
-export async function fetchPlaygroundRuns({ limit, cursor } = {}) {
+export async function fetchTryOnRuns({ limit, cursor } = {}) {
   const q = new URLSearchParams();
   if (limit) q.set("limit", limit);
   if (cursor) q.set("cursor", cursor);
   const qs = q.toString();
-  return apiFetch(`/playground/runs${qs ? `?${qs}` : ""}`);
+  return apiFetch(`/tryon/runs${qs ? `?${qs}` : ""}`);
 }
 
-export async function fetchPlaygroundRun(runId) {
-  return apiFetch(`/playground/runs/${runId}`);
+export async function fetchTryOnRun(runId) {
+  return apiFetch(`/tryon/runs/${runId}`);
 }
 
 export async function getCatalogItem(itemId) {
@@ -210,38 +200,38 @@ export async function getCatalogItem(itemId) {
 
 // ── Admin: prompt library CRUD ──────────────────────────────────────────────
 
-export async function patchPlaygroundSystemPrompt(payload) {
-  return apiFetch("/playground/system-prompt", { method: "PATCH", body: payload });
+export async function patchTryOnSystemPrompt(payload) {
+  return apiFetch("/tryon/system-prompt", { method: "PATCH", body: payload });
 }
 
-export async function listPlaygroundTemplatesAdmin() {
-  return apiFetch("/playground/templates?include_inactive=true");
+export async function listTryOnTemplatesAdmin() {
+  return apiFetch("/tryon/templates?include_inactive=true");
 }
 
-export async function createPlaygroundTemplate(payload) {
-  return apiFetch("/playground/templates", { method: "POST", body: payload });
+export async function createTryOnTemplate(payload) {
+  return apiFetch("/tryon/templates", { method: "POST", body: payload });
 }
 
-export async function patchPlaygroundTemplate(id, payload) {
-  return apiFetch(`/playground/templates/${id}`, { method: "PATCH", body: payload });
+export async function patchTryOnTemplate(id, payload) {
+  return apiFetch(`/tryon/templates/${id}`, { method: "PATCH", body: payload });
 }
 
-export async function deletePlaygroundTemplate(id) {
-  return apiFetch(`/playground/templates/${id}`, { method: "DELETE" });
+export async function deleteTryOnTemplate(id) {
+  return apiFetch(`/tryon/templates/${id}`, { method: "DELETE" });
 }
 
-export async function listPlaygroundPersonasAdmin() {
-  return apiFetch("/playground/personas?include_inactive=true");
+export async function listTryOnPersonasAdmin() {
+  return apiFetch("/tryon/personas?include_inactive=true");
 }
 
-export async function createPlaygroundPersona(payload) {
-  return apiFetch("/playground/personas", { method: "POST", body: payload });
+export async function createTryOnPersona(payload) {
+  return apiFetch("/tryon/personas", { method: "POST", body: payload });
 }
 
-export async function patchPlaygroundPersona(id, payload) {
-  return apiFetch(`/playground/personas/${id}`, { method: "PATCH", body: payload });
+export async function patchTryOnPersona(id, payload) {
+  return apiFetch(`/tryon/personas/${id}`, { method: "PATCH", body: payload });
 }
 
-export async function deletePlaygroundPersona(id) {
-  return apiFetch(`/playground/personas/${id}`, { method: "DELETE" });
+export async function deleteTryOnPersona(id) {
+  return apiFetch(`/tryon/personas/${id}`, { method: "DELETE" });
 }

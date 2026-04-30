@@ -120,7 +120,7 @@
     },
     {
       "key": "saveOutfitSource",
-      "value": "playground"
+      "value": "tryon"
     },
     {
       "key": "generatedImageUrl",
@@ -923,97 +923,6 @@
               ]
             },
             "description": "DELETE /outfits/{outfit_id}."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Try-On",
-      "item": [
-        {
-          "name": "Submit Try-On",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"slots\": {\n    \"top\": \"{{itemId}}\",\n    \"bottom\": \"{{wardrobeItemId}}\"\n  },\n  \"model_preference\": \"{{modelPreference}}\",\n  \"user_photo_url\": \"{{userPhotoUrl}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/tryon/submit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tryon",
-                "submit"
-              ]
-            },
-            "description": "POST /tryon/submit with TryOnSubmitRequest { slots, model_preference, user_photo_url }."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 202) {",
-                  "  const json = pm.response.json();",
-                  "  if (json.job_id) {",
-                  "    pm.collectionVariables.set('jobId', json.job_id);",
-                  "  }",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Try-On Status",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/tryon/status/{{jobId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tryon",
-                "status",
-                "{{jobId}}"
-              ]
-            },
-            "description": "GET /tryon/status/{job_id}."
           }
         }
       ]

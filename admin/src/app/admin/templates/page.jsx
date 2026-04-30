@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import {
-    listPlaygroundTemplatesAdmin,
-    createPlaygroundTemplate,
-    patchPlaygroundTemplate,
-    deletePlaygroundTemplate,
+    listTryOnTemplatesAdmin,
+    createTryOnTemplate,
+    patchTryOnTemplate,
+    deleteTryOnTemplate,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function AdminTemplatesPage() {
 
     async function load() {
         try {
-            setRows(await listPlaygroundTemplatesAdmin());
+            setRows(await listTryOnTemplatesAdmin());
         } catch (err) {
             toast.error(err.message);
             setRows([]);
@@ -68,11 +68,11 @@ export default function AdminTemplatesPage() {
     }
 
     async function softDelete(row) {
-        if (!confirm(`Soft-delete template "${row.label}"? It will be hidden from the playground but retained for audit.`)) {
+        if (!confirm(`Soft-delete template "${row.label}"? It will be hidden from try-on generation but retained for audit.`)) {
             return;
         }
         try {
-            await deletePlaygroundTemplate(row.id);
+            await deleteTryOnTemplate(row.id);
             toast.success(`Archived ${row.slug}`);
             load();
         } catch (err) {
@@ -82,7 +82,7 @@ export default function AdminTemplatesPage() {
 
     async function restore(row) {
         try {
-            await patchPlaygroundTemplate(row.id, { is_active: true });
+            await patchTryOnTemplate(row.id, { is_active: true });
             toast.success(`Restored ${row.slug}`);
             load();
         } catch (err) {
@@ -106,7 +106,7 @@ export default function AdminTemplatesPage() {
             }
             setSaving(true);
             try {
-                await createPlaygroundTemplate({
+                await createTryOnTemplate({
                     slug: form.slug,
                     label: form.label,
                     description: form.description || null,
@@ -136,7 +136,7 @@ export default function AdminTemplatesPage() {
         }
         setSaving(true);
         try {
-            await patchPlaygroundTemplate(editing.id, payload);
+            await patchTryOnTemplate(editing.id, payload);
             toast.success(`Updated ${editing.slug}`);
             close();
             load();
@@ -154,7 +154,7 @@ export default function AdminTemplatesPage() {
                     <h1 className="text-2xl font-bold text-white">Templates</h1>
                     <p className="text-slate-400 mt-1 text-sm">
                         User-prompt templates with a {"{{MODEL}}"} placeholder. Active rows
-                        appear in the playground dropdown.
+                        appear in the try-on dropdown.
                     </p>
                 </div>
                 <Button

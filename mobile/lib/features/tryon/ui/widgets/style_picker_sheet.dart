@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fashion_app/core/models/playground_models.dart';
+import 'package:fashion_app/core/models/tryon_models.dart';
 import 'package:fashion_app/core/theme/app_colors.dart';
-import 'package:fashion_app/features/playground/providers/playground_draft_provider.dart';
-import 'package:fashion_app/features/playground/providers/playground_library_provider.dart';
+import 'package:fashion_app/features/tryon/providers/tryon_draft_provider.dart';
+import 'package:fashion_app/features/tryon/providers/tryon_library_provider.dart';
 
-/// Modal bottom sheet for picking the editorial style of the next playground
+/// Modal bottom sheet for picking the editorial style of the next tryon
 /// generation: template + gender + persona dropdowns plus a variation-notes
-/// textarea. Mutates the playgroundDraftProvider so the Try-On sheet can read
+/// textarea. Mutates the tryonDraftProvider so the Try-On sheet can read
 /// the result.
 class StylePickerSheet extends ConsumerWidget {
   const StylePickerSheet({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final libraryAsync = ref.watch(playgroundLibraryProvider);
+    final libraryAsync = ref.watch(tryonLibraryProvider);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -54,7 +54,7 @@ class StylePickerSheet extends ConsumerWidget {
 }
 
 class _StylePickerBody extends ConsumerStatefulWidget {
-  final PlaygroundLibrary library;
+  final TryOnLibrary library;
   final ScrollController scrollController;
 
   const _StylePickerBody({
@@ -72,8 +72,8 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
   @override
   void initState() {
     super.initState();
-    _userPromptController =
-        TextEditingController(text: ref.read(playgroundDraftProvider).userPromptText);
+    _userPromptController = TextEditingController(
+        text: ref.read(tryonDraftProvider).userPromptText);
   }
 
   @override
@@ -84,8 +84,8 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
 
   @override
   Widget build(BuildContext context) {
-    final draft = ref.watch(playgroundDraftProvider);
-    final notifier = ref.read(playgroundDraftProvider.notifier);
+    final draft = ref.watch(tryonDraftProvider);
+    final notifier = ref.read(tryonDraftProvider.notifier);
     final lib = widget.library;
 
     // Sync controller text if the draft changed externally (e.g. dropdowns
@@ -127,7 +127,6 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
                 ),
           ),
           const SizedBox(height: 16),
-
           _Field(
             label: 'Template',
             helper: lib.templates
@@ -142,13 +141,13 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
             child: _styledDropdown<String>(
               value: draft.templateId,
               items: lib.templates
-                  .map((t) => DropdownMenuItem(value: t.id, child: Text(t.label)))
+                  .map((t) =>
+                      DropdownMenuItem(value: t.id, child: Text(t.label)))
                   .toList(),
               onChanged: (v) => notifier.setTemplate(v),
             ),
           ),
           const SizedBox(height: 14),
-
           _Field(
             label: 'Gender',
             helper: 'Filters which personas are available.',
@@ -164,7 +163,6 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
             ),
           ),
           const SizedBox(height: 14),
-
           _Field(
             label: 'Persona',
             child: _styledDropdown<String>(
@@ -172,13 +170,13 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
                   ? draft.personaId
                   : null,
               items: visiblePersonas
-                  .map((p) => DropdownMenuItem(value: p.id, child: Text(p.label)))
+                  .map((p) =>
+                      DropdownMenuItem(value: p.id, child: Text(p.label)))
                   .toList(),
               onChanged: (v) => notifier.setPersona(v),
             ),
           ),
           const SizedBox(height: 18),
-
           Row(
             children: [
               Text(
@@ -255,8 +253,8 @@ class _StylePickerBodyState extends ConsumerState<_StylePickerBody> {
           items: items,
           onChanged: onChanged,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down,
-              color: AppColors.textMuted),
+          icon:
+              const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
           dropdownColor: AppColors.surface,
         ),
       ),
@@ -318,7 +316,7 @@ class _StatusPill extends StatelessWidget {
 }
 
 // Used by the helper-text fallback when templates haven't loaded yet.
-PlaygroundTemplate _placeholderTemplate() => const PlaygroundTemplate(
+TryOnTemplate _placeholderTemplate() => const TryOnTemplate(
       id: '',
       slug: '',
       label: '',

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fashion_app/core/models/playground_models.dart';
+import 'package:fashion_app/core/models/tryon_models.dart';
 import 'package:fashion_app/core/theme/app_colors.dart';
-import 'package:fashion_app/features/playground/data/playground_repository.dart';
+import 'package:fashion_app/features/tryon/data/tryon_repository.dart';
 
-/// Full snapshot view of a past run. Re-fetches /playground/runs/{id} to get
+/// Full snapshot view of a past run. Re-fetches /tryon/runs/{id} to get
 /// fresh signed image URLs (the list-page URLs are 15 min and may have
 /// expired). Shows all images, full system + user prompt text, and a
 /// Reproduce button that delegates to the caller.
 class RunDetailSheet extends ConsumerWidget {
   final String runId;
-  final Future<void> Function(PlaygroundRun run) onReproduce;
+  final Future<void> Function(TryOnRun run) onReproduce;
 
   const RunDetailSheet({
     required this.runId,
@@ -48,8 +48,10 @@ class RunDetailSheet extends ConsumerWidget {
                 style: const TextStyle(color: AppColors.danger),
               ),
             ),
-            data: (run) =>
-                _Body(run: run, scrollController: scrollController, onReproduce: onReproduce),
+            data: (run) => _Body(
+                run: run,
+                scrollController: scrollController,
+                onReproduce: onReproduce),
           ),
         );
       },
@@ -58,9 +60,9 @@ class RunDetailSheet extends ConsumerWidget {
 }
 
 class _Body extends StatelessWidget {
-  final PlaygroundRun run;
+  final TryOnRun run;
   final ScrollController scrollController;
-  final Future<void> Function(PlaygroundRun run) onReproduce;
+  final Future<void> Function(TryOnRun run) onReproduce;
 
   const _Body({
     required this.run,
@@ -233,6 +235,6 @@ class _PromptBlock extends StatelessWidget {
 /// Family provider that fetches a single run by id; used by RunDetailSheet
 /// so the modal owns its own loading/error states.
 final _runDetailProvider =
-    FutureProvider.family<PlaygroundRun, String>((ref, runId) async {
-  return ref.read(playgroundRepositoryProvider).getRun(runId);
+    FutureProvider.family<TryOnRun, String>((ref, runId) async {
+  return ref.read(tryOnGenerationRepositoryProvider).getRun(runId);
 });

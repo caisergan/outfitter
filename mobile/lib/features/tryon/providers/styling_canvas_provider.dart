@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:fashion_app/core/models/catalog_item.dart';
 import 'package:fashion_app/core/models/wardrobe_item.dart';
-import 'package:fashion_app/features/playground/models/styling_canvas_models.dart';
+import 'package:fashion_app/features/tryon/models/styling_canvas_models.dart';
 
 class StylingCanvasState {
   final List<CanvasGarment> garments;
@@ -345,13 +345,13 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
     state = state.copyWith(
       garments: outfit.garments
           .map((g) => CanvasGarment(
-        id: g.id,
-        item: g.item,
-        x: g.x,
-        y: g.y,
-        scale: g.scale,
-        rotation: g.rotation,
-      ))
+                id: g.id,
+                item: g.item,
+                x: g.x,
+                y: g.y,
+                scale: g.scale,
+                rotation: g.rotation,
+              ))
           .toList(),
       selectedGarmentId: null,
       activeOutfitId: outfit.id,

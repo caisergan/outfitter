@@ -162,9 +162,8 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
   String _titleCase(String value) {
     return value
         .split(' ')
-        .map((word) => word.isEmpty
-            ? word
-            : word[0].toUpperCase() + word.substring(1))
+        .map((word) =>
+            word.isEmpty ? word : word[0].toUpperCase() + word.substring(1))
         .join(' ');
   }
 }

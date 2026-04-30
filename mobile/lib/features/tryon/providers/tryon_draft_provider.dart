@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fashion_app/core/models/playground_models.dart';
-import 'playground_library_provider.dart';
+import 'package:fashion_app/core/models/tryon_models.dart';
+import 'tryon_library_provider.dart';
 
 /// Draft of what will be sent on the next Generate. Holds the chosen
 /// template / gender / persona, the editable system prompt, and the
 /// user-prompt textarea content. The Style picker sheet mutates this; the
 /// Try-On sheet reads it to drive the Generate button.
-class PlaygroundDraft {
+class TryOnDraft {
   final String? templateId;
   final String gender;
   final String? personaId;
@@ -17,7 +17,7 @@ class PlaygroundDraft {
   // tell whether the textarea has been manually edited.
   final String lastAppliedComposed;
 
-  const PlaygroundDraft({
+  const TryOnDraft({
     this.templateId,
     this.gender = 'female',
     this.personaId,
@@ -26,7 +26,7 @@ class PlaygroundDraft {
     this.lastAppliedComposed = '',
   });
 
-  PlaygroundDraft copyWith({
+  TryOnDraft copyWith({
     String? templateId,
     bool clearTemplate = false,
     String? gender,
@@ -36,7 +36,7 @@ class PlaygroundDraft {
     String? userPromptText,
     String? lastAppliedComposed,
   }) {
-    return PlaygroundDraft(
+    return TryOnDraft(
       templateId: clearTemplate ? null : (templateId ?? this.templateId),
       gender: gender ?? this.gender,
       personaId: clearPersona ? null : (personaId ?? this.personaId),
@@ -54,36 +54,36 @@ class PlaygroundDraft {
 /// Mirrors the web-side composeUserPrompt helper. Returns "" if either side
 /// is missing so the textarea stays empty until both dropdowns resolve.
 String composeUserPrompt({
-  PlaygroundTemplate? template,
-  PlaygroundPersona? persona,
+  TryOnTemplate? template,
+  TryOnPersona? persona,
 }) {
   if (template == null || persona == null) return '';
   return template.body.replaceFirst('{{MODEL}}', persona.description.trim());
 }
 
-class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
+class TryOnDraftNotifier extends Notifier<TryOnDraft> {
   @override
-  PlaygroundDraft build() {
+  TryOnDraft build() {
     // Seed from the library provider once it resolves.
-    ref.listen(playgroundLibraryProvider, (_, next) {
+    ref.listen(tryonLibraryProvider, (_, next) {
       next.whenData((lib) => _seedFromLibrary(lib));
     });
-    final lib = ref.read(playgroundLibraryProvider).valueOrNull;
+    final lib = ref.read(tryonLibraryProvider).valueOrNull;
     if (lib != null) {
       return _initialFrom(lib);
     }
-    return const PlaygroundDraft();
+    return const TryOnDraft();
   }
 
-  PlaygroundDraft _initialFrom(PlaygroundLibrary lib) {
+  TryOnDraft _initialFrom(TryOnLibrary lib) {
     final template = lib.templates.isNotEmpty ? lib.templates.first : null;
-    final firstFemale =
-        lib.allPersonas.firstWhere((p) => p.gender == 'female',
-            orElse: () => lib.allPersonas.isNotEmpty
-                ? lib.allPersonas.first
-                : _placeholderPersona());
-    final composed = composeUserPrompt(template: template, persona: firstFemale);
-    return PlaygroundDraft(
+    final firstFemale = lib.allPersonas.firstWhere((p) => p.gender == 'female',
+        orElse: () => lib.allPersonas.isNotEmpty
+            ? lib.allPersonas.first
+            : _placeholderPersona());
+    final composed =
+        composeUserPrompt(template: template, persona: firstFemale);
+    return TryOnDraft(
       templateId: template?.id,
       gender: firstFemale.gender,
       personaId: firstFemale.id,
@@ -93,7 +93,7 @@ class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
     );
   }
 
-  void _seedFromLibrary(PlaygroundLibrary lib) {
+  void _seedFromLibrary(TryOnLibrary lib) {
     if (state.templateId == null && state.personaId == null) {
       state = _initialFrom(lib);
     }
@@ -111,7 +111,7 @@ class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
   }
 
   void setTemplate(String? templateId) {
-    final lib = ref.read(playgroundLibraryProvider).valueOrNull;
+    final lib = ref.read(tryonLibraryProvider).valueOrNull;
     state = state.copyWith(
       templateId: templateId,
       clearTemplate: templateId == null,
@@ -135,15 +135,15 @@ class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
   }
 
   void setGender(String gender) {
-    final lib = ref.read(playgroundLibraryProvider).valueOrNull;
+    final lib = ref.read(tryonLibraryProvider).valueOrNull;
     if (lib == null) {
       state = state.copyWith(gender: gender);
       return;
     }
     // If the current personaId belongs to a different gender, snap to the
     // first persona of the new gender.
-    final current = lib.allPersonas
-        .firstWhere((p) => p.id == state.personaId, orElse: () => _placeholderPersona());
+    final current = lib.allPersonas.firstWhere((p) => p.id == state.personaId,
+        orElse: () => _placeholderPersona());
     final newPersona = current.gender == gender
         ? current
         : lib.allPersonas.firstWhere(
@@ -170,7 +170,7 @@ class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
   }
 
   void setPersona(String? personaId) {
-    final lib = ref.read(playgroundLibraryProvider).valueOrNull;
+    final lib = ref.read(tryonLibraryProvider).valueOrNull;
     state = state.copyWith(
       personaId: personaId,
       clearPersona: personaId == null,
@@ -219,7 +219,7 @@ class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
     required String userPromptText,
     required String composedFromDropdowns,
   }) {
-    state = PlaygroundDraft(
+    state = TryOnDraft(
       templateId: templateId,
       gender: gender,
       personaId: personaId,
@@ -230,7 +230,7 @@ class PlaygroundDraftNotifier extends Notifier<PlaygroundDraft> {
   }
 }
 
-PlaygroundPersona _placeholderPersona() => const PlaygroundPersona(
+TryOnPersona _placeholderPersona() => const TryOnPersona(
       id: '',
       slug: '',
       label: '',
@@ -239,7 +239,6 @@ PlaygroundPersona _placeholderPersona() => const PlaygroundPersona(
       isActive: false,
     );
 
-final playgroundDraftProvider =
-    NotifierProvider<PlaygroundDraftNotifier, PlaygroundDraft>(
-  PlaygroundDraftNotifier.new,
+final tryonDraftProvider = NotifierProvider<TryOnDraftNotifier, TryOnDraft>(
+  TryOnDraftNotifier.new,
 );

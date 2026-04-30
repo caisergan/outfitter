@@ -183,8 +183,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
             ? _buildEmptyState(context)
             : GridView.builder(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 14,
                   mainAxisSpacing: 18,

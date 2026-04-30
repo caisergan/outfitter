@@ -6,7 +6,7 @@ class MainScaffold extends StatelessWidget {
   final Widget child;
   const MainScaffold({required this.child, super.key});
 
-  static const _tabs = ['/discover', '/playground', '/assistant', '/wardrobe'];
+  static const _tabs = ['/discover', '/tryon', '/assistant', '/wardrobe'];
 
   @override
   Widget build(BuildContext context) {

@@ -8,7 +8,7 @@ import '../../../core/utils/error_helpers.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../providers/wardrobe_provider.dart';
-import '/features/playground/providers/styling_canvas_provider.dart';
+import '/features/tryon/providers/styling_canvas_provider.dart';
 
 class WardrobeItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -86,10 +86,12 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                               _titleCase(
                                 resolvedItem.subtype ?? resolvedItem.category,
                               ),
-                              style:
-                                  Theme.of(context).textTheme.displaySmall?.copyWith(
-                                        fontSize: 34,
-                                      ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displaySmall
+                                  ?.copyWith(
+                                    fontSize: 34,
+                                  ),
                             ),
                             const SizedBox(height: 18),
                             Container(
@@ -185,7 +187,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: () =>
-                            _addToPlayground(context, ref, resolvedItem),
+                            _addToTryOn(context, ref, resolvedItem),
                         child: const Text('Add to Studio'),
                       ),
                       const SizedBox(height: 12),
@@ -233,7 +235,8 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     WardrobeItem current,
   ) {
     final similar = items
-        .where((item) => item.id != current.id && item.category == current.category)
+        .where((item) =>
+            item.id != current.id && item.category == current.category)
         .take(4)
         .toList();
 
@@ -283,7 +286,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _addToPlayground(
+  void _addToTryOn(
     BuildContext context,
     WidgetRef ref,
     WardrobeItem item,
@@ -292,7 +295,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Added to Studio')),
     );
-    context.go('/playground');
+    context.go('/tryon');
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
@@ -333,9 +336,8 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
   static String _titleCase(String value) {
     return value
         .split(' ')
-        .map((word) => word.isEmpty
-            ? word
-            : word[0].toUpperCase() + word.substring(1))
+        .map((word) =>
+            word.isEmpty ? word : word[0].toUpperCase() + word.substring(1))
         .join(' ');
   }
 }

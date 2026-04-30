@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fashion_app/core/models/playground_models.dart';
+import 'package:fashion_app/core/models/tryon_models.dart';
 import 'package:fashion_app/core/theme/app_colors.dart';
-import 'package:fashion_app/features/playground/providers/playground_library_provider.dart';
-import 'package:fashion_app/features/playground/providers/playground_runs_provider.dart';
+import 'package:fashion_app/features/tryon/providers/tryon_library_provider.dart';
+import 'package:fashion_app/features/tryon/providers/tryon_runs_provider.dart';
 
 import 'run_detail_sheet.dart';
 
-/// Modal bottom sheet listing the user's recent playground runs (newest
+/// Modal bottom sheet listing the user's recent tryon runs (newest
 /// first) with thumbnails, status badges, prompt excerpts, and tap-to-view
 /// or reproduce actions.
 class RecentRunsSheet extends ConsumerWidget {
-  final Future<void> Function(PlaygroundRun run) onReproduce;
+  final Future<void> Function(TryOnRun run) onReproduce;
 
   const RecentRunsSheet({required this.onReproduce, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final runs = ref.watch(playgroundRunsProvider);
-    final lib = ref.watch(playgroundLibraryProvider).valueOrNull;
-    final notifier = ref.read(playgroundRunsProvider.notifier);
+    final runs = ref.watch(tryonRunsProvider);
+    final lib = ref.watch(tryonLibraryProvider).valueOrNull;
+    final notifier = ref.read(tryonRunsProvider.notifier);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -96,8 +96,8 @@ class RecentRunsSheet extends ConsumerWidget {
 
   Widget _buildBody(
     BuildContext context,
-    PlaygroundRunsState runs,
-    PlaygroundLibrary? lib,
+    TryOnRunsState runs,
+    TryOnLibrary? lib,
     ScrollController scrollController,
   ) {
     if (runs.error != null && runs.items.isEmpty) {
@@ -142,7 +142,7 @@ class RecentRunsSheet extends ConsumerWidget {
     );
   }
 
-  void _openDetail(BuildContext context, PlaygroundRun run) {
+  void _openDetail(BuildContext context, TryOnRun run) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -172,8 +172,8 @@ class _Handle extends StatelessWidget {
 }
 
 class _RunRow extends StatelessWidget {
-  final PlaygroundRun run;
-  final PlaygroundLibrary? library;
+  final TryOnRun run;
+  final TryOnLibrary? library;
   final VoidCallback onView;
   final VoidCallback onReproduce;
 
@@ -190,9 +190,8 @@ class _RunRow extends StatelessWidget {
         .where((t) => t.id == run.templateId)
         .firstOrNull
         ?.label;
-    final persona = library?.allPersonas
-        .where((p) => p.id == run.personaId)
-        .firstOrNull;
+    final persona =
+        library?.allPersonas.where((p) => p.id == run.personaId).firstOrNull;
     final timestamp = _formatTimestamp(run.createdAt.toLocal());
     final isFailed = run.status == 'failed';
 
@@ -211,16 +210,16 @@ class _RunRow extends StatelessWidget {
                       run.images.first,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const _ThumbPlaceholder(),
-                      loadingBuilder: (context, child, progress) =>
-                          progress == null
-                              ? child
-                              : const Center(
-                                  child: SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  ),
-                                ),
+                      loadingBuilder: (context, child, progress) => progress ==
+                              null
+                          ? child
+                          : const Center(
+                              child: SizedBox.square(
+                                dimension: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
                     )
                   : const _ThumbPlaceholder(),
             ),
@@ -296,12 +295,24 @@ class _RunRow extends StatelessWidget {
           (l) => l.trim().isNotEmpty,
           orElse: () => '',
         );
-    return firstLine.length > max ? '${firstLine.substring(0, max - 1)}…' : firstLine;
+    return firstLine.length > max
+        ? '${firstLine.substring(0, max - 1)}…'
+        : firstLine;
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   static String _formatTimestamp(DateTime t) {

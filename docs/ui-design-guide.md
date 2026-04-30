@@ -214,7 +214,7 @@ Outfitter does not use a traditional 12-column Figma grid. The layout is content
 | `radius-sm` | 4px | Attribute/tag chips (small), overline badges |
 | `radius-md` | 8px | Input field corners, snackbar, tooltip |
 | `radius-lg` | 12px | Wardrobe item cards (3-column grid), shortcut tiles, skeleton loaders |
-| `radius-xl` | 16px | Outfit cards (Discover feed), outfit slot tiles (Playground), outfit suggestion cards (Assistant) |
+| `radius-xl` | 16px | Outfit cards (Discover feed), outfit slot tiles (TryOn), outfit suggestion cards (Assistant) |
 | `radius-2xl` | 24px | Bottom sheet top corners, large editorial feature cards, AI try-on result image |
 | `radius-full` | 9999px | Pill buttons (CTA and secondary), filter chips, story circle avatar border, FAB, search bar, tag chips (28px height), spinner |
 
@@ -232,7 +232,7 @@ Outfitter does not use a traditional 12-column Figma grid. The layout is content
 | Snackbar/toast | `radius-md` |
 | Standard input field | `radius-md` |
 | Outfit card (Discover) | `radius-xl` |
-| Outfit slot tile (Playground) | `radius-xl` |
+| Outfit slot tile (TryOn) | `radius-xl` |
 | Suggestion card (Assistant) | `radius-xl` |
 | AI try-on result image | `radius-2xl` |
 | Bottom sheet | `radius-2xl` (top corners only, bottom corners 0px) |
@@ -309,7 +309,7 @@ Do not use the accent gradient on icons. Icon color is always flat.
 
 **Bottom Navigation Bar:**
 - Discover: compass or home icon (outlined → filled when selected)
-- Playground: layers or grid icon
+- TryOn: layers or grid icon
 - Assistant: sparkle or wand icon
 - Wardrobe: hanger or shirt icon
 - FAB: plus (+) icon (always white, always 28px)
@@ -319,7 +319,7 @@ Do not use the accent gradient on icons. Icon color is always flat.
 - Magnifying glass (search) — top right header
 - Chevron right — "See all" rows
 
-**Playground Tab:**
+**TryOn Tab:**
 - X (close/remove) — filled slot remove button
 - Arrow cycle (regenerate) — action row
 - Floppy disk or bookmark (save) — action row
@@ -547,7 +547,7 @@ Same dimensions as Primary CTA. Background `destructive` (#D32F2F), white text. 
 | Position | Centered horizontally, vertically centered within the 49px bar (not the full 83px) |
 | Elevation | Level 1 shadow |
 
-The FAB is NOT a tab. It does not have a selected state. Tapping it always opens the Add Item bottom sheet. The 2 tabs to the left (Discover, Playground) and 2 tabs to the right (Assistant, Wardrobe) are spaced evenly around the FAB.
+The FAB is NOT a tab. It does not have a selected state. Tapping it always opens the Add Item bottom sheet. The 2 tabs to the left (Discover, TryOn) and 2 tabs to the right (Assistant, Wardrobe) are spaced evenly around the FAB.
 
 ---
 
@@ -613,7 +613,7 @@ The FAB is NOT a tab. It does not have a selected state. Tapping it always opens
 - Trailing padding: 16px
 - Row height: 34px chip + 8px vertical margin above + 8px below = 50px total row height
 
-**Used in:** Playground slot browser (category filter), Wardrobe tab category bar, Assistant parameter selection (wrapping variant — see Section 9.4)
+**Used in:** TryOn slot browser (category filter), Wardrobe tab category bar, Assistant parameter selection (wrapping variant — see Section 9.4)
 
 ---
 
@@ -773,7 +773,7 @@ Same pattern as Empty Wardrobe. Illustration: a simple line-art outline of a han
 
 ---
 
-### 8.10 Outfit Slot Tile (Playground)
+### 8.10 Outfit Slot Tile (TryOn)
 
 **Grid:** 2 columns × 3 rows. 6 slots total.
 - Required slots: Top, Bottom, Shoes
@@ -810,7 +810,7 @@ Same pattern as Empty Wardrobe. Illustration: a simple line-art outline of a han
 
 ---
 
-### 8.11 AI Try-On Result View (Playground)
+### 8.11 AI Try-On Result View (TryOn)
 
 **Anatomy:** Generated image → Action row
 
@@ -830,7 +830,7 @@ Same pattern as Empty Wardrobe. Illustration: a simple line-art outline of a han
 
 **Loading state (AI generation in progress):**
 - Shimmer skeleton: 358×476px, `radius-2xl`
-- Full-screen overlay: `overlay-white-soft` over the entire Playground screen (not just the image zone)
+- Full-screen overlay: `overlay-white-soft` over the entire TryOn screen (not just the image zone)
 - Status text messages (cycling every 2.5s, fade transition):
   1. "Analyzing your outfit..."
   2. "Generating your look..."
@@ -915,11 +915,11 @@ Same pattern as Empty Wardrobe. Illustration: a simple line-art outline of a han
 
 ---
 
-### 9.3 Playground Tab
+### 9.3 TryOn Tab
 
 **Navigation pattern:** Root tab OR pushed screen from Discover card tap
 **Header:**
-- "Playground" centered in `heading-1` (24px, Bold)
+- "TryOn" centered in `heading-1` (24px, Bold)
 - Left: back chevron (only shown if navigated from another screen, not when accessed via tab)
 - Right: no actions
 

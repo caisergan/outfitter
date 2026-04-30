@@ -508,7 +508,7 @@ class _SavedOutfitsSection extends StatelessWidget {
                 SizedBox(
                   width: 180,
                   child: OutlinedButton(
-                    onPressed: () => context.go('/playground'),
+                    onPressed: () => context.go('/tryon'),
                     child: const Text('Open Studio'),
                   ),
                 ),
@@ -532,7 +532,7 @@ class _SavedOutfitsSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   child: InkWell(
                     onTap: () => context.go(
-                      '/playground',
+                      '/tryon',
                       extra: {'slots': outfit.slots},
                     ),
                     borderRadius: BorderRadius.circular(24),

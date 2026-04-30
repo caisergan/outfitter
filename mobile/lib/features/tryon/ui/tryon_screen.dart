@@ -3,30 +3,30 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/models/playground_models.dart';
+import '../../../core/models/tryon_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../discover/data/catalog_repository.dart';
-import '../data/playground_repository.dart';
+import '../data/tryon_repository.dart';
 import '../models/styling_canvas_models.dart';
-import '../providers/playground_draft_provider.dart';
-import '../providers/playground_library_provider.dart';
-import '../providers/playground_runs_provider.dart';
+import '../providers/tryon_draft_provider.dart';
+import '../providers/tryon_library_provider.dart';
+import '../providers/tryon_runs_provider.dart';
 import '../providers/styling_canvas_provider.dart';
 import 'widgets/item_browser_sheet.dart';
 import 'widgets/recent_runs_sheet.dart';
 import 'widgets/style_picker_sheet.dart';
 import 'widgets/wardrobe_browser_sheet.dart';
 
-class PlaygroundScreen extends ConsumerStatefulWidget {
+class TryOnScreen extends ConsumerStatefulWidget {
   final Map<String, String>? prefilledSlots;
-  const PlaygroundScreen({this.prefilledSlots, super.key});
+  const TryOnScreen({this.prefilledSlots, super.key});
 
   @override
-  ConsumerState<PlaygroundScreen> createState() => _PlaygroundScreenState();
+  ConsumerState<TryOnScreen> createState() => _TryOnScreenState();
 }
 
-class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
+class _TryOnScreenState extends ConsumerState<TryOnScreen> {
   Future<void> _openGarmentSourcePicker() async {
     final source = await showModalBottomSheet<_GarmentSource>(
       context: context,
@@ -64,8 +64,6 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
       });
     }
   }
-
-
 
   void _openOnlinePlatformBrowser() {
     showModalBottomSheet(
@@ -167,10 +165,10 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
   /// that have since been deleted are silently skipped with a single
   /// snackbar mentioning the count. After reproducing, the user can tap
   /// AI Try On to see the rehydrated state.
-  Future<void> _reproduceRun(PlaygroundRun run) async {
+  Future<void> _reproduceRun(TryOnRun run) async {
     final canvasNotifier = ref.read(stylingCanvasProvider.notifier);
-    final draftNotifier = ref.read(playgroundDraftProvider.notifier);
-    final library = ref.read(playgroundLibraryProvider).valueOrNull;
+    final draftNotifier = ref.read(tryonDraftProvider.notifier);
+    final library = ref.read(tryonLibraryProvider).valueOrNull;
     final catalog = ref.read(catalogRepositoryProvider);
 
     canvasNotifier.newCanvas();
@@ -189,12 +187,10 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
       }
     }
 
-    final persona = library?.allPersonas
-        .where((p) => p.id == run.personaId)
-        .firstOrNull;
-    final template = library?.templates
-        .where((t) => t.id == run.templateId)
-        .firstOrNull;
+    final persona =
+        library?.allPersonas.where((p) => p.id == run.personaId).firstOrNull;
+    final template =
+        library?.templates.where((t) => t.id == run.templateId).firstOrNull;
     final gender = persona?.gender ?? 'female';
     final composed = composeUserPrompt(template: template, persona: persona);
 
@@ -209,8 +205,7 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
 
     if (!mounted) return;
     final shortId = run.id.substring(0, 8);
-    final tail =
-        missing > 0 ? ' · $missing item(s) no longer exist' : '';
+    final tail = missing > 0 ? ' · $missing item(s) no longer exist' : '';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Reproduced run $shortId$tail'),
@@ -305,9 +300,8 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                     child: FilledButton.icon(
                       icon: const Icon(Icons.auto_awesome_rounded),
                       label: const Text('AI Try On'),
-                      onPressed: canvas.garments.isEmpty
-                          ? null
-                          : _openTryOnExperience,
+                      onPressed:
+                          canvas.garments.isEmpty ? null : _openTryOnExperience,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.blush,
                         foregroundColor: AppColors.surface,
@@ -356,8 +350,8 @@ class _StudioTryOnSheet extends ConsumerStatefulWidget {
 
 class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
   bool _generating = false;
-  PlaygroundRun? _result; // populated only after polling resolves the run
-  PlaygroundCapException? _capError;
+  TryOnRun? _result; // populated only after polling resolves the run
+  TryOnCapException? _capError;
   Object? _error;
 
   Future<void> _openStylePicker() async {
@@ -371,10 +365,8 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
   }
 
   Future<void> _generate() async {
-    final draft = ref.read(playgroundDraftProvider);
-    final ids = widget.garments
-        .map((g) => g.item.id)
-        .toList(growable: false);
+    final draft = ref.read(tryonDraftProvider);
+    final ids = widget.garments.map((g) => g.item.id).toList(growable: false);
     if (ids.isEmpty) return;
     setState(() {
       _generating = true;
@@ -383,19 +375,18 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
     });
     try {
       // POST returns 202 + pending; the repo polls until success/failed.
-      final result = await ref
-          .read(playgroundRepositoryProvider)
-          .generateAndAwait(
-            GenerateRequest(
-              catalogItemIds: ids,
-              systemPrompt: draft.systemPromptText,
-              userPrompt: draft.userPromptText,
-              templateId: draft.templateId,
-              personaId: draft.personaId,
-            ),
-          );
+      final result =
+          await ref.read(tryOnGenerationRepositoryProvider).generateAndAwait(
+                TryOnGenerateRequest(
+                  catalogItemIds: ids,
+                  systemPrompt: draft.systemPromptText,
+                  userPrompt: draft.userPromptText,
+                  templateId: draft.templateId,
+                  personaId: draft.personaId,
+                ),
+              );
       if (!mounted) return;
-      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+      ref.read(tryonRunsProvider.notifier).refreshAfterGenerate();
 
       if (result.run.status == 'failed') {
         setState(() {
@@ -417,27 +408,27 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } on PlaygroundCapException catch (e) {
+    } on TryOnCapException catch (e) {
       if (!mounted) return;
       setState(() {
         _capError = e;
         _generating = false;
       });
-      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+      ref.read(tryonRunsProvider.notifier).refreshAfterGenerate();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e;
         _generating = false;
       });
-      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+      ref.read(tryonRunsProvider.notifier).refreshAfterGenerate();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final draft = ref.watch(playgroundDraftProvider);
-    final libraryAsync = ref.watch(playgroundLibraryProvider);
+    final draft = ref.watch(tryonDraftProvider);
+    final libraryAsync = ref.watch(tryonLibraryProvider);
 
     return Container(
       constraints: BoxConstraints(
@@ -524,9 +515,8 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                 label: Text(_generating
                     ? 'Generating…'
                     : (_result == null ? 'Generate' : 'Generate again')),
-                onPressed: (_generating || widget.garments.isEmpty)
-                    ? null
-                    : _generate,
+                onPressed:
+                    (_generating || widget.garments.isEmpty) ? null : _generate,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.blush,
                   foregroundColor: AppColors.surface,
@@ -545,8 +535,8 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
 }
 
 class _StylePillRow extends StatelessWidget {
-  final PlaygroundDraft draft;
-  final PlaygroundLibrary library;
+  final TryOnDraft draft;
+  final TryOnLibrary library;
   final VoidCallback onTap;
 
   const _StylePillRow({
@@ -561,7 +551,7 @@ class _StylePillRow extends StatelessWidget {
       (t) => t.id == draft.templateId,
       orElse: () => library.templates.isNotEmpty
           ? library.templates.first
-          : const PlaygroundTemplate(
+          : const TryOnTemplate(
               id: '',
               slug: '',
               label: '—',
@@ -571,7 +561,7 @@ class _StylePillRow extends StatelessWidget {
     );
     final persona = library.allPersonas.firstWhere(
       (p) => p.id == draft.personaId,
-      orElse: () => const PlaygroundPersona(
+      orElse: () => const TryOnPersona(
         id: '',
         slug: '',
         label: '—',
@@ -584,8 +574,7 @@ class _StylePillRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(999),
@@ -656,8 +645,8 @@ class _TryOnPreview extends StatelessWidget {
   static const _aspectRatio = 1024 / 1536;
 
   final bool generating;
-  final PlaygroundRun? result;
-  final PlaygroundCapException? capError;
+  final TryOnRun? result;
+  final TryOnCapException? capError;
   final Object? error;
 
   const _TryOnPreview({
@@ -710,8 +699,7 @@ class _TryOnPreview extends StatelessWidget {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 14),
-            Text('Generating…',
-                style: TextStyle(color: AppColors.textMuted)),
+            Text('Generating…', style: TextStyle(color: AppColors.textMuted)),
           ],
         ),
       );

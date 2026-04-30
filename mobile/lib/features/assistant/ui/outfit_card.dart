@@ -15,10 +15,7 @@ class OutfitCard extends StatelessWidget {
     final shoes = slots['shoes'];
 
     final accessories = slots.entries
-        .where((e) =>
-    e.key != 'top' &&
-        e.key != 'bottom' &&
-        e.key != 'shoes')
+        .where((e) => e.key != 'top' && e.key != 'bottom' && e.key != 'shoes')
         .map((e) => e.value)
         .toList();
 
@@ -44,9 +41,8 @@ class OutfitCard extends StatelessWidget {
           Expanded(
             flex: 1,
             child: Column(
-              children: accessories
-                  .map((a) => Expanded(child: _itemBox(a)))
-                  .toList(),
+              children:
+                  accessories.map((a) => Expanded(child: _itemBox(a))).toList(),
             ),
           ),
         ],

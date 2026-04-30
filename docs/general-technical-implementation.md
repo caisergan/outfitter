@@ -225,7 +225,7 @@ CREATE INDEX ON wardrobe_items USING hnsw (clip_embedding vector_cosine_ops);
 CREATE TABLE saved_outfits (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    source              TEXT NOT NULL CHECK (source IN ('playground', 'assistant')),
+    source              TEXT NOT NULL CHECK (source IN ('tryon', 'assistant')),
     slots               JSONB NOT NULL,   -- {"top": item_id, "bottom": item_id, ...}
     generated_image_url TEXT,
     created_at          TIMESTAMPTZ DEFAULT now()
@@ -453,7 +453,7 @@ Save an outfit to the Lookbook.
 
 ```json
 {
-  "source": "playground",
+  "source": "tryon",
   "slots": {
     "top": "item-uuid",
     "bottom": "item-uuid",
@@ -842,7 +842,7 @@ final router = GoRouter(
       builder: (context, state, child) => ScaffoldWithNavBar(child: child),
       routes: [
         GoRoute(path: '/discover',   builder: (_,__) => const DiscoverTab()),
-        GoRoute(path: '/playground', builder: (_,__) => const PlaygroundTab()),
+        GoRoute(path: '/tryon', builder: (_,__) => const TryOnTab()),
         GoRoute(path: '/assistant',  builder: (_,__) => const AssistantTab()),
         GoRoute(path: '/wardrobe',   builder: (_,__) => const WardrobeTab()),
       ],

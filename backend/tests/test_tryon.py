@@ -6,10 +6,15 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
+# Import the submodule directly. `app.routers.tryon` resolves to the APIRouter
+# object via the package alias in routers/__init__.py, which masks the
+# submodule's private attributes from string-based monkeypatch.setattr. Going
+# through `import x.y.z as alias` bypasses the shadow.
+import app.routers.tryon as tryon_module  # noqa: E402
 from app.models.catalog import CatalogItem
-from app.models.playground import (
+from app.models.tryon import (
     ModelPersona,
-    PlaygroundRun,
+    TryOnRun,
     SystemPrompt,
     UserPromptTemplate,
 )
@@ -21,7 +26,7 @@ from app.models.playground import (
 
 
 async def _signup(
-    client: AsyncClient, email: str = "playground@outfitter.dev"
+    client: AsyncClient, email: str = "tryon@outfitter.dev"
 ):
     return await client.post(
         "/auth/signup", json={"email": email, "password": "supersecret99"}
@@ -165,12 +170,9 @@ def _install_fakes(
     def fake_signed_read(key: str, expires_in: int = 900) -> str:
         return f"https://signed/{key}"
 
+    monkeypatch.setattr(tryon_module, "_finish_generation", fake_finish)
     monkeypatch.setattr(
-        "app.routers.playground._finish_generation", fake_finish
-    )
-    monkeypatch.setattr(
-        "app.routers.playground.storage_service.get_signed_read_url",
-        fake_signed_read,
+        tryon_module.storage_service, "get_signed_read_url", fake_signed_read
     )
 
     # Stash the simulation parameters on the db session for later retrieval
@@ -194,7 +196,7 @@ async def _simulate_finish(db, run_id):
     storage_error_cls = db.info["_fake_storage_error_cls"]
 
     row = (
-        await db.execute(select(PlaygroundRun).where(PlaygroundRun.id == run_id))
+        await db.execute(select(TryOnRun).where(TryOnRun.id == run_id))
     ).scalar_one_or_none()
     if row is None:
         return
@@ -215,7 +217,7 @@ async def _simulate_finish(db, run_id):
                 and idx == storage_raises_on_index
             ):
                 raise storage_error_cls("simulated R2 failure")
-            image_keys.append(f"playground/{row.user_id}/{run_id}/{idx}.png")
+            image_keys.append(f"tryon/{row.user_id}/{run_id}/{idx}.png")
     except Exception as exc:
         row.status = "failed"
         row.image_keys = list(image_keys)
@@ -234,11 +236,11 @@ async def _simulate_finish(db, run_id):
 async def _await_run_finish(client, db, token, run_id):
     """Drive the fake bg task and re-fetch the run via the API.
 
-    Returns the parsed JSON of GET /playground/runs/{run_id}.
+    Returns the parsed JSON of GET /tryon/runs/{run_id}.
     """
     await _simulate_finish(db, run_id)
     resp = await client.get(
-        f"/playground/runs/{run_id}",
+        f"/tryon/runs/{run_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     return resp.json()
@@ -269,7 +271,7 @@ def _generate_body(
 
 
 @pytest.mark.asyncio
-async def test_playground_generate_happy_path(
+async def test_tryon_generate_happy_path(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client)
@@ -278,7 +280,7 @@ async def test_playground_generate_happy_path(
     _install_fakes(monkeypatch, db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(
             item.id, system_prompt="THE SYSTEM PROMPT", user_prompt="THE USER NOTES"
@@ -300,11 +302,11 @@ async def test_playground_generate_happy_path(
     final = await _await_run_finish(client, db, token, run_id)
     assert final["status"] == "success"
     assert len(final["images"]) == 1
-    assert final["images"][0].startswith("https://signed/playground/")
+    assert final["images"][0].startswith("https://signed/tryon/")
     assert final["images"][0].endswith(f"/{run_id}/0.png")
 
     # Snapshot fields persisted on the row in their final form
-    runs = (await db.execute(select(PlaygroundRun))).scalars().all()
+    runs = (await db.execute(select(TryOnRun))).scalars().all()
     assert len(runs) == 1
     run = runs[0]
     assert run.status == "success"
@@ -316,9 +318,9 @@ async def test_playground_generate_happy_path(
 
 
 @pytest.mark.asyncio
-async def test_playground_unauthorized(client: AsyncClient):
+async def test_tryon_unauthorized(client: AsyncClient):
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         json={
             "catalog_item_ids": [str(uuid.uuid4())],
             "system_prompt": "x",
@@ -329,7 +331,7 @@ async def test_playground_unauthorized(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_playground_unknown_item_id(
+async def test_tryon_unknown_item_id(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="unknown@outfitter.dev")
@@ -338,7 +340,7 @@ async def test_playground_unknown_item_id(
     _install_fakes(monkeypatch, db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(bogus),
     )
@@ -347,7 +349,7 @@ async def test_playground_unknown_item_id(
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_empty_system_prompt(
+async def test_tryon_validation_empty_system_prompt(
     client: AsyncClient, db
 ):
     signup_resp = await _signup(client, email="empty@outfitter.dev")
@@ -355,7 +357,7 @@ async def test_playground_validation_empty_system_prompt(
     item = await _seed_item(db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json={
             "catalog_item_ids": [str(item.id)],
@@ -367,12 +369,12 @@ async def test_playground_validation_empty_system_prompt(
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_no_items(client: AsyncClient, db):
+async def test_tryon_validation_no_items(client: AsyncClient, db):
     signup_resp = await _signup(client, email="noitems@outfitter.dev")
     token = signup_resp.json()["access_token"]
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json={"catalog_item_ids": [], "system_prompt": "x"},
     )
@@ -380,14 +382,14 @@ async def test_playground_validation_no_items(client: AsyncClient, db):
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_too_many_items(
+async def test_tryon_validation_too_many_items(
     client: AsyncClient, db
 ):
     signup_resp = await _signup(client, email="toomany@outfitter.dev")
     token = signup_resp.json()["access_token"]
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json={
             "catalog_item_ids": [str(uuid.uuid4()) for _ in range(17)],
@@ -398,7 +400,7 @@ async def test_playground_validation_too_many_items(
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_combined_length(
+async def test_tryon_validation_combined_length(
     client: AsyncClient, db
 ):
     signup_resp = await _signup(client, email="long@outfitter.dev")
@@ -406,7 +408,7 @@ async def test_playground_validation_combined_length(
     item = await _seed_item(db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json={
             "catalog_item_ids": [str(item.id)],
@@ -424,7 +426,7 @@ async def test_playground_validation_combined_length(
 
 
 @pytest.mark.asyncio
-async def test_playground_proxy_error_writes_failed_row(
+async def test_tryon_proxy_error_writes_failed_row(
     client: AsyncClient, db, monkeypatch
 ):
     """Codex proxy errors no longer 502 the user — they happen in the
@@ -437,7 +439,7 @@ async def test_playground_proxy_error_writes_failed_row(
     _install_fakes(monkeypatch, db, codex_raises=CodexProxyError("500: upstream blew up"))
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
@@ -451,7 +453,7 @@ async def test_playground_proxy_error_writes_failed_row(
 
 
 @pytest.mark.asyncio
-async def test_playground_timeout_writes_failed_row(
+async def test_tryon_timeout_writes_failed_row(
     client: AsyncClient, db, monkeypatch
 ):
     from app.services.codex_image_service import CodexProxyTimeout
@@ -462,7 +464,7 @@ async def test_playground_timeout_writes_failed_row(
     _install_fakes(monkeypatch, db, codex_raises=CodexProxyTimeout("read timeout"))
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
@@ -475,7 +477,7 @@ async def test_playground_timeout_writes_failed_row(
 
 
 @pytest.mark.asyncio
-async def test_playground_storage_failure_writes_failed_row(
+async def test_tryon_storage_failure_writes_failed_row(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="storage@outfitter.dev")
@@ -484,7 +486,7 @@ async def test_playground_storage_failure_writes_failed_row(
     _install_fakes(monkeypatch, db, storage_raises_on_index=0)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
@@ -502,7 +504,7 @@ async def test_playground_storage_failure_writes_failed_row(
 
 
 @pytest.mark.asyncio
-async def test_playground_invalid_template_id_404(
+async def test_tryon_invalid_template_id_404(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="badtpl@outfitter.dev")
@@ -515,7 +517,7 @@ async def test_playground_invalid_template_id_404(
     body["template_id"] = str(bogus)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=body,
     )
@@ -524,7 +526,7 @@ async def test_playground_invalid_template_id_404(
 
 
 @pytest.mark.asyncio
-async def test_playground_invalid_persona_id_404(
+async def test_tryon_invalid_persona_id_404(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="badpers@outfitter.dev")
@@ -537,7 +539,7 @@ async def test_playground_invalid_persona_id_404(
     body["persona_id"] = str(bogus)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=body,
     )
@@ -546,7 +548,7 @@ async def test_playground_invalid_persona_id_404(
 
 
 @pytest.mark.asyncio
-async def test_playground_inactive_template_404(
+async def test_tryon_inactive_template_404(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="inactivetpl@outfitter.dev")
@@ -559,7 +561,7 @@ async def test_playground_inactive_template_404(
     body["template_id"] = str(template.id)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=body,
     )
@@ -567,7 +569,7 @@ async def test_playground_inactive_template_404(
 
 
 @pytest.mark.asyncio
-async def test_playground_optional_ids_omitted_works(
+async def test_tryon_optional_ids_omitted_works(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="noids@outfitter.dev")
@@ -576,13 +578,13 @@ async def test_playground_optional_ids_omitted_works(
     _install_fakes(monkeypatch, db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
     assert response.status_code == 202
 
-    runs = (await db.execute(select(PlaygroundRun))).scalars().all()
+    runs = (await db.execute(select(TryOnRun))).scalars().all()
     assert runs[0].template_id is None
     assert runs[0].persona_id is None
 
@@ -593,7 +595,7 @@ async def test_playground_optional_ids_omitted_works(
 
 
 @pytest.mark.asyncio
-async def test_playground_uses_active_system_prompt_snapshot(
+async def test_tryon_uses_active_system_prompt_snapshot(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="snapshot@outfitter.dev")
@@ -603,20 +605,20 @@ async def test_playground_uses_active_system_prompt_snapshot(
     _install_fakes(monkeypatch, db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id, system_prompt="REQUEST PROMPT"),
     )
     assert response.status_code == 202
 
-    run = (await db.execute(select(PlaygroundRun))).scalars().one()
+    run = (await db.execute(select(TryOnRun))).scalars().one()
     assert run.system_prompt_id == sp.id
     # Snapshot is what the client sent, not the DB row content.
     assert run.system_prompt_text == "REQUEST PROMPT"
 
 
 @pytest.mark.asyncio
-async def test_playground_run_snapshot_fields_persisted(
+async def test_tryon_run_snapshot_fields_persisted(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="allfields@outfitter.dev")
@@ -639,12 +641,12 @@ async def test_playground_run_snapshot_fields_persisted(
     body["persona_id"] = str(persona.id)
 
     response = await client.post(
-        "/playground/generate-image", headers=_auth_headers(token), json=body
+        "/tryon/generate-image", headers=_auth_headers(token), json=body
     )
     assert response.status_code == 202
     await _await_run_finish(client, db, token, response.json()["run_id"])
 
-    run = (await db.execute(select(PlaygroundRun))).scalars().one()
+    run = (await db.execute(select(TryOnRun))).scalars().one()
     assert run.system_prompt_id == sp.id
     assert run.template_id == template.id
     assert run.persona_id == persona.id
@@ -674,7 +676,7 @@ async def _run_n_successes(client, db, monkeypatch, *, email: str, n: int) -> st
     _install_fakes(monkeypatch, db)
     for _ in range(n):
         resp = await client.post(
-            "/playground/generate-image",
+            "/tryon/generate-image",
             headers=_auth_headers(token),
             json=_generate_body(item.id),
         )
@@ -684,7 +686,7 @@ async def _run_n_successes(client, db, monkeypatch, *, email: str, n: int) -> st
 
 
 @pytest.mark.asyncio
-async def test_playground_daily_cap_blocks_sixth(
+async def test_tryon_daily_cap_blocks_sixth(
     client: AsyncClient, db, monkeypatch
 ):
     token = await _run_n_successes(
@@ -693,7 +695,7 @@ async def test_playground_daily_cap_blocks_sixth(
     item = (await db.execute(select(CatalogItem))).scalars().one()
 
     resp = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
@@ -707,7 +709,7 @@ async def test_playground_daily_cap_blocks_sixth(
 
 
 @pytest.mark.asyncio
-async def test_playground_failed_runs_count_toward_cap_default(
+async def test_tryon_failed_runs_count_toward_cap_default(
     client: AsyncClient, db, monkeypatch
 ):
     from app.services.codex_image_service import CodexProxyError
@@ -719,7 +721,7 @@ async def test_playground_failed_runs_count_toward_cap_default(
 
     for _ in range(5):
         resp = await client.post(
-            "/playground/generate-image",
+            "/tryon/generate-image",
             headers=_auth_headers(token),
             json=_generate_body(item.id),
         )
@@ -729,7 +731,7 @@ async def test_playground_failed_runs_count_toward_cap_default(
     # 6th attempt — flip codex back to success but cap should still trigger.
     _install_fakes(monkeypatch, db)
     resp = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
@@ -737,14 +739,14 @@ async def test_playground_failed_runs_count_toward_cap_default(
 
 
 @pytest.mark.asyncio
-async def test_playground_failed_runs_excluded_when_flag_off(
+async def test_tryon_failed_runs_excluded_when_flag_off(
     client: AsyncClient, db, monkeypatch
 ):
     from app.config import settings as app_settings
     from app.services.codex_image_service import CodexProxyError
 
     monkeypatch.setattr(
-        app_settings, "PLAYGROUND_FAILED_RUNS_COUNT_TOWARD_CAP", False
+        app_settings, "TRYON_FAILED_RUNS_COUNT_TOWARD_CAP", False
     )
 
     signup_resp = await _signup(client, email="failexcl@outfitter.dev")
@@ -754,7 +756,7 @@ async def test_playground_failed_runs_excluded_when_flag_off(
 
     for _ in range(5):
         resp = await client.post(
-            "/playground/generate-image",
+            "/tryon/generate-image",
             headers=_auth_headers(token),
             json=_generate_body(item.id),
         )
@@ -763,7 +765,7 @@ async def test_playground_failed_runs_excluded_when_flag_off(
 
     _install_fakes(monkeypatch, db)
     resp = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
@@ -787,7 +789,7 @@ async def test_get_system_prompt_returns_active(client: AsyncClient, db):
     )
 
     resp = await client.get(
-        "/playground/system-prompt", headers=_auth_headers(token)
+        "/tryon/system-prompt", headers=_auth_headers(token)
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -803,7 +805,7 @@ async def test_get_system_prompt_filters_inactive(client: AsyncClient, db):
     await _seed_system_prompt(db, slug="g", is_active=False)
 
     resp = await client.get(
-        "/playground/system-prompt", headers=_auth_headers(token)
+        "/tryon/system-prompt", headers=_auth_headers(token)
     )
     assert resp.status_code == 404
 
@@ -816,7 +818,7 @@ async def test_list_templates_filters_inactive(client: AsyncClient, db):
     await _seed_template(db, slug="active2", label="A2", is_active=True)
     await _seed_template(db, slug="hidden", label="H", is_active=False)
 
-    resp = await client.get("/playground/templates", headers=_auth_headers(token))
+    resp = await client.get("/tryon/templates", headers=_auth_headers(token))
     assert resp.status_code == 200
     slugs = {row["slug"] for row in resp.json()}
     assert slugs == {"active1", "active2"}
@@ -831,7 +833,7 @@ async def test_list_personas_gender_filter(client: AsyncClient, db):
     await _seed_persona(db, slug="m1", gender="male", label="M1")
 
     resp = await client.get(
-        "/playground/personas?gender=female", headers=_auth_headers(token)
+        "/tryon/personas?gender=female", headers=_auth_headers(token)
     )
     assert resp.status_code == 200
     rows = resp.json()
@@ -839,7 +841,7 @@ async def test_list_personas_gender_filter(client: AsyncClient, db):
     assert all(r["gender"] == "female" for r in rows)
 
     resp_all = await client.get(
-        "/playground/personas", headers=_auth_headers(token)
+        "/tryon/personas", headers=_auth_headers(token)
     )
     assert resp_all.status_code == 200
     assert len(resp_all.json()) == 3
@@ -861,17 +863,17 @@ async def test_list_runs_only_for_current_user(
     b_token = (await _signup(client, email="b@outfitter.dev")).json()["access_token"]
 
     await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(a_token),
         json=_generate_body(item.id),
     )
     await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(b_token),
         json=_generate_body(item.id),
     )
 
-    resp = await client.get("/playground/runs", headers=_auth_headers(a_token))
+    resp = await client.get("/tryon/runs", headers=_auth_headers(a_token))
     assert resp.status_code == 200
     body = resp.json()
     assert len(body["items"]) == 1
@@ -886,15 +888,15 @@ async def test_list_runs_excludes_soft_deleted(
     token = (await _signup(client, email="sd@outfitter.dev")).json()["access_token"]
 
     await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
-    run = (await db.execute(select(PlaygroundRun))).scalars().one()
+    run = (await db.execute(select(TryOnRun))).scalars().one()
     run.deleted_at = datetime.now(timezone.utc)
     await db.commit()
 
-    resp = await client.get("/playground/runs", headers=_auth_headers(token))
+    resp = await client.get("/tryon/runs", headers=_auth_headers(token))
     assert resp.status_code == 200
     assert resp.json()["items"] == []
 
@@ -908,14 +910,14 @@ async def test_get_run_404_for_other_user(client: AsyncClient, db, monkeypatch):
     b_token = (await _signup(client, email="bb@outfitter.dev")).json()["access_token"]
 
     a_resp = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(a_token),
         json=_generate_body(item.id),
     )
     run_id = a_resp.json()["run_id"]
 
     resp = await client.get(
-        f"/playground/runs/{run_id}", headers=_auth_headers(b_token)
+        f"/tryon/runs/{run_id}", headers=_auth_headers(b_token)
     )
     assert resp.status_code == 404
 
@@ -929,7 +931,7 @@ async def test_get_run_returns_snapshot(client: AsyncClient, db, monkeypatch):
     ]
 
     post_resp = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(
             item.id, system_prompt="SYS X", user_prompt="USR Y"
@@ -939,7 +941,7 @@ async def test_get_run_returns_snapshot(client: AsyncClient, db, monkeypatch):
     await _simulate_finish(db, run_id)
 
     resp = await client.get(
-        f"/playground/runs/{run_id}", headers=_auth_headers(token)
+        f"/tryon/runs/{run_id}", headers=_auth_headers(token)
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -971,7 +973,7 @@ async def test_list_runs_cursor_pagination(
     base_time = datetime.now(timezone.utc)
     for i in range(25):
         db.add(
-            PlaygroundRun(
+            TryOnRun(
                 user_id=user.id,
                 catalog_item_ids=[str(item.id)],
                 system_prompt_text="x",
@@ -991,7 +993,7 @@ async def test_list_runs_cursor_pagination(
     await db.commit()
 
     resp1 = await client.get(
-        "/playground/runs?limit=20", headers=_auth_headers(token)
+        "/tryon/runs?limit=20", headers=_auth_headers(token)
     )
     assert resp1.status_code == 200
     page1 = resp1.json()
@@ -999,7 +1001,7 @@ async def test_list_runs_cursor_pagination(
     assert page1["next_cursor"] is not None
 
     resp2 = await client.get(
-        f"/playground/runs?limit=20&cursor={page1['next_cursor']}",
+        f"/tryon/runs?limit=20&cursor={page1['next_cursor']}",
         headers=_auth_headers(token),
     )
     assert resp2.status_code == 200
@@ -1019,7 +1021,7 @@ async def test_admin_patch_system_prompt(client: AsyncClient, db):
     token = await _signup_admin(client, db, email="admin1@outfitter.dev")
 
     resp = await client.patch(
-        "/playground/system-prompt",
+        "/tryon/system-prompt",
         headers=_auth_headers(token),
         json={"content": "NEW", "label": "New label"},
     )
@@ -1038,7 +1040,7 @@ async def test_non_admin_patch_system_prompt_403(client: AsyncClient, db):
     ]
 
     resp = await client.patch(
-        "/playground/system-prompt",
+        "/tryon/system-prompt",
         headers=_auth_headers(token),
         json={"content": "NEW"},
     )
@@ -1050,7 +1052,7 @@ async def test_admin_create_template(client: AsyncClient, db):
     token = await _signup_admin(client, db, email="admin2@outfitter.dev")
 
     resp = await client.post(
-        "/playground/templates",
+        "/tryon/templates",
         headers=_auth_headers(token),
         json={
             "slug": "my_new_tpl",
@@ -1070,7 +1072,7 @@ async def test_create_template_bad_slug_pattern_422(client: AsyncClient, db):
     token = await _signup_admin(client, db, email="admin3@outfitter.dev")
 
     resp = await client.post(
-        "/playground/templates",
+        "/tryon/templates",
         headers=_auth_headers(token),
         json={
             "slug": "Has-Caps",
@@ -1087,7 +1089,7 @@ async def test_create_template_duplicate_slug_409(client: AsyncClient, db):
     await _seed_template(db, slug="dupe")
 
     resp = await client.post(
-        "/playground/templates",
+        "/tryon/templates",
         headers=_auth_headers(token),
         json={"slug": "dupe", "label": "x", "body": "{{MODEL}}"},
     )
@@ -1101,7 +1103,7 @@ async def test_non_admin_create_template_403(client: AsyncClient, db):
     ]
 
     resp = await client.post(
-        "/playground/templates",
+        "/tryon/templates",
         headers=_auth_headers(token),
         json={"slug": "x_y_z", "label": "x", "body": "{{MODEL}}"},
     )
@@ -1114,7 +1116,7 @@ async def test_admin_patch_template(client: AsyncClient, db):
     tpl = await _seed_template(db, slug="patchme", body="old body")
 
     resp = await client.patch(
-        f"/playground/templates/{tpl.id}",
+        f"/tryon/templates/{tpl.id}",
         headers=_auth_headers(token),
         json={"body": "new body", "label": "new label"},
     )
@@ -1132,20 +1134,20 @@ async def test_admin_soft_delete_and_restore_template(
     tpl = await _seed_template(db, slug="killme")
 
     resp = await client.delete(
-        f"/playground/templates/{tpl.id}",
+        f"/tryon/templates/{tpl.id}",
         headers=_auth_headers(token),
     )
     assert resp.status_code == 204
 
     # Hidden from default list
     listing = await client.get(
-        "/playground/templates", headers=_auth_headers(token)
+        "/tryon/templates", headers=_auth_headers(token)
     )
     assert all(r["slug"] != "killme" for r in listing.json())
 
     # Visible with include_inactive (admin only)
     listing_all = await client.get(
-        "/playground/templates?include_inactive=true",
+        "/tryon/templates?include_inactive=true",
         headers=_auth_headers(token),
     )
     assert any(
@@ -1155,7 +1157,7 @@ async def test_admin_soft_delete_and_restore_template(
 
     # Restore via PATCH
     resp = await client.patch(
-        f"/playground/templates/{tpl.id}",
+        f"/tryon/templates/{tpl.id}",
         headers=_auth_headers(token),
         json={"is_active": True},
     )
@@ -1170,7 +1172,7 @@ async def test_include_inactive_requires_admin(client: AsyncClient, db):
     ]
 
     resp = await client.get(
-        "/playground/templates?include_inactive=true",
+        "/tryon/templates?include_inactive=true",
         headers=_auth_headers(token),
     )
     assert resp.status_code == 403
@@ -1181,7 +1183,7 @@ async def test_admin_create_persona(client: AsyncClient, db):
     token = await _signup_admin(client, db, email="admin7@outfitter.dev")
 
     resp = await client.post(
-        "/playground/personas",
+        "/tryon/personas",
         headers=_auth_headers(token),
         json={
             "slug": "f_test",
@@ -1206,7 +1208,7 @@ async def test_persona_gender_immutable_on_patch(client: AsyncClient, db):
     # by Pydantic v2 by default? Actually default is to ignore. Test expectation:
     # extras silently ignored, gender stays female).
     resp = await client.patch(
-        f"/playground/personas/{p.id}",
+        f"/tryon/personas/{p.id}",
         headers=_auth_headers(token),
         json={"gender": "male", "label": "Renamed"},
     )
@@ -1222,13 +1224,13 @@ async def test_admin_soft_delete_persona(client: AsyncClient, db):
     p = await _seed_persona(db, slug="dyingpersona")
 
     resp = await client.delete(
-        f"/playground/personas/{p.id}",
+        f"/tryon/personas/{p.id}",
         headers=_auth_headers(token),
     )
     assert resp.status_code == 204
 
     listing = await client.get(
-        "/playground/personas", headers=_auth_headers(token)
+        "/tryon/personas", headers=_auth_headers(token)
     )
     assert all(r["slug"] != "dyingpersona" for r in listing.json())
 

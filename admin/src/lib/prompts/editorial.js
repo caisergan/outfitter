@@ -1,4 +1,4 @@
-// Global system prompt for the playground.
+// Global system prompt for try-on generation.
 //
 // gpt-image-2 has a single `prompt` field — there is no chat-style system role.
 // The panel concatenates this global system prompt with a per-generation user

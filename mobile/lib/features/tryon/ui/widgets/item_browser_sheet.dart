@@ -7,8 +7,8 @@ import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/discover/data/catalog_repository.dart';
-import 'package:fashion_app/features/playground/models/garment_category_filter.dart';
-import 'package:fashion_app/features/playground/providers/slot_builder_provider.dart';
+import 'package:fashion_app/features/tryon/models/garment_category_filter.dart';
+import 'package:fashion_app/features/tryon/providers/slot_builder_provider.dart';
 
 class ItemBrowserSheet extends ConsumerStatefulWidget {
   final SlotType? type;
@@ -123,10 +123,10 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   ) {
     final uniqueCategories = categories.toSet().toList()
       ..sort((left, right) {
-        final leftOrder = garmentCategorySortOrder[left] ??
-            garmentCategorySortOrder.length;
-        final rightOrder = garmentCategorySortOrder[right] ??
-            garmentCategorySortOrder.length;
+        final leftOrder =
+            garmentCategorySortOrder[left] ?? garmentCategorySortOrder.length;
+        final rightOrder =
+            garmentCategorySortOrder[right] ?? garmentCategorySortOrder.length;
         if (leftOrder != rightOrder) return leftOrder.compareTo(rightOrder);
         return left.compareTo(right);
       });
@@ -617,9 +617,8 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: isSelected
-                            ? AppColors.text
-                            : AppColors.textMuted,
+                        color:
+                            isSelected ? AppColors.text : AppColors.textMuted,
                         letterSpacing: 0.8,
                       ),
                 ),
@@ -667,7 +666,8 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
 
   List<String> get _availableSubtypeOptions {
     if (widget.currentCategory == null) return widget.options.subtypes;
-    return widget.options.subtypesByCategory[widget.currentCategory] ?? const [];
+    return widget.options.subtypesByCategory[widget.currentCategory] ??
+        const [];
   }
 
   String? _resolveSubtype(String? value) {

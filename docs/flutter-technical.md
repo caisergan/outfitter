@@ -15,7 +15,7 @@
 5. [API Client & Data Layer](#5-api-client--data-layer)
 6. [Authentication Flow](#6-authentication-flow)
 7. [Feature: Discover Tab](#7-feature-discover-tab)
-8. [Feature: Playground Tab](#8-feature-playground-tab)
+8. [Feature: TryOn Tab](#8-feature-tryon-tab)
 9. [Feature: Assistant Tab](#9-feature-assistant-tab)
 10. [Feature: Wardrobe Tab](#10-feature-wardrobe-tab)
 11. [Shared Components & Widgets](#11-shared-components--widgets)
@@ -127,7 +127,7 @@ lib/
 │   │   ├── data/                # Repository + DTOs
 │   │   ├── providers/           # Riverpod providers
 │   │   └── ui/                  # Screens + widgets
-│   ├── playground/
+│   ├── tryon/
 │   ├── assistant/
 │   └── wardrobe/
 └── router.dart                  # go_router definition
@@ -167,11 +167,11 @@ final appRouter = GoRouter(
           builder: (_, __) => const DiscoverScreen(),
         ),
         GoRoute(
-          path: '/playground',
+          path: '/tryon',
           builder: (_, state) {
             // Accept optional pre-filled outfit from Assistant handoff
             final extra = state.extra as Map<String, dynamic>?;
-            return PlaygroundScreen(prefilledSlots: extra?['slots']);
+            return TryOnScreen(prefilledSlots: extra?['slots']);
           },
         ),
         GoRoute(
@@ -202,7 +202,7 @@ class MainScaffold extends StatelessWidget {
   final Widget child;
   const MainScaffold({required this.child, super.key});
 
-  static const _tabs = ['/discover', '/playground', '/assistant', '/wardrobe'];
+  static const _tabs = ['/discover', '/tryon', '/assistant', '/wardrobe'];
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +216,7 @@ class MainScaffold extends StatelessWidget {
         onDestinationSelected: (i) => context.go(_tabs[i]),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.explore_outlined), label: 'Discover'),
-          NavigationDestination(icon: Icon(Icons.checkroom_outlined), label: 'Playground'),
+          NavigationDestination(icon: Icon(Icons.checkroom_outlined), label: 'TryOn'),
           NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), label: 'Assistant'),
           NavigationDestination(icon: Icon(Icons.door_sliding_outlined), label: 'Wardrobe'),
         ],
@@ -226,12 +226,12 @@ class MainScaffold extends StatelessWidget {
 }
 ```
 
-### Assistant → Playground Handoff
+### Assistant → TryOn Handoff
 
 ```dart
 // In AssistantScreen, when user taps "Try On":
 context.go(
-  '/playground',
+  '/tryon',
   extra: {'slots': outfit.slots}, // Map<String, String> itemId per slot
 );
 ```
@@ -278,7 +278,7 @@ class WardrobeNotifier extends _$WardrobeNotifier {
 ### Example: Outfit Slot Builder
 
 ```dart
-// features/playground/providers/slot_builder_provider.dart
+// features/tryon/providers/slot_builder_provider.dart
 class OutfitSlots {
   final Map<SlotType, CatalogOrWardrobeItem?> slots;
   const OutfitSlots(this.slots);
@@ -306,7 +306,7 @@ class SlotBuilderNotifier extends StateNotifier<OutfitSlots> {
       state = state.copyWith(type, item);
 
   void prefill(Map<String, String> itemIds) {
-    // Called on Assistant → Playground handoff
+    // Called on Assistant → TryOn handoff
     // Resolve item IDs to full objects via catalog/wardrobe cache
   }
 
@@ -548,18 +548,18 @@ DiscoverScreen
 Discover content in v1.0 is **hardcoded or fetched from a static JSON endpoint**. No dynamic personalization. Display saved outfit cards from `GET /outfits` response for the "recently saved" row.
 
 ```dart
-// Outfit card tapped → go to playground with pre-filled slots
-context.go('/playground', extra: {'slots': outfit.slots});
+// Outfit card tapped → go to tryon with pre-filled slots
+context.go('/tryon', extra: {'slots': outfit.slots});
 ```
 
 ---
 
-## 8. Feature: Playground Tab
+## 8. Feature: TryOn Tab
 
 ### Screen Structure
 
 ```
-PlaygroundScreen
+TryOnScreen
 ├── OutfitCanvas           ← slot grid (Top, Bottom, Shoes, Accessory, Outerwear, Bag)
 ├── GenerateButton         ← enabled when top+bottom+shoes filled
 ├── TryOnResultView        ← shown after generation completes
@@ -705,7 +705,7 @@ AssistantScreen
         ├── StackedItemImages
         ├── ItemNameList (tap → ItemDetailSheet)
         ├── StyleNote
-        ├── TryOnButton  → go to /playground with pre-filled slots
+        ├── TryOnButton  → go to /tryon with pre-filled slots
         └── SaveOutfitButton
 ```
 
@@ -748,7 +748,7 @@ class OutfitSuggestionCard extends StatelessWidget {
         Row(children: [
           TextButton(
             child: const Text('Try On'),
-            onPressed: () => context.go('/playground', extra: {'slots': outfit.slotIds}),
+            onPressed: () => context.go('/tryon', extra: {'slots': outfit.slotIds}),
           ),
           TextButton(
             child: const Text('Save'),
@@ -917,12 +917,12 @@ class FilterChipRow extends StatelessWidget {
 
 ### `OutfitLookbookGrid`
 
-Reusable grid used in the Lookbook section. Tap restores outfit to Playground.
+Reusable grid used in the Lookbook section. Tap restores outfit to TryOn.
 
 ```dart
 class OutfitLookbookGrid extends StatelessWidget {
   final List<SavedOutfit> outfits;
-  // Tapping an outfit: context.go('/playground', extra: {'slots': outfit.slots})
+  // Tapping an outfit: context.go('/tryon', extra: {'slots': outfit.slots})
 }
 ```
 
@@ -991,7 +991,7 @@ final XFile? image = await picker.pickImage(
 ### Polling Function
 
 ```dart
-// features/playground/data/tryon_repository.dart
+// features/tryon/data/tryon_repository.dart
 
 Future<String> pollTryonResult(String jobId) async {
   const maxAttempts = 15;
@@ -1247,7 +1247,7 @@ class OutfitSuggestion with _$OutfitSuggestion {
   factory OutfitSuggestion.fromJson(Map<String, dynamic> json) =>
       _$OutfitSuggestionFromJson(json);
 
-  // Convenience: extract just the item IDs for Playground handoff
+  // Convenience: extract just the item IDs for TryOn handoff
 }
 
 @freezed
@@ -1272,7 +1272,7 @@ class SlotItem with _$SlotItem {
 class SavedOutfit with _$SavedOutfit {
   const factory SavedOutfit({
     required String id,
-    required String source,              // 'playground' | 'assistant'
+    required String source,              // 'tryon' | 'assistant'
     required Map<String, String> slots,  // slotType → itemId
     String? generatedImageUrl,
     required DateTime createdAt,
@@ -1320,7 +1320,7 @@ All requests require `Authorization: Bearer <token>` except `/auth/*`.
 |--------|----------|---------------|
 | `POST` | `/auth/signup` | Registration screen |
 | `POST` | `/auth/login` | Login screen |
-| `GET` | `/catalog/search` | Item browser in Playground slot sheet |
+| `GET` | `/catalog/search` | Item browser in TryOn slot sheet |
 | `GET` | `/catalog/similar/{id}` | "More like this" in item detail |
 | `GET` | `/wardrobe` | Wardrobe tab grid |
 | `POST` | `/wardrobe` | Save confirmed item after tagging |
@@ -1328,9 +1328,9 @@ All requests require `Authorization: Bearer <token>` except `/auth/*`.
 | `POST` | `/wardrobe/tag` | Auto-tag photo before confirmation |
 | `POST` | `/outfits/suggest` | Assistant "Find Outfits" CTA |
 | `GET` | `/outfits` | Lookbook grid |
-| `POST` | `/outfits` | Save outfit from Playground or Assistant |
+| `POST` | `/outfits` | Save outfit from TryOn or Assistant |
 | `DELETE` | `/outfits/{id}` | Remove from Lookbook |
-| `POST` | `/tryon/submit` | Playground "Generate" button |
+| `POST` | `/tryon/submit` | TryOn "Generate" button |
 | `GET` | `/tryon/status/{job_id}` | Polling loop (every 2s, max 30s) |
 
 ### Key Request/Response Shapes

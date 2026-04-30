@@ -128,7 +128,9 @@ class CatalogRepository {
     }
 
     final remainingOffsets = <int>[];
-    for (var offset = items.length; offset < total; offset += _catalogPageSize) {
+    for (var offset = items.length;
+        offset < total;
+        offset += _catalogPageSize) {
       remainingOffsets.add(offset);
     }
 

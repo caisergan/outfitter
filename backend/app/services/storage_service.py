@@ -1,7 +1,7 @@
 """AWS S3 / S3-compatible storage service.
 
 Provides presigned PUT upload targets for client uploads, signed read URLs for
-serving private images, and a helper for direct backend uploads (e.g. Kling results).
+serving private images, and a helper for direct backend uploads (e.g. try-on results).
 
 Upload target flow:
   1. Caller requests an upload target.
@@ -178,8 +178,8 @@ def upload_bytes(
 ) -> str:
     """Upload raw bytes directly from the backend.
 
-    Typical usage: persisting Kling try-on result images to
-    ``tryon/{user_id}/{job_id}.jpg``.
+    Typical usage: persisting try-on generation result images to
+    ``tryon/{user_id}/{run_id}/{idx}.png``.
 
     Returns:
         The object key that was written, so callers can reference it easily.

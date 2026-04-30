@@ -1,4 +1,4 @@
-"""Allow 'pending' status on playground_runs
+"""Allow 'pending' status on tryon_runs
 
 Revision ID: 0010
 Revises: 0009
@@ -21,25 +21,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.drop_constraint(
-        "ck_playground_runs_status",
-        "playground_runs",
+        "ck_tryon_runs_status",
+        "tryon_runs",
         type_="check",
     )
     op.create_check_constraint(
-        "ck_playground_runs_status",
-        "playground_runs",
+        "ck_tryon_runs_status",
+        "tryon_runs",
         "status IN ('pending','success','failed')",
     )
 
 
 def downgrade() -> None:
     op.drop_constraint(
-        "ck_playground_runs_status",
-        "playground_runs",
+        "ck_tryon_runs_status",
+        "tryon_runs",
         type_="check",
     )
     op.create_check_constraint(
-        "ck_playground_runs_status",
-        "playground_runs",
+        "ck_tryon_runs_status",
+        "tryon_runs",
         "status IN ('success','failed')",
     )

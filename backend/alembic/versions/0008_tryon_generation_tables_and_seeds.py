@@ -1,14 +1,14 @@
-"""Playground tables and seed data
+"""TryOn tables and seed data
 
 Revision ID: 0008
 Revises: 0007
 Create Date: 2026-04-30
 
-Adds four tables for the persisted playground feature:
+Adds four tables for the persisted tryon feature:
 - system_prompts: singleton-shaped library of global system prompts (one row active)
 - user_prompt_templates: library of user-prompt templates with {{MODEL}} placeholder
 - model_personas: library of model personas (gendered) slotted into templates
-- playground_runs: persisted generation history with full prompt snapshots
+- tryon_runs: persisted generation history with full prompt snapshots
 
 Seeds 1 system prompt + 3 templates + 8 personas. UUIDs are generated in Python
 to avoid a pgcrypto dependency.
@@ -353,7 +353,7 @@ def upgrade() -> None:
     op.create_index("ix_model_personas_gender", "model_personas", ["gender"], unique=False)
 
     op.create_table(
-        "playground_runs",
+        "tryon_runs",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
@@ -393,7 +393,7 @@ def upgrade() -> None:
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint(
-            "status IN ('success','failed')", name="ck_playground_runs_status"
+            "status IN ('success','failed')", name="ck_tryon_runs_status"
         ),
         sa.ForeignKeyConstraint(
             ["user_id"], ["users.id"], ondelete="CASCADE"
@@ -415,8 +415,8 @@ def upgrade() -> None:
         ),
     )
     op.create_index(
-        "ix_playground_runs_user_id_created_at",
-        "playground_runs",
+        "ix_tryon_runs_user_id_created_at",
+        "tryon_runs",
         ["user_id", "created_at"],
         unique=False,
     )
@@ -458,9 +458,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index(
-        "ix_playground_runs_user_id_created_at", table_name="playground_runs"
+        "ix_tryon_runs_user_id_created_at", table_name="tryon_runs"
     )
-    op.drop_table("playground_runs")
+    op.drop_table("tryon_runs")
     op.drop_index("ix_model_personas_gender", table_name="model_personas")
     op.drop_index("ix_model_personas_slug", table_name="model_personas")
     op.drop_table("model_personas")
