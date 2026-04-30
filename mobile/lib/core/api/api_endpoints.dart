@@ -24,4 +24,15 @@ class ApiEndpoints {
   // Try-On
   static const tryonSubmit = '/tryon/submit';
   static String tryonStatus(String jobId) => '/tryon/status/$jobId';
+
+  // Playground (gpt-image-2 editorial generation)
+  static const playgroundSystemPrompt = '/playground/system-prompt';
+  static const playgroundTemplates = '/playground/templates';
+  static const playgroundPersonas = '/playground/personas';
+  static const playgroundGenerate = '/playground/generate-image';
+  static const playgroundRuns = '/playground/runs';
+  static String playgroundRun(String runId) => '/playground/runs/$runId';
+
+  // Catalog single-item lookup (used for reproducing past playground runs)
+  static String catalogItem(String itemId) => '/catalog/items/$itemId';
 }
