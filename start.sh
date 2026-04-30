@@ -93,6 +93,15 @@ echo -e "${BLUE}  Detected environment: ${GREEN}${ENV_TYPE}${NC}"
 echo ""
 
 # -----------------------------------------------------------------------------
+# Resolve service ports from env files (with safe defaults)
+# -----------------------------------------------------------------------------
+API_PORT="$(get_env_value "API_PORT" "backend/.env")"
+[ -z "$API_PORT" ] && API_PORT="8000"
+
+ADMIN_PORT="$(get_env_value "PORT" "admin/.env.local")"
+[ -z "$ADMIN_PORT" ] && ADMIN_PORT="3000"
+
+# -----------------------------------------------------------------------------
 # Handle 'stop' Command
 # -----------------------------------------------------------------------------
 if [ "$1" == "stop" ]; then
@@ -102,8 +111,8 @@ if [ "$1" == "stop" ]; then
         cd backend && docker compose down 2>/dev/null || true
         cd "$SCRIPT_DIR"
     fi
-    echo -e "${BLUE}  Killing existing Admin processes (Port 3000)...${NC}"
-    kill_port 3000
+    echo -e "${BLUE}  Killing existing Admin processes (Port ${ADMIN_PORT})...${NC}"
+    kill_port "$ADMIN_PORT"
     echo -e "${GREEN}✓ All services stopped.${NC}"
     exit 0
 fi
@@ -134,7 +143,7 @@ if [ ! -f "backend/.env" ]; then
 fi
 if [ ! -f "admin/.env.local" ]; then
     echo -e "${YELLOW}  ⚠ admin/.env.local not found. Creating default local URLs...${NC}"
-    echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > admin/.env.local
+    echo "NEXT_PUBLIC_API_URL=http://localhost:${API_PORT}" > admin/.env.local
 fi
 echo -e "${GREEN}  ✓ Environment files exist${NC}"
 
@@ -161,9 +170,9 @@ if [ -d "backend" ]; then
 fi
 
 # Kill any processes holding standard ports
-echo -e "${BLUE}  Clearing port 3000 (Admin) and 8000 (API)...${NC}"
-kill_port 3000
-kill_port 8000
+echo -e "${BLUE}  Clearing port ${ADMIN_PORT} (Admin) and ${API_PORT} (API)...${NC}"
+kill_port "$ADMIN_PORT"
+kill_port "$API_PORT"
 sleep 1
 
 echo -e "${GREEN}  ✓ Cleanup complete${NC}"
@@ -202,7 +211,7 @@ cd "$SCRIPT_DIR"
 
 echo -e "${YELLOW}Waiting for Backend API to be healthy...${NC}"
 # Wait for the API docs page to be accessible
-while ! curl -s http://localhost:8000/docs >/dev/null; do
+while ! curl -s "http://localhost:${API_PORT}/docs" >/dev/null; do
     sleep 1
 done
 echo -e "${GREEN}  ✓ Backend API is up!${NC}"
@@ -216,8 +225,8 @@ echo -e "${GREEN}                       🎉 Outfitter is Ready! 🎉${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo -e "${YELLOW}Services Access:${NC}"
-echo -e "  📊 Admin Dashboard:     ${GREEN}http://localhost:3000${NC}"
-echo -e "  🔌 Backend API:        ${GREEN}http://localhost:8000${NC}"
+echo -e "  📊 Admin Dashboard:     ${GREEN}http://localhost:${ADMIN_PORT}${NC}"
+echo -e "  🔌 Backend API:        ${GREEN}http://localhost:${API_PORT}${NC}"
 echo ""
 echo -e "${YELLOW}Backend Logs:${NC}"
 echo -e "  View with:           ${BLUE}cd backend && docker compose logs -f api${NC}"
@@ -237,6 +246,6 @@ cleanup() {
 # Trap Ctrl+C (SIGINT) and SIGTERM
 trap cleanup SIGINT SIGTERM
 
-# Start Admin in foreground
+# Start Admin in foreground (PORT is read by `next dev`)
 cd "$SCRIPT_DIR/admin"
-npm run dev
+PORT="$ADMIN_PORT" npm run dev
