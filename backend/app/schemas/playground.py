@@ -45,6 +45,9 @@ class GenerateResponse(BaseModel):
     daily_limit: int
 
 
+SLUG_PATTERN = r"^[a-z0-9_]+$"
+
+
 class SystemPromptOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,6 +55,12 @@ class SystemPromptOut(BaseModel):
     slug: str
     label: str
     content: str
+    is_active: bool
+
+
+class SystemPromptUpdate(BaseModel):
+    content: Annotated[str, Field(min_length=1, max_length=PROMPT_CHAR_CAP)] | None = None
+    label: Annotated[str, Field(min_length=1, max_length=128)] | None = None
 
 
 class TemplateOut(BaseModel):
@@ -62,6 +71,21 @@ class TemplateOut(BaseModel):
     label: str
     description: str | None = None
     body: str
+    is_active: bool
+
+
+class TemplateCreate(BaseModel):
+    slug: Annotated[str, Field(min_length=1, max_length=64, pattern=SLUG_PATTERN)]
+    label: Annotated[str, Field(min_length=1, max_length=128)]
+    description: str | None = None
+    body: Annotated[str, Field(min_length=1)]
+
+
+class TemplateUpdate(BaseModel):
+    label: Annotated[str, Field(min_length=1, max_length=128)] | None = None
+    description: str | None = None
+    body: Annotated[str, Field(min_length=1)] | None = None
+    is_active: bool | None = None
 
 
 class PersonaOut(BaseModel):
@@ -72,6 +96,22 @@ class PersonaOut(BaseModel):
     label: str
     gender: GenderLiteral
     description: str
+    is_active: bool
+
+
+class PersonaCreate(BaseModel):
+    slug: Annotated[str, Field(min_length=1, max_length=64, pattern=SLUG_PATTERN)]
+    label: Annotated[str, Field(min_length=1, max_length=128)]
+    gender: GenderLiteral
+    description: Annotated[str, Field(min_length=1)]
+
+
+class PersonaUpdate(BaseModel):
+    """Update schema for personas. Gender is intentionally immutable post-create."""
+
+    label: Annotated[str, Field(min_length=1, max_length=128)] | None = None
+    description: Annotated[str, Field(min_length=1)] | None = None
+    is_active: bool | None = None
 
 
 class RunOut(BaseModel):
