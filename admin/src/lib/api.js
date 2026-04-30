@@ -203,3 +203,7 @@ export async function fetchPlaygroundRuns({ limit, cursor } = {}) {
 export async function fetchPlaygroundRun(runId) {
   return apiFetch(`/playground/runs/${runId}`);
 }
+
+export async function getCatalogItem(itemId) {
+  return apiFetch(`/catalog/items/${itemId}`);
+}
