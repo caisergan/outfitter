@@ -87,3 +87,13 @@ export function buildFinalPrompt({ systemPrompt, userPrompt }) {
         .filter(Boolean)
         .join("\n\n");
 }
+
+// Compose the user prompt from a template + persona pair. The template body
+// contains `{{MODEL}}` which gets replaced by the persona description. If
+// either is missing, returns "" so the textarea stays empty until the user
+// picks both.
+export function composeUserPrompt({ template, persona }) {
+    if (!template || !persona) return "";
+    const description = (persona.description || "").trim();
+    return (template.body || "").replace("{{MODEL}}", description);
+}

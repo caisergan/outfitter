@@ -93,7 +93,7 @@ async def test_catalog_search_filters_by_color_array_members(client: AsyncClient
         pattern=None,
         fit="regular",
         style_tags=["occasion"],
-        image_url="https://example.com/catalog/aqua-slip-dress.jpg",
+        image_front_url="https://example.com/catalog/aqua-slip-dress.jpg",
         product_url="https://example.com/products/aqua-slip-dress",
     )
     other_item = CatalogItem(
@@ -106,7 +106,7 @@ async def test_catalog_search_filters_by_color_array_members(client: AsyncClient
         pattern=None,
         fit="regular",
         style_tags=["occasion"],
-        image_url="https://example.com/catalog/black-slip-dress.jpg",
+        image_front_url="https://example.com/catalog/black-slip-dress.jpg",
         product_url="https://example.com/products/black-slip-dress",
     )
     db.add_all([matching_item, other_item])
@@ -127,6 +127,97 @@ async def test_catalog_search_filters_by_color_array_members(client: AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_catalog_search_filters_by_subtype(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-subtype-filter@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    shirt = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="top",
+        subtype="shirt",
+        name="Linen Shirt",
+        color=["white"],
+        fit="regular",
+        style_tags=["casual"],
+        image_front_url="https://example.com/catalog/linen-shirt.jpg",
+        product_url="https://example.com/products/linen-shirt",
+    )
+    tee = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="top",
+        subtype="t-shirt",
+        name="Cotton Tee",
+        color=["white"],
+        fit="regular",
+        style_tags=["casual"],
+        image_front_url="https://example.com/catalog/cotton-tee.jpg",
+        product_url="https://example.com/products/cotton-tee",
+    )
+    db.add_all([shirt, tee])
+    await db.commit()
+    await db.refresh(shirt)
+    await db.refresh(tee)
+
+    response = await client.get(
+        "/catalog/search?subtype=shirt",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(shirt.id)
+    assert body["items"][0]["subtype"] == "shirt"
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_filters_by_name_query_case_insensitive(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-name-search@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    linen = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="top",
+        subtype="shirt",
+        name="Linen Shirt",
+        color=["white"],
+        fit="regular",
+        style_tags=["casual"],
+        image_front_url="https://example.com/catalog/linen-shirt.jpg",
+        product_url="https://example.com/products/linen-shirt",
+    )
+    cotton = CatalogItem(
+        brand="Mango",
+        gender="women",
+        category="top",
+        subtype="t-shirt",
+        name="Cotton Tee",
+        color=["white"],
+        fit="regular",
+        style_tags=["casual"],
+        image_front_url="https://example.com/catalog/cotton-tee.jpg",
+        product_url="https://example.com/products/cotton-tee",
+    )
+    db.add_all([linen, cotton])
+    await db.commit()
+    await db.refresh(linen)
+    await db.refresh(cotton)
+
+    response = await client.get(
+        "/catalog/search?q=LINEN",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(linen.id)
+
+
+@pytest.mark.asyncio
 async def test_catalog_search_filters_by_style_tag_array_members(client: AsyncClient, db):
     signup_resp = await _signup(client, email="catalog-style-filter@outfitter.dev")
     token = signup_resp.json()["access_token"]
@@ -141,7 +232,7 @@ async def test_catalog_search_filters_by_style_tag_array_members(client: AsyncCl
         pattern=None,
         fit="regular",
         style_tags=["minimal", "office"],
-        image_url="https://example.com/catalog/minimal-shirt.jpg",
+        image_front_url="https://example.com/catalog/minimal-shirt.jpg",
         product_url="https://example.com/products/minimal-shirt",
     )
     other_item = CatalogItem(
@@ -154,7 +245,7 @@ async def test_catalog_search_filters_by_style_tag_array_members(client: AsyncCl
         pattern=None,
         fit="regular",
         style_tags=["boho"],
-        image_url="https://example.com/catalog/boho-shirt.jpg",
+        image_front_url="https://example.com/catalog/boho-shirt.jpg",
         product_url="https://example.com/products/boho-shirt",
     )
     db.add_all([matching_item, other_item])
