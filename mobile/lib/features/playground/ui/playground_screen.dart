@@ -324,13 +324,13 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              _TryOnLookStrip(garments: widget.garments),
-              const SizedBox(height: 18),
               Expanded(
                 child: _TryOnPreviewState(
                   garments: widget.garments,
                 ),
               ),
+              const SizedBox(height: 18),
+              _TryOnLookStrip(garments: widget.garments),
             ],
           ),
         ),
