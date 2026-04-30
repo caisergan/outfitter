@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import io
 import logging
 
@@ -88,21 +89,57 @@ async def _download(url: str, client: httpx.AsyncClient) -> tuple[bytes, str]:
     return _transcode_to_png(body, url), "image/png"
 
 
-async def generate_outfit_image(
+async def _download_all(
+    urls: list[str], client: httpx.AsyncClient
+) -> list[tuple[bytes, str]]:
+    """Download every reference URL concurrently. Raises ReferenceImageError on any failure."""
+    try:
+        return await asyncio.gather(*(_download(url, client) for url in urls))
+    except httpx.HTTPError as exc:
+        logger.exception("Reference image download failed")
+        raise ReferenceImageError(str(exc)) from exc
+
+
+async def _post_to_proxy(
+    client: httpx.AsyncClient,
+    files: list[tuple[str, tuple[str, bytes, str]]],
+    data: dict[str, str],
+) -> dict:
+    """Send the multipart edit request and return the parsed JSON body."""
+    try:
+        response = await client.post(
+            f"{settings.CODEX_PROXY_URL}/images/edits",
+            headers={"Authorization": f"Bearer {settings.CODEX_PROXY_API_KEY}"},
+            files=files,
+            data=data,
+            timeout=_PROXY_TIMEOUT,
+        )
+        response.raise_for_status()
+    except (httpx.TimeoutException, httpx.ReadTimeout) as exc:
+        raise CodexProxyTimeout(str(exc)) from exc
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text[:500] if exc.response is not None else str(exc)
+        raise CodexProxyError(f"{exc.response.status_code}: {detail}") from exc
+    except httpx.HTTPError as exc:
+        raise CodexProxyError(str(exc)) from exc
+
+    return response.json()
+
+
+async def generate_outfit_image_bytes(
     reference_urls: list[str],
     prompt: str,
     size: str,
     quality: str,
     n: int,
-) -> list[str]:
+) -> list[bytes]:
+    """Generate via gpt-image-2 and return the raw decoded PNG bytes per result.
+
+    Used by the playground router so generated images can be uploaded to R2
+    rather than round-tripped as base64 data URLs.
+    """
     async with httpx.AsyncClient() as client:
-        try:
-            downloads = await asyncio.gather(
-                *(_download(url, client) for url in reference_urls)
-            )
-        except httpx.HTTPError as exc:
-            logger.exception("Reference image download failed")
-            raise ReferenceImageError(str(exc)) from exc
+        downloads = await _download_all(reference_urls, client)
 
         files = [
             ("image", (f"ref-{i}.{_EXT_BY_TYPE[ct]}", b, ct))
@@ -116,23 +153,28 @@ async def generate_outfit_image(
             "n": str(n),
         }
 
-        try:
-            response = await client.post(
-                f"{settings.CODEX_PROXY_URL}/images/edits",
-                headers={"Authorization": f"Bearer {settings.CODEX_PROXY_API_KEY}"},
-                files=files,
-                data=data,
-                timeout=_PROXY_TIMEOUT,
-            )
-            response.raise_for_status()
-        except (httpx.TimeoutException, httpx.ReadTimeout) as exc:
-            raise CodexProxyTimeout(str(exc)) from exc
-        except httpx.HTTPStatusError as exc:
-            detail = exc.response.text[:500] if exc.response is not None else str(exc)
-            raise CodexProxyError(f"{exc.response.status_code}: {detail}") from exc
-        except httpx.HTTPError as exc:
-            raise CodexProxyError(str(exc)) from exc
+        body = await _post_to_proxy(client, files, data)
 
-        body = response.json()
+    return [base64.b64decode(item["b64_json"]) for item in body.get("data", [])]
 
-    return [f"data:image/png;base64,{item['b64_json']}" for item in body.get("data", [])]
+
+async def generate_outfit_image(
+    reference_urls: list[str],
+    prompt: str,
+    size: str,
+    quality: str,
+    n: int,
+) -> list[str]:
+    """Back-compat wrapper that returns ``data:image/png;base64,...`` strings.
+
+    Kept so that existing callers and ``test_codex_image_service`` continue to
+    work unchanged. New code paths should prefer :func:`generate_outfit_image_bytes`.
+    """
+    images = await generate_outfit_image_bytes(
+        reference_urls=reference_urls,
+        prompt=prompt,
+        size=size,
+        quality=quality,
+        n=n,
+    )
+    return [f"data:image/png;base64,{base64.b64encode(b).decode('ascii')}" for b in images]
