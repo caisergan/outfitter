@@ -133,6 +133,17 @@ async def get_catalog_filter_options(db: DbDep, _: CurrentUserDep) -> dict:
     fits = await scalar_distinct(CatalogItem.fit)
     colors = await array_distinct(CatalogItem.color)
     style_tags = await array_distinct(CatalogItem.style_tags)
+    subtypes = await scalar_distinct(CatalogItem.subtype)
+
+    subtype_pairs_result = await db.execute(
+        select(CatalogItem.category, CatalogItem.subtype)
+        .where(CatalogItem.subtype.is_not(None))
+        .distinct()
+        .order_by(CatalogItem.category, CatalogItem.subtype)
+    )
+    subtypes_by_category: dict[str, list[str]] = {}
+    for cat, sub in subtype_pairs_result.all():
+        subtypes_by_category.setdefault(cat, []).append(sub)
 
     return {
         "categories": categories,
@@ -141,6 +152,8 @@ async def get_catalog_filter_options(db: DbDep, _: CurrentUserDep) -> dict:
         "fits": fits,
         "colors": colors,
         "style_tags": style_tags,
+        "subtypes": subtypes,
+        "subtypes_by_category": subtypes_by_category,
     }
 
 
@@ -149,38 +162,47 @@ async def search_catalog(
     db: DbDep,
     _: CurrentUserDep,
     category: Annotated[str | None, Query()] = None,
+    subtype: Annotated[str | None, Query()] = None,
     color: Annotated[str | None, Query()] = None,
     brand: Annotated[str | None, Query()] = None,
     gender: Annotated[str | None, Query()] = None,
     style: Annotated[str | None, Query()] = None,
     fit: Annotated[str | None, Query()] = None,
+    q: Annotated[str | None, Query(description="Case-insensitive substring match on item name")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CatalogSearchResponse:
-    q = select(CatalogItem)
+    query = select(CatalogItem)
     dialect_name = db.get_bind().dialect.name
 
     if category:
-        q = q.where(CatalogItem.category == category)
+        query = query.where(CatalogItem.category == category)
+    if subtype:
+        query = query.where(CatalogItem.subtype == subtype)
     if brand:
-        q = q.where(CatalogItem.brand == brand)
+        query = query.where(CatalogItem.brand == brand)
     if gender:
-        q = q.where(CatalogItem.gender == gender)
+        query = query.where(CatalogItem.gender == gender)
     if fit:
-        q = q.where(CatalogItem.fit == fit)
+        query = query.where(CatalogItem.fit == fit)
     if color:
         colors = [value.strip() for value in color.split(",") if value.strip()]
         if colors:
-            q = q.where(_array_has_any(CatalogItem.color, colors, dialect_name))
+            query = query.where(_array_has_any(CatalogItem.color, colors, dialect_name))
     if style:
         styles = [value.strip() for value in style.split(",") if value.strip()]
         if styles:
-            q = q.where(_array_has_any(CatalogItem.style_tags, styles, dialect_name))
+            query = query.where(_array_has_any(CatalogItem.style_tags, styles, dialect_name))
+    if q:
+        needle = q.strip()
+        if needle:
+            pattern = f"%{needle}%"
+            query = query.where(CatalogItem.name.ilike(pattern))
 
-    count_result = await db.execute(select(func.count()).select_from(q.subquery()))
+    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = count_result.scalar_one()
 
-    result = await db.execute(q.offset(offset).limit(limit))
+    result = await db.execute(query.offset(offset).limit(limit))
     items = result.scalars().all()
 
     return CatalogSearchResponse(

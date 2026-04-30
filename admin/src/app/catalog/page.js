@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { searchCatalog, getSimilarItems, requestCatalogImageUpload, createCatalogItem, getCatalogFilterOptions } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,11 @@ import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight, Image, Upload,
 import { toast } from "sonner";
 
 const LIMIT = 20;
+const SEARCH_DEBOUNCE_MS = 300;
 
 const FILTER_FIELDS = [
     { key: "category", label: "Category", optionsKey: "categories" },
+    { key: "subtype",  label: "Subtype",  optionsKey: "__subtypes_by_category" },
     { key: "brand",    label: "Brand",    optionsKey: "brands" },
     { key: "gender",   label: "Gender",   optionsKey: "genders" },
     { key: "color",    label: "Color",    optionsKey: "colors" },
@@ -27,32 +29,55 @@ const FILTER_FIELDS = [
     { key: "fit",      label: "Fit",      optionsKey: "fits" },
 ];
 
-function CatalogFilters({ filters, onChange, onSearch, loading, filterOptions }) {
+function CatalogFilters({ filters, onChange, searchQuery, onSearchQueryChange, loading, filterOptions }) {
+    function handleFilterChange(key, value) {
+        if (key === "category" && filters.category !== value) {
+            onChange({ ...filters, category: value, subtype: "" });
+            return;
+        }
+        onChange({ ...filters, [key]: value });
+    }
+
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 mb-4">
-            {FILTER_FIELDS.map(({ key, label, optionsKey }) => {
-                const options = filterOptions?.[optionsKey] ?? [];
-                return (
-                    <div key={key} className="space-y-1">
-                        <Label className="text-xs text-slate-400">{label}</Label>
-                        <select
-                            value={filters[key] || ""}
-                            onChange={(e) => onChange({ ...filters, [key]: e.target.value })}
-                            className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        >
-                            <option value="">All</option>
-                            {options.map((opt) => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </select>
-                    </div>
-                );
-            })}
-            <div className="flex items-end">
-                <Button onClick={onSearch} disabled={loading} size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700">
-                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3 mr-1" />}
-                    Search
-                </Button>
+        <div className="space-y-3 mb-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                {loading && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-500" />
+                )}
+                <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => onSearchQueryChange(e.target.value)}
+                    placeholder="Search catalog by name…"
+                    className="pl-9 pr-9 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-10"
+                />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+                {FILTER_FIELDS.map(({ key, label, optionsKey }) => {
+                    const options =
+                        optionsKey === "__subtypes_by_category"
+                            ? (filterOptions?.subtypes_by_category?.[filters.category] ?? [])
+                            : (filterOptions?.[optionsKey] ?? []);
+                    const isSubtype = key === "subtype";
+                    const isDisabled = isSubtype && !filters.category;
+                    return (
+                        <div key={key} className="space-y-1">
+                            <Label className="text-xs text-slate-400">{label}</Label>
+                            <select
+                                value={filters[key] || ""}
+                                onChange={(e) => handleFilterChange(key, e.target.value)}
+                                disabled={isDisabled}
+                                className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <option value="">{isDisabled ? "Pick category" : "All"}</option>
+                                {options.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -319,6 +344,8 @@ function CreateCatalogForm({ onCreated }) {
 
 export default function CatalogPage() {
     const [filters, setFilters] = useState({});
+    const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [filterOptions, setFilterOptions] = useState(null);
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -332,14 +359,20 @@ export default function CatalogPage() {
     const [lightboxUrl, setLightboxUrl] = useState(null);
 
     useEffect(() => {
-        handleSearch(0);
         getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
     }, []);
 
-    async function handleSearch(newOffset = 0) {
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), SEARCH_DEBOUNCE_MS);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const runSearch = useCallback(async (newOffset) => {
         setLoading(true);
         try {
-            const data = await searchCatalog({ ...filters, limit: LIMIT, offset: newOffset });
+            const params = { ...filters, limit: LIMIT, offset: newOffset };
+            if (debouncedQuery) params.q = debouncedQuery;
+            const data = await searchCatalog(params);
             setResults(data);
             setOffset(newOffset);
         } catch (err) {
@@ -347,6 +380,14 @@ export default function CatalogPage() {
         } finally {
             setLoading(false);
         }
+    }, [filters, debouncedQuery]);
+
+    useEffect(() => {
+        runSearch(0);
+    }, [runSearch]);
+
+    async function handleSearch(newOffset = 0) {
+        await runSearch(newOffset);
     }
 
     async function handleSimilar() {
@@ -384,7 +425,14 @@ export default function CatalogPage() {
 
                 <TabsContent value="search" className="mt-4 space-y-4">
                     <Card className="bg-slate-900 border-slate-800 p-4">
-                        <CatalogFilters filters={filters} onChange={setFilters} onSearch={() => handleSearch(0)} loading={loading} filterOptions={filterOptions} />
+                        <CatalogFilters
+                            filters={filters}
+                            onChange={setFilters}
+                            searchQuery={searchQuery}
+                            onSearchQueryChange={setSearchQuery}
+                            loading={loading}
+                            filterOptions={filterOptions}
+                        />
                     </Card>
 
                     {loading && (
