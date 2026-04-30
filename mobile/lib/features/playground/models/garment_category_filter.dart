@@ -2,7 +2,7 @@ import 'package:fashion_app/core/models/slot_type.dart';
 
 class GarmentCategoryFilter {
   final String label;
-  final String backendCategory;
+  final String? backendCategory;
 
   const GarmentCategoryFilter({
     required this.label,
@@ -10,16 +10,28 @@ class GarmentCategoryFilter {
   });
 }
 
+const allGarmentCategoryFilter = GarmentCategoryFilter(
+  label: 'All',
+  backendCategory: null,
+);
+
 const garmentCategoryFilters = [
   GarmentCategoryFilter(label: 'Top', backendCategory: 'top'),
   GarmentCategoryFilter(label: 'Bottom', backendCategory: 'bottom'),
   GarmentCategoryFilter(label: 'Dress', backendCategory: 'dress'),
-  GarmentCategoryFilter(label: 'Outwear', backendCategory: 'outerwear'),
+  GarmentCategoryFilter(label: 'Outerwear', backendCategory: 'outerwear'),
   GarmentCategoryFilter(label: 'Shoes', backendCategory: 'footwear'),
+  GarmentCategoryFilter(label: 'Bag', backendCategory: 'bag'),
   GarmentCategoryFilter(label: 'Accessories', backendCategory: 'accessory'),
   GarmentCategoryFilter(label: 'Swimwear', backendCategory: 'swimwear'),
   GarmentCategoryFilter(label: 'Underwear', backendCategory: 'underwear'),
+  GarmentCategoryFilter(label: 'Activewear', backendCategory: 'activewear'),
 ];
+
+final garmentCategorySortOrder = {
+  for (final entry in garmentCategoryFilters.indexed)
+    if (entry.$2.backendCategory != null) entry.$2.backendCategory!: entry.$1,
+};
 
 GarmentCategoryFilter garmentCategoryForBackendCategory(String category) {
   for (final filter in garmentCategoryFilters) {
