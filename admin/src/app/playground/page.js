@@ -344,7 +344,9 @@ export default function PlaygroundPage() {
         }
         setGenerating(true);
         try {
-            const data = await generatePlaygroundImage({
+            // 1. Kick off the run. Backend returns 202 with status='pending'
+            //    immediately and runs the codex+R2 work in the background.
+            const accepted = await generatePlaygroundImage({
                 catalog_item_ids: Array.from(selected.keys()),
                 system_prompt: systemPrompt,
                 user_prompt: prompt,
@@ -354,12 +356,47 @@ export default function PlaygroundPage() {
                 quality,
                 n: count,
             });
-            setGeneratedImages(data.images);
+
+            // 2. Poll /runs/{run_id} until the bg task moves it off 'pending'.
+            //    2s cadence, 180s ceiling (matches the backend codex proxy
+            //    timeout) — beyond that we surface a "still processing"
+            //    message and let the user check Recent runs later.
+            const POLL_INTERVAL_MS = 2000;
+            const POLL_CEILING_MS = 180_000;
+            const startedAt = Date.now();
+            let run = null;
+            while (Date.now() - startedAt < POLL_CEILING_MS) {
+                run = await fetchPlaygroundRun(accepted.run_id);
+                if (run.status !== "pending") break;
+                await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+            }
+
+            if (!run || run.status === "pending") {
+                const msg =
+                    "Generation is taking longer than expected. Check Recent runs in a moment.";
+                setGenError(msg);
+                toast(msg);
+                refreshRunsAfterGenerate();
+                return;
+            }
+
+            if (run.status === "failed") {
+                const msg = run.error_message || "Generation failed";
+                setGenError(msg);
+                toast.error(msg);
+                refreshRunsAfterGenerate();
+                return;
+            }
+
+            setGeneratedImages(run.images);
             const usage =
-                typeof data.daily_used === "number" && typeof data.daily_limit === "number"
-                    ? ` · ${data.daily_used}/${data.daily_limit} today`
+                typeof accepted.daily_used === "number" &&
+                typeof accepted.daily_limit === "number"
+                    ? ` · ${accepted.daily_used}/${accepted.daily_limit} today`
                     : "";
-            toast.success(`Generated ${data.images.length} image(s) in ${data.elapsed_ms}ms${usage}`);
+            toast.success(
+                `Generated ${run.images.length} image(s) in ${run.elapsed_ms}ms${usage}`,
+            );
             refreshRunsAfterGenerate();
         } catch (err) {
             if (
@@ -379,8 +416,6 @@ export default function PlaygroundPage() {
             } else {
                 setGenError(err.message);
                 toast.error(err.message);
-                // Failed runs are still persisted server-side; refresh so the
-                // recent runs list reflects the failed-status row.
                 if (err.status !== 429) {
                     refreshRunsAfterGenerate();
                 }

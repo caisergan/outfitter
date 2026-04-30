@@ -356,7 +356,7 @@ class _StudioTryOnSheet extends ConsumerStatefulWidget {
 
 class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
   bool _generating = false;
-  GenerateResponse? _result;
+  PlaygroundRun? _result; // populated only after polling resolves the run
   PlaygroundCapException? _capError;
   Object? _error;
 
@@ -382,7 +382,10 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
       _capError = null;
     });
     try {
-      final response = await ref.read(playgroundRepositoryProvider).generate(
+      // POST returns 202 + pending; the repo polls until success/failed.
+      final result = await ref
+          .read(playgroundRepositoryProvider)
+          .generateAndAwait(
             GenerateRequest(
               catalogItemIds: ids,
               systemPrompt: draft.systemPromptText,
@@ -392,15 +395,24 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
             ),
           );
       if (!mounted) return;
+      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
+
+      if (result.run.status == 'failed') {
+        setState(() {
+          _error = result.run.errorMessage ?? 'Generation failed';
+          _generating = false;
+        });
+        return;
+      }
+
       setState(() {
-        _result = response;
+        _result = result.run;
         _generating = false;
       });
-      ref.read(playgroundRunsProvider.notifier).refreshAfterGenerate();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Generated · ${response.dailyUsed}/${response.dailyLimit} today',
+            'Generated · ${result.accepted.dailyUsed}/${result.accepted.dailyLimit} today',
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -644,7 +656,7 @@ class _TryOnPreview extends StatelessWidget {
   static const _aspectRatio = 1024 / 1536;
 
   final bool generating;
-  final GenerateResponse? result;
+  final PlaygroundRun? result;
   final PlaygroundCapException? capError;
   final Object? error;
 

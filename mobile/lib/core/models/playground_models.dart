@@ -106,6 +106,7 @@ class GenerateRequest with _$GenerateRequest {
 class GenerateResponse with _$GenerateResponse {
   const factory GenerateResponse({
     @JsonKey(name: 'run_id') required String runId,
+    required String status,
     required List<String> images,
     required String model,
     @JsonKey(name: 'item_count') required int itemCount,

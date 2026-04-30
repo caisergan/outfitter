@@ -152,6 +152,32 @@ class PlaygroundRepository {
     final res = await _dio.get(ApiEndpoints.playgroundRun(runId));
     return PlaygroundRun.fromJson(res.data as Map<String, dynamic>);
   }
+
+  /// POST /generate-image (returns 202 + pending) then poll /runs/{id}
+  /// every [pollInterval] until the run moves off `pending`. Returns the
+  /// resolved run ([status] is `success` or `failed`).
+  ///
+  /// Throws [PlaygroundCapException] on 429, [PlaygroundException] on any
+  /// other failure including poll timeout.
+  Future<({GenerateResponse accepted, PlaygroundRun run})> generateAndAwait(
+    GenerateRequest req, {
+    Duration pollInterval = const Duration(seconds: 2),
+    Duration ceiling = const Duration(minutes: 3),
+  }) async {
+    final accepted = await generate(req);
+    final deadline = DateTime.now().add(ceiling);
+    PlaygroundRun? latest;
+    while (DateTime.now().isBefore(deadline)) {
+      latest = await getRun(accepted.runId);
+      if (latest.status != 'pending') {
+        return (accepted: accepted, run: latest);
+      }
+      await Future.delayed(pollInterval);
+    }
+    throw const PlaygroundException(
+      'Generation is taking longer than expected. Check Recent runs.',
+    );
+  }
 }
 
 final playgroundRepositoryProvider = Provider<PlaygroundRepository>(
