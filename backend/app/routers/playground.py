@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import logging
 import time
@@ -12,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.admin import require_admin
 from app.auth.jwt import get_current_user
 from app.config import settings
-from app.database import get_db
+from app.database import AsyncSessionLocal, get_db
 from app.models.catalog import CatalogItem
 from app.models.playground import (
     ModelPersona,
@@ -112,6 +113,13 @@ def _serialize_run(row: PlaygroundRun) -> RunOut:
 
 
 async def _count_today(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """Count this user's runs today for daily-cap enforcement.
+
+    With async generation, a freshly-POSTed row is `pending` until the
+    background task completes. Pending and success rows always count
+    toward the cap so a user can't fire-hose attempts before the first
+    finishes. The setting only governs whether `failed` rows count.
+    """
     midnight = _utc_midnight_today()
     q = select(func.count(PlaygroundRun.id)).where(
         PlaygroundRun.user_id == user_id,
@@ -119,7 +127,7 @@ async def _count_today(db: AsyncSession, user_id: uuid.UUID) -> int:
         PlaygroundRun.deleted_at.is_(None),
     )
     if not settings.PLAYGROUND_FAILED_RUNS_COUNT_TOWARD_CAP:
-        q = q.where(PlaygroundRun.status == "success")
+        q = q.where(PlaygroundRun.status != "failed")
     return (await db.execute(q)).scalar_one()
 
 
@@ -456,7 +464,112 @@ async def delete_persona(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/generate-image", response_model=GenerateResponse)
+async def _finish_generation(
+    *,
+    run_id: uuid.UUID,
+    user_id: uuid.UUID,
+    reference_urls: list[str],
+    final_prompt: str,
+    size: str,
+    quality: str,
+    n: int,
+) -> None:
+    """Background worker that runs the codex call + R2 upload and writes the
+    final state (success/failed) onto the existing pending row.
+
+    Uses its own DB session because the request session is closed by the
+    time this runs. All state lives on the row at `run_id`; nothing here
+    depends on the request scope.
+    """
+    started = time.perf_counter()
+    try:
+        try:
+            images_bytes = await generate_outfit_image_bytes(
+                reference_urls=reference_urls,
+                prompt=final_prompt,
+                size=size,
+                quality=quality,
+                n=n,
+            )
+        except (CodexProxyTimeout, CodexProxyError, ReferenceImageError) as exc:
+            await _mark_run_finished(
+                run_id=run_id,
+                status_value="failed",
+                image_keys=[],
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+                error_message=str(exc),
+            )
+            return
+
+        # Upload each generated image to R2; partial failures still mark the
+        # run as failed but record any keys that did upload (orphan reaper
+        # is out of scope here).
+        image_keys: list[str] = []
+        try:
+            for idx, data in enumerate(images_bytes):
+                key = f"playground/{user_id}/{run_id}/{idx}.png"
+                storage_service.upload_bytes(key, data, "image/png")
+                image_keys.append(key)
+        except StorageError as exc:
+            await _mark_run_finished(
+                run_id=run_id,
+                status_value="failed",
+                image_keys=image_keys,
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+                error_message=f"Storage upload failed: {exc}",
+            )
+            return
+
+        await _mark_run_finished(
+            run_id=run_id,
+            status_value="success",
+            image_keys=image_keys,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+            error_message=None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Catch-all so a pending row never lingers if something unexpected
+        # fires (e.g. event-loop cancellation, network blip outside Dio's
+        # exception classes).
+        logger.exception("Background generation crashed for run %s", run_id)
+        try:
+            await _mark_run_finished(
+                run_id=run_id,
+                status_value="failed",
+                image_keys=[],
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+                error_message=f"Unexpected error: {exc}",
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to mark run %s as failed", run_id)
+
+
+async def _mark_run_finished(
+    *,
+    run_id: uuid.UUID,
+    status_value: str,
+    image_keys: list[str],
+    elapsed_ms: int,
+    error_message: str | None,
+) -> None:
+    """Update the pending run row in a fresh DB session."""
+    async with AsyncSessionLocal() as session:
+        row = await session.get(PlaygroundRun, run_id)
+        if row is None:
+            logger.warning("Run %s vanished before background finish", run_id)
+            return
+        row.status = status_value
+        row.image_keys = list(image_keys)
+        row.elapsed_ms = elapsed_ms
+        row.error_message = error_message
+        await session.commit()
+
+
+@router.post(
+    "/generate-image",
+    response_model=GenerateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def generate_image(
     body: GenerateRequest,
     db: DbDep,
@@ -541,67 +654,11 @@ async def generate_image(
     # 5. Build the final prompt that gpt-image-2 sees
     final_prompt = _build_final_prompt(body.system_prompt, body.user_prompt)
 
-    # 6. Call gpt-image-2; on failure persist a failed-run snapshot then map to HTTP error
+    # 6. Persist a pending row, commit it so the background task (which uses
+    # its own session) can find it, then fire-and-forget the codex+R2 work.
     run_id = uuid.uuid4()
     template_id = template.id if template else None
     persona_id = persona.id if persona else None
-    started = time.perf_counter()
-    try:
-        images_bytes = await generate_outfit_image_bytes(
-            reference_urls=reference_urls,
-            prompt=final_prompt,
-            size=body.size,
-            quality=body.quality,
-            n=body.n,
-        )
-    except (CodexProxyTimeout, CodexProxyError, ReferenceImageError) as exc:
-        elapsed_ms = int((time.perf_counter() - started) * 1000)
-        await _persist_run(
-            db,
-            run_id=run_id,
-            user_id=current_user.id,
-            body=body,
-            system_prompt_id=system_prompt_id,
-            template_id=template_id,
-            persona_id=persona_id,
-            final_prompt=final_prompt,
-            elapsed_ms=elapsed_ms,
-            image_keys=[],
-            status_value="failed",
-            error_message=str(exc),
-        )
-        raise _map_codex_error(exc) from exc
-
-    elapsed_ms = int((time.perf_counter() - started) * 1000)
-
-    # 7. Upload generated images to R2; on failure persist a failed-run snapshot then 502
-    image_keys: list[str] = []
-    try:
-        for idx, data in enumerate(images_bytes):
-            key = f"playground/{current_user.id}/{run_id}/{idx}.png"
-            storage_service.upload_bytes(key, data, "image/png")
-            image_keys.append(key)
-    except StorageError as exc:
-        await _persist_run(
-            db,
-            run_id=run_id,
-            user_id=current_user.id,
-            body=body,
-            system_prompt_id=system_prompt_id,
-            template_id=template_id,
-            persona_id=persona_id,
-            final_prompt=final_prompt,
-            elapsed_ms=elapsed_ms,
-            image_keys=image_keys,
-            status_value="failed",
-            error_message=str(exc),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Storage upload failed: {exc}",
-        ) from exc
-
-    # 8. Persist success snapshot
     await _persist_run(
         db,
         run_id=run_id,
@@ -611,20 +668,33 @@ async def generate_image(
         template_id=template_id,
         persona_id=persona_id,
         final_prompt=final_prompt,
-        elapsed_ms=elapsed_ms,
-        image_keys=image_keys,
-        status_value="success",
+        elapsed_ms=0,
+        image_keys=[],
+        status_value="pending",
         error_message=None,
     )
 
-    # 9. Build presigned URLs for the response
-    presigned = [storage_service.get_signed_read_url(k) for k in image_keys]
+    asyncio.create_task(
+        _finish_generation(
+            run_id=run_id,
+            user_id=current_user.id,
+            reference_urls=reference_urls,
+            final_prompt=final_prompt,
+            size=body.size,
+            quality=body.quality,
+            n=body.n,
+        )
+    )
+
+    # 7. Return immediately — clients poll /playground/runs/{run_id} until
+    # status is success or failed.
     return GenerateResponse(
         run_id=run_id,
-        images=presigned,
+        status="pending",
+        images=[],
         model="gpt-image-2",
         item_count=len(ids),
-        elapsed_ms=elapsed_ms,
+        elapsed_ms=0,
         daily_used=used + 1,
         daily_limit=settings.PLAYGROUND_DAILY_CAP,
     )

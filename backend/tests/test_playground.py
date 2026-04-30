@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -127,51 +128,120 @@ async def _seed_persona(
 
 def _install_fakes(
     monkeypatch,
+    db,
     *,
     images: list[bytes] | None = None,
     codex_raises: Exception | None = None,
     storage_raises_on_index: int | None = None,
 ):
-    """Patch network-touching deps for a single test.
+    """Wire test fakes for the async generation flow.
 
-    - ``images`` defaults to ``[b"fake"]``.
-    - ``codex_raises``: raise this exception from generate_outfit_image_bytes.
-    - ``storage_raises_on_index``: raise StorageError on the Nth upload_bytes call.
+    POST /generate-image now persists a `pending` row and fires
+    `_finish_generation` via asyncio.create_task. The real
+    `_finish_generation` would call codex + upload via AsyncSessionLocal,
+    which doesn't work in the SQLite test setup AND running concurrently
+    with the test's own session causes async-session transaction races.
+
+    Instead this helper:
+    - Neutralizes the real bg task by replacing `_finish_generation` with
+      a no-op coroutine.
+    - Records what the simulated bg work *would* have done (success vs
+      failed via codex/storage params) so a follow-up call to
+      ``_simulate_finish`` writes the eventual state to the test session
+      synchronously, without any concurrency.
+
+    Also installs a fake signed-read so RunOut.images comes out as stable
+    `https://signed/<key>` strings.
     """
     from app.services.storage_service import StorageError
 
     image_payload = images if images is not None else [b"fake"]
 
-    async def fake_codex(**_kwargs):
-        if codex_raises is not None:
-            raise codex_raises
-        return list(image_payload)
-
-    upload_calls: list[tuple[str, bytes, str]] = []
-
-    def fake_upload(key: str, data: bytes, content_type: str = "image/jpeg") -> str:
-        upload_calls.append((key, data, content_type))
-        if (
-            storage_raises_on_index is not None
-            and len(upload_calls) - 1 == storage_raises_on_index
-        ):
-            raise StorageError("simulated R2 failure")
-        return key
+    async def fake_finish(*, run_id, **_kwargs):  # noqa: ARG001
+        # Real bg task is replaced with a no-op; the test drives the
+        # eventual row state via _simulate_finish below.
+        return None
 
     def fake_signed_read(key: str, expires_in: int = 900) -> str:
         return f"https://signed/{key}"
 
     monkeypatch.setattr(
-        "app.routers.playground.generate_outfit_image_bytes", fake_codex
-    )
-    monkeypatch.setattr(
-        "app.routers.playground.storage_service.upload_bytes", fake_upload
+        "app.routers.playground._finish_generation", fake_finish
     )
     monkeypatch.setattr(
         "app.routers.playground.storage_service.get_signed_read_url",
         fake_signed_read,
     )
-    return upload_calls
+
+    # Stash the simulation parameters on the db session for later retrieval
+    # by _simulate_finish. Avoids passing them around through every test.
+    db.info["_fake_image_payload"] = image_payload
+    db.info["_fake_codex_raises"] = codex_raises
+    db.info["_fake_storage_raises_on_index"] = storage_raises_on_index
+    db.info["_fake_storage_error_cls"] = StorageError
+
+
+async def _simulate_finish(db, run_id):
+    """Drive the in-test simulation of the background generation, writing
+    the eventual `success` or `failed` state to the run row using the
+    same test session that the request handler used. Mirrors the real
+    `_finish_generation` logic but stays single-threaded so SQLite
+    AsyncSession can handle it cleanly.
+    """
+    image_payload = db.info["_fake_image_payload"]
+    codex_raises = db.info["_fake_codex_raises"]
+    storage_raises_on_index = db.info["_fake_storage_raises_on_index"]
+    storage_error_cls = db.info["_fake_storage_error_cls"]
+
+    row = (
+        await db.execute(select(PlaygroundRun).where(PlaygroundRun.id == run_id))
+    ).scalar_one_or_none()
+    if row is None:
+        return
+
+    if codex_raises is not None:
+        row.status = "failed"
+        row.image_keys = []
+        row.elapsed_ms = 42
+        row.error_message = str(codex_raises)
+        await db.commit()
+        return
+
+    image_keys: list[str] = []
+    try:
+        for idx in range(len(image_payload)):
+            if (
+                storage_raises_on_index is not None
+                and idx == storage_raises_on_index
+            ):
+                raise storage_error_cls("simulated R2 failure")
+            image_keys.append(f"playground/{row.user_id}/{run_id}/{idx}.png")
+    except Exception as exc:
+        row.status = "failed"
+        row.image_keys = list(image_keys)
+        row.elapsed_ms = 42
+        row.error_message = f"Storage upload failed: {exc}"
+        await db.commit()
+        return
+
+    row.status = "success"
+    row.image_keys = image_keys
+    row.elapsed_ms = 42
+    row.error_message = None
+    await db.commit()
+
+
+async def _await_run_finish(client, db, token, run_id):
+    """Drive the fake bg task and re-fetch the run via the API.
+
+    Returns the parsed JSON of GET /playground/runs/{run_id}.
+    """
+    await _simulate_finish(db, run_id)
+    resp = await client.get(
+        f"/playground/runs/{run_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return resp.json()
 
 
 def _auth_headers(token: str) -> dict[str, str]:
@@ -205,7 +275,7 @@ async def test_playground_generate_happy_path(
     signup_resp = await _signup(client)
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     response = await client.post(
         "/playground/generate-image",
@@ -215,18 +285,25 @@ async def test_playground_generate_happy_path(
         ),
     )
 
-    assert response.status_code == 200, response.text
+    # Initial response: 202 Accepted with a pending placeholder
+    assert response.status_code == 202, response.text
     body = response.json()
-    assert "run_id" in body
-    assert len(body["images"]) == 1
-    assert body["images"][0].startswith("https://signed/playground/")
-    assert body["images"][0].endswith(f"/{body['run_id']}/0.png")
+    assert body["status"] == "pending"
+    assert body["images"] == []
+    assert body["elapsed_ms"] == 0
     assert body["model"] == "gpt-image-2"
     assert body["item_count"] == 1
     assert body["daily_used"] == 1
     assert body["daily_limit"] == 5
-    assert isinstance(body["elapsed_ms"], int)
 
+    run_id = body["run_id"]
+    final = await _await_run_finish(client, db, token, run_id)
+    assert final["status"] == "success"
+    assert len(final["images"]) == 1
+    assert final["images"][0].startswith("https://signed/playground/")
+    assert final["images"][0].endswith(f"/{run_id}/0.png")
+
+    # Snapshot fields persisted on the row in their final form
     runs = (await db.execute(select(PlaygroundRun))).scalars().all()
     assert len(runs) == 1
     run = runs[0]
@@ -258,7 +335,7 @@ async def test_playground_unknown_item_id(
     signup_resp = await _signup(client, email="unknown@outfitter.dev")
     token = signup_resp.json()["access_token"]
     bogus = uuid.uuid4()
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     response = await client.post(
         "/playground/generate-image",
@@ -347,74 +424,76 @@ async def test_playground_validation_combined_length(
 
 
 @pytest.mark.asyncio
-async def test_playground_proxy_error_maps_to_502_and_writes_failed_row(
+async def test_playground_proxy_error_writes_failed_row(
     client: AsyncClient, db, monkeypatch
 ):
+    """Codex proxy errors no longer 502 the user — they happen in the
+    background task and surface as a `failed` row that the client polls."""
     from app.services.codex_image_service import CodexProxyError
 
     signup_resp = await _signup(client, email="proxyerr@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch, codex_raises=CodexProxyError("500: upstream blew up"))
+    _install_fakes(monkeypatch, db, codex_raises=CodexProxyError("500: upstream blew up"))
 
     response = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
-    assert response.status_code == 502
-    assert "Image generation failed" in response.json()["detail"]
+    assert response.status_code == 202
+    run_id = response.json()["run_id"]
 
-    runs = (await db.execute(select(PlaygroundRun))).scalars().all()
-    assert len(runs) == 1
-    assert runs[0].status == "failed"
-    assert "upstream blew up" in (runs[0].error_message or "")
-    assert runs[0].image_keys == []
+    final = await _await_run_finish(client, db, token, run_id)
+    assert final["status"] == "failed"
+    assert "upstream blew up" in (final["error_message"] or "")
+    assert final["image_keys"] == []
 
 
 @pytest.mark.asyncio
-async def test_playground_timeout_maps_to_504(client: AsyncClient, db, monkeypatch):
+async def test_playground_timeout_writes_failed_row(
+    client: AsyncClient, db, monkeypatch
+):
     from app.services.codex_image_service import CodexProxyTimeout
 
     signup_resp = await _signup(client, email="timeout@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch, codex_raises=CodexProxyTimeout("read timeout"))
+    _install_fakes(monkeypatch, db, codex_raises=CodexProxyTimeout("read timeout"))
 
     response = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
-    assert response.status_code == 504
-    assert response.json()["detail"] == "Image generation timed out"
+    assert response.status_code == 202
+    run_id = response.json()["run_id"]
 
-    runs = (await db.execute(select(PlaygroundRun))).scalars().all()
-    assert len(runs) == 1
-    assert runs[0].status == "failed"
+    final = await _await_run_finish(client, db, token, run_id)
+    assert final["status"] == "failed"
+    assert "read timeout" in (final["error_message"] or "")
 
 
 @pytest.mark.asyncio
-async def test_playground_storage_failure_502(
+async def test_playground_storage_failure_writes_failed_row(
     client: AsyncClient, db, monkeypatch
 ):
     signup_resp = await _signup(client, email="storage@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch, storage_raises_on_index=0)
+    _install_fakes(monkeypatch, db, storage_raises_on_index=0)
 
     response = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
-    assert response.status_code == 502
-    assert "Storage upload failed" in response.json()["detail"]
+    assert response.status_code == 202
+    run_id = response.json()["run_id"]
 
-    runs = (await db.execute(select(PlaygroundRun))).scalars().all()
-    assert len(runs) == 1
-    assert runs[0].status == "failed"
-    assert "simulated R2 failure" in (runs[0].error_message or "")
+    final = await _await_run_finish(client, db, token, run_id)
+    assert final["status"] == "failed"
+    assert "simulated R2 failure" in (final["error_message"] or "")
 
 
 # ---------------------------------------------------------------------------
@@ -429,7 +508,7 @@ async def test_playground_invalid_template_id_404(
     signup_resp = await _signup(client, email="badtpl@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     bogus = uuid.uuid4()
 
     body = _generate_body(item.id)
@@ -451,7 +530,7 @@ async def test_playground_invalid_persona_id_404(
     signup_resp = await _signup(client, email="badpers@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     bogus = uuid.uuid4()
 
     body = _generate_body(item.id)
@@ -474,7 +553,7 @@ async def test_playground_inactive_template_404(
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
     template = await _seed_template(db, slug="hidden", is_active=False)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     body = _generate_body(item.id)
     body["template_id"] = str(template.id)
@@ -494,14 +573,14 @@ async def test_playground_optional_ids_omitted_works(
     signup_resp = await _signup(client, email="noids@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     response = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     runs = (await db.execute(select(PlaygroundRun))).scalars().all()
     assert runs[0].template_id is None
@@ -521,14 +600,14 @@ async def test_playground_uses_active_system_prompt_snapshot(
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
     sp = await _seed_system_prompt(db, content="DB COPY")
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     response = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id, system_prompt="REQUEST PROMPT"),
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     run = (await db.execute(select(PlaygroundRun))).scalars().one()
     assert run.system_prompt_id == sp.id
@@ -546,7 +625,7 @@ async def test_playground_run_snapshot_fields_persisted(
     sp = await _seed_system_prompt(db)
     template = await _seed_template(db, slug="evening_editorial")
     persona = await _seed_persona(db, slug="f_x", gender="female")
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     body = _generate_body(
         item.id,
@@ -562,7 +641,8 @@ async def test_playground_run_snapshot_fields_persisted(
     response = await client.post(
         "/playground/generate-image", headers=_auth_headers(token), json=body
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
+    await _await_run_finish(client, db, token, response.json()["run_id"])
 
     run = (await db.execute(select(PlaygroundRun))).scalars().one()
     assert run.system_prompt_id == sp.id
@@ -591,14 +671,15 @@ async def _run_n_successes(client, db, monkeypatch, *, email: str, n: int) -> st
     signup_resp = await _signup(client, email=email)
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     for _ in range(n):
         resp = await client.post(
             "/playground/generate-image",
             headers=_auth_headers(token),
             json=_generate_body(item.id),
         )
-        assert resp.status_code == 200, resp.text
+        assert resp.status_code == 202, resp.text
+        await _await_run_finish(client, db, token, resp.json()["run_id"])
     return token
 
 
@@ -634,7 +715,7 @@ async def test_playground_failed_runs_count_toward_cap_default(
     signup_resp = await _signup(client, email="failcap@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch, codex_raises=CodexProxyError("nope"))
+    _install_fakes(monkeypatch, db, codex_raises=CodexProxyError("nope"))
 
     for _ in range(5):
         resp = await client.post(
@@ -642,10 +723,11 @@ async def test_playground_failed_runs_count_toward_cap_default(
             headers=_auth_headers(token),
             json=_generate_body(item.id),
         )
-        assert resp.status_code == 502
+        assert resp.status_code == 202
+        await _await_run_finish(client, db, token, resp.json()["run_id"])
 
     # 6th attempt — flip codex back to success but cap should still trigger.
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     resp = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
@@ -668,7 +750,7 @@ async def test_playground_failed_runs_excluded_when_flag_off(
     signup_resp = await _signup(client, email="failexcl@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
-    _install_fakes(monkeypatch, codex_raises=CodexProxyError("nope"))
+    _install_fakes(monkeypatch, db, codex_raises=CodexProxyError("nope"))
 
     for _ in range(5):
         resp = await client.post(
@@ -676,15 +758,16 @@ async def test_playground_failed_runs_excluded_when_flag_off(
             headers=_auth_headers(token),
             json=_generate_body(item.id),
         )
-        assert resp.status_code == 502
+        assert resp.status_code == 202
+        await _await_run_finish(client, db, token, resp.json()["run_id"])
 
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     resp = await client.post(
         "/playground/generate-image",
         headers=_auth_headers(token),
         json=_generate_body(item.id),
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 202
 
 
 # ---------------------------------------------------------------------------
@@ -772,7 +855,7 @@ async def test_list_runs_only_for_current_user(
     client: AsyncClient, db, monkeypatch
 ):
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     a_token = (await _signup(client, email="a@outfitter.dev")).json()["access_token"]
     b_token = (await _signup(client, email="b@outfitter.dev")).json()["access_token"]
@@ -799,7 +882,7 @@ async def test_list_runs_excludes_soft_deleted(
     client: AsyncClient, db, monkeypatch
 ):
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     token = (await _signup(client, email="sd@outfitter.dev")).json()["access_token"]
 
     await client.post(
@@ -819,7 +902,7 @@ async def test_list_runs_excludes_soft_deleted(
 @pytest.mark.asyncio
 async def test_get_run_404_for_other_user(client: AsyncClient, db, monkeypatch):
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
 
     a_token = (await _signup(client, email="aa@outfitter.dev")).json()["access_token"]
     b_token = (await _signup(client, email="bb@outfitter.dev")).json()["access_token"]
@@ -840,7 +923,7 @@ async def test_get_run_404_for_other_user(client: AsyncClient, db, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_run_returns_snapshot(client: AsyncClient, db, monkeypatch):
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     token = (await _signup(client, email="own@outfitter.dev")).json()[
         "access_token"
     ]
@@ -853,6 +936,7 @@ async def test_get_run_returns_snapshot(client: AsyncClient, db, monkeypatch):
         ),
     )
     run_id = post_resp.json()["run_id"]
+    await _simulate_finish(db, run_id)
 
     resp = await client.get(
         f"/playground/runs/{run_id}", headers=_auth_headers(token)
@@ -873,7 +957,7 @@ async def test_list_runs_cursor_pagination(
     client: AsyncClient, db, monkeypatch
 ):
     item = await _seed_item(db)
-    _install_fakes(monkeypatch)
+    _install_fakes(monkeypatch, db)
     token = (await _signup(client, email="page@outfitter.dev")).json()[
         "access_token"
     ]

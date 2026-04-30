@@ -75,7 +75,8 @@ class PlaygroundRun(Base):
     __tablename__ = "playground_runs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('success','failed')", name="ck_playground_runs_status"
+            "status IN ('pending','success','failed')",
+            name="ck_playground_runs_status",
         ),
         Index(
             "ix_playground_runs_user_id_created_at",

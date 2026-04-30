@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 PlaygroundSize = Literal["1024x1024", "1024x1536", "1536x1024"]
 PlaygroundQuality = Literal["low", "medium", "high"]
 GenderLiteral = Literal["female", "male"]
-StatusLiteral = Literal["success", "failed"]
+StatusLiteral = Literal["pending", "success", "failed"]
 
 # The hard cap the proxy accepts. Combined-length validation uses this.
 PROMPT_CHAR_CAP = 32000
@@ -36,7 +36,18 @@ class GenerateRequest(BaseModel):
 
 
 class GenerateResponse(BaseModel):
+    """Returned immediately by POST /generate-image.
+
+    The request is accepted (HTTP 202) and the codex + R2 work happens
+    asynchronously. Clients poll GET /playground/runs/{run_id} until status
+    moves to `success` or `failed`, then read images from that snapshot.
+
+    `images` is empty and `elapsed_ms` is 0 in the immediate response;
+    they're populated on the run row after the background task finishes.
+    """
+
     run_id: uuid.UUID
+    status: StatusLiteral
     images: list[str]
     model: str
     item_count: int
