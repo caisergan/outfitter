@@ -21,7 +21,14 @@ class ApiEndpoints {
   static const outfits = '/outfits';
   static String outfit(String id) => '/outfits/$id';
 
-  // Try-On
-  static const tryonSubmit = '/tryon/submit';
-  static String tryonStatus(String jobId) => '/tryon/status/$jobId';
+  // Try-On (gpt-image-2 editorial generation)
+  static const tryonSystemPrompt = '/tryon/system-prompt';
+  static const tryonTemplates = '/tryon/templates';
+  static const tryonPersonas = '/tryon/personas';
+  static const tryonGenerate = '/tryon/generate-image';
+  static const tryonRuns = '/tryon/runs';
+  static String tryonRun(String runId) => '/tryon/runs/$runId';
+
+  // Catalog single-item lookup (used for reproducing past tryon runs)
+  static String catalogItem(String itemId) => '/catalog/items/$itemId';
 }

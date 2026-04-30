@@ -1,65 +1,65 @@
-# Admin Playground (gpt-image-2) Implementation Plan
+# Admin TryOn (gpt-image-2) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a `/playground` page to the admin panel that lets the operator pick catalog items, type a free-form prompt, and generate images via the local OpenAI-compatible proxy (`http://localhost:8317/v1`) using `gpt-image-2`.
+**Goal:** Add a `/tryon` page to the admin panel that lets the operator pick catalog items, type a free-form prompt, and generate images via the local OpenAI-compatible proxy (`http://localhost:8317/v1`) using `gpt-image-2`.
 
-**Architecture:** New FastAPI router (`/playground/generate-image`) calls a thin httpx-based service that downloads each selected catalog item's `image_front_url` and forwards it as `multipart/form-data` to the proxy's `/images/edits` endpoint. Returns base64 data URLs to the admin UI. No DB writes; admin-only; auth via existing JWT middleware.
+**Architecture:** New FastAPI router (`/tryon/generate-image`) calls a thin httpx-based service that downloads each selected catalog item's `image_front_url` and forwards it as `multipart/form-data` to the proxy's `/images/edits` endpoint. Returns base64 data URLs to the admin UI. No DB writes; admin-only; auth via existing JWT middleware.
 
 **Tech Stack:** FastAPI, SQLAlchemy async, httpx (already a dep), pytest + pytest-asyncio + pytest-httpx; Next.js 15 (admin), shadcn/ui components, Tailwind, sonner toasts, lucide-react icons.
 
-**Spec:** `docs/superpowers/specs/2026-04-28-admin-playground-design.md`
+**Spec:** `docs/superpowers/specs/2026-04-28-admin-tryon-design.md`
 
 ---
 
 ## File Structure
 
 **Backend — create:**
-- `backend/app/schemas/playground.py` — request/response Pydantic models
+- `backend/app/schemas/tryon.py` — request/response Pydantic models
 - `backend/app/services/codex_image_service.py` — proxy client + typed errors
-- `backend/app/routers/playground.py` — single endpoint `POST /playground/generate-image`
-- `backend/tests/test_playground.py` — pytest module
+- `backend/app/routers/tryon.py` — single endpoint `POST /tryon/generate-image`
+- `backend/tests/test_tryon.py` — pytest module
 
 **Backend — modify:**
 - `backend/app/config.py` — add `CODEX_PROXY_URL`, `CODEX_PROXY_API_KEY`
 - `backend/app/main.py` — register router
 
 **Frontend — create:**
-- `admin/src/app/playground/page.js` — single client component
+- `admin/src/app/tryon/page.js` — single client component
 
 **Frontend — modify:**
-- `admin/src/lib/api.js` — add `generatePlaygroundImage(payload)`
-- `admin/src/components/Sidebar.js` — add Playground nav entry
+- `admin/src/lib/api.js` — add `generateTryOnImage(payload)`
+- `admin/src/components/Sidebar.js` — add TryOn nav entry
 
 ---
 
 ## Task 1: Pydantic schemas
 
 **Files:**
-- Create: `backend/app/schemas/playground.py`
+- Create: `backend/app/schemas/tryon.py`
 
 - [ ] **Step 1: Write the schemas file**
 
 ```python
-# backend/app/schemas/playground.py
+# backend/app/schemas/tryon.py
 import uuid
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-PlaygroundSize = Literal["1024x1024", "1024x1536", "1536x1024"]
-PlaygroundQuality = Literal["low", "medium", "high"]
+TryOnSize = Literal["1024x1024", "1024x1536", "1536x1024"]
+TryOnQuality = Literal["low", "medium", "high"]
 
 
-class PlaygroundGenerateRequest(BaseModel):
+class TryOnGenerateRequest(BaseModel):
     catalog_item_ids: Annotated[list[uuid.UUID], Field(min_length=1, max_length=16)]
     prompt: Annotated[str, Field(min_length=1, max_length=2000)]
-    size: PlaygroundSize = "1024x1536"
-    quality: PlaygroundQuality = "high"
+    size: TryOnSize = "1024x1536"
+    quality: TryOnQuality = "high"
     n: Annotated[int, Field(ge=1, le=4)] = 1
 
 
-class PlaygroundGenerateResponse(BaseModel):
+class TryOnGenerateResponse(BaseModel):
     images: list[str]   # data URLs ("data:image/png;base64,...")
     model: str
     item_count: int
@@ -68,14 +68,14 @@ class PlaygroundGenerateResponse(BaseModel):
 
 - [ ] **Step 2: Verify the module imports clean**
 
-Run: `cd backend && python -c "from app.schemas.playground import PlaygroundGenerateRequest, PlaygroundGenerateResponse; print('ok')"`
+Run: `cd backend && python -c "from app.schemas.tryon import TryOnGenerateRequest, TryOnGenerateResponse; print('ok')"`
 Expected: `ok`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add backend/app/schemas/playground.py
-git commit -m "feat(playground): add request/response schemas for image generation"
+git add backend/app/schemas/tryon.py
+git commit -m "feat(tryon): add request/response schemas for image generation"
 ```
 
 ---
@@ -90,7 +90,7 @@ git commit -m "feat(playground): add request/response schemas for image generati
 In `backend/app/config.py`, inside the `Settings` class, add directly after the `KLING_API_KEY` line in the "AI APIs" block:
 
 ```python
-    # OpenAI-compatible proxy for gpt-image-2 (admin playground)
+    # OpenAI-compatible proxy for gpt-image-2 (admin tryon)
     CODEX_PROXY_URL: str = "http://localhost:8317/v1"
     CODEX_PROXY_API_KEY: str = "dummy"
 ```
@@ -259,7 +259,7 @@ Expected: PASS
 
 ```bash
 git add backend/app/services/codex_image_service.py backend/tests/test_codex_image_service.py
-git commit -m "feat(playground): codex image service happy path"
+git commit -m "feat(tryon): codex image service happy path"
 ```
 
 ---
@@ -406,7 +406,7 @@ Expected: all 4 tests PASS.
 
 ```bash
 git add backend/app/services/codex_image_service.py backend/tests/test_codex_image_service.py
-git commit -m "feat(playground): typed errors for codex service (download/proxy/timeout)"
+git commit -m "feat(tryon): typed errors for codex service (download/proxy/timeout)"
 ```
 
 ---
@@ -414,14 +414,14 @@ git commit -m "feat(playground): typed errors for codex service (download/proxy/
 ## Task 5: Router — happy path (TDD)
 
 **Files:**
-- Create: `backend/app/routers/playground.py`
+- Create: `backend/app/routers/tryon.py`
 - Modify: `backend/app/main.py`
-- Create: `backend/tests/test_playground.py`
+- Create: `backend/tests/test_tryon.py`
 
 - [ ] **Step 1: Write the failing happy-path test**
 
 ```python
-# backend/tests/test_playground.py
+# backend/tests/test_tryon.py
 import base64
 import uuid
 from unittest.mock import AsyncMock
@@ -432,7 +432,7 @@ from httpx import AsyncClient
 from app.models.catalog import CatalogItem
 
 
-async def _signup(client: AsyncClient, email: str = "playground@outfitter.dev"):
+async def _signup(client: AsyncClient, email: str = "tryon@outfitter.dev"):
     return await client.post("/auth/signup", json={"email": email, "password": "supersecret99"})
 
 
@@ -455,7 +455,7 @@ async def _seed_item(db, **overrides) -> CatalogItem:
 
 
 @pytest.mark.asyncio
-async def test_playground_generate_happy_path(client: AsyncClient, db, monkeypatch):
+async def test_tryon_generate_happy_path(client: AsyncClient, db, monkeypatch):
     signup_resp = await _signup(client)
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
@@ -463,12 +463,12 @@ async def test_playground_generate_happy_path(client: AsyncClient, db, monkeypat
     fake_b64 = base64.b64encode(b"generated").decode()
     fake_service = AsyncMock(return_value=[f"data:image/png;base64,{fake_b64}"])
     monkeypatch.setattr(
-        "app.routers.playground.generate_outfit_image",
+        "app.routers.tryon.generate_outfit_image",
         fake_service,
     )
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "catalog_item_ids": [str(item.id)],
@@ -497,13 +497,13 @@ async def test_playground_generate_happy_path(client: AsyncClient, db, monkeypat
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd backend && pytest tests/test_playground.py::test_playground_generate_happy_path -v`
+Run: `cd backend && pytest tests/test_tryon.py::test_tryon_generate_happy_path -v`
 Expected: FAIL with 404 (route not registered) or import error.
 
 - [ ] **Step 3: Implement the router**
 
 ```python
-# backend/app/routers/playground.py
+# backend/app/routers/tryon.py
 import logging
 import time
 import uuid
@@ -517,9 +517,9 @@ from app.auth.jwt import get_current_user
 from app.database import get_db
 from app.models.catalog import CatalogItem
 from app.models.user import User
-from app.schemas.playground import (
-    PlaygroundGenerateRequest,
-    PlaygroundGenerateResponse,
+from app.schemas.tryon import (
+    TryOnGenerateRequest,
+    TryOnGenerateResponse,
 )
 from app.services.codex_image_service import (
     CodexProxyError,
@@ -529,18 +529,18 @@ from app.services.codex_image_service import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/playground", tags=["playground"])
+router = APIRouter(prefix="/tryon", tags=["tryon"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
-@router.post("/generate-image", response_model=PlaygroundGenerateResponse)
+@router.post("/generate-image", response_model=TryOnGenerateResponse)
 async def generate_image(
-    body: PlaygroundGenerateRequest,
+    body: TryOnGenerateRequest,
     db: DbDep,
     _: CurrentUserDep,
-) -> PlaygroundGenerateResponse:
+) -> TryOnGenerateResponse:
     ids: list[uuid.UUID] = list(body.catalog_item_ids)
 
     result = await db.execute(select(CatalogItem).where(CatalogItem.id.in_(ids)))
@@ -583,7 +583,7 @@ async def generate_image(
 
     elapsed_ms = int((time.perf_counter() - started) * 1000)
 
-    return PlaygroundGenerateResponse(
+    return TryOnGenerateResponse(
         images=images,
         model="gpt-image-2",
         item_count=len(ids),
@@ -604,7 +604,7 @@ from app.routers import auth, catalog, wardrobe, outfits, tryon, storage
 Replace with:
 
 ```python
-from app.routers import auth, catalog, wardrobe, outfits, tryon, storage, playground
+from app.routers import auth, catalog, wardrobe, outfits, tryon, storage, tryon
 ```
 
 Find the block:
@@ -619,19 +619,19 @@ Replace with:
 ```python
 app.include_router(tryon)
 app.include_router(storage)
-app.include_router(playground)
+app.include_router(tryon)
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `cd backend && pytest tests/test_playground.py::test_playground_generate_happy_path -v`
+Run: `cd backend && pytest tests/test_tryon.py::test_tryon_generate_happy_path -v`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/routers/playground.py backend/app/main.py backend/tests/test_playground.py
-git commit -m "feat(playground): POST /playground/generate-image happy path"
+git add backend/app/routers/tryon.py backend/app/main.py backend/tests/test_tryon.py
+git commit -m "feat(tryon): POST /tryon/generate-image happy path"
 ```
 
 ---
@@ -639,17 +639,17 @@ git commit -m "feat(playground): POST /playground/generate-image happy path"
 ## Task 6: Router — error paths (TDD)
 
 **Files:**
-- Modify: `backend/tests/test_playground.py`
+- Modify: `backend/tests/test_tryon.py`
 
 - [ ] **Step 1: Write the failing error-path tests**
 
-Append to `backend/tests/test_playground.py`:
+Append to `backend/tests/test_tryon.py`:
 
 ```python
 @pytest.mark.asyncio
-async def test_playground_unauthorized(client: AsyncClient):
+async def test_tryon_unauthorized(client: AsyncClient):
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         json={
             "catalog_item_ids": [str(uuid.uuid4())],
             "prompt": "x",
@@ -659,13 +659,13 @@ async def test_playground_unauthorized(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_playground_unknown_item_id(client: AsyncClient, db):
+async def test_tryon_unknown_item_id(client: AsyncClient, db):
     signup_resp = await _signup(client, email="unknown@outfitter.dev")
     token = signup_resp.json()["access_token"]
     bogus = uuid.uuid4()
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={"catalog_item_ids": [str(bogus)], "prompt": "x"},
     )
@@ -674,13 +674,13 @@ async def test_playground_unknown_item_id(client: AsyncClient, db):
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_empty_prompt(client: AsyncClient, db):
+async def test_tryon_validation_empty_prompt(client: AsyncClient, db):
     signup_resp = await _signup(client, email="empty@outfitter.dev")
     token = signup_resp.json()["access_token"]
     item = await _seed_item(db)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={"catalog_item_ids": [str(item.id)], "prompt": ""},
     )
@@ -688,12 +688,12 @@ async def test_playground_validation_empty_prompt(client: AsyncClient, db):
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_no_items(client: AsyncClient, db):
+async def test_tryon_validation_no_items(client: AsyncClient, db):
     signup_resp = await _signup(client, email="noitems@outfitter.dev")
     token = signup_resp.json()["access_token"]
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={"catalog_item_ids": [], "prompt": "x"},
     )
@@ -701,12 +701,12 @@ async def test_playground_validation_no_items(client: AsyncClient, db):
 
 
 @pytest.mark.asyncio
-async def test_playground_validation_too_many_items(client: AsyncClient, db):
+async def test_tryon_validation_too_many_items(client: AsyncClient, db):
     signup_resp = await _signup(client, email="toomany@outfitter.dev")
     token = signup_resp.json()["access_token"]
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "catalog_item_ids": [str(uuid.uuid4()) for _ in range(17)],
@@ -717,7 +717,7 @@ async def test_playground_validation_too_many_items(client: AsyncClient, db):
 
 
 @pytest.mark.asyncio
-async def test_playground_proxy_error_maps_to_502(client: AsyncClient, db, monkeypatch):
+async def test_tryon_proxy_error_maps_to_502(client: AsyncClient, db, monkeypatch):
     from app.services.codex_image_service import CodexProxyError
 
     signup_resp = await _signup(client, email="proxyerr@outfitter.dev")
@@ -727,10 +727,10 @@ async def test_playground_proxy_error_maps_to_502(client: AsyncClient, db, monke
     async def boom(**_kwargs):
         raise CodexProxyError("500: upstream blew up")
 
-    monkeypatch.setattr("app.routers.playground.generate_outfit_image", boom)
+    monkeypatch.setattr("app.routers.tryon.generate_outfit_image", boom)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={"catalog_item_ids": [str(item.id)], "prompt": "x"},
     )
@@ -739,7 +739,7 @@ async def test_playground_proxy_error_maps_to_502(client: AsyncClient, db, monke
 
 
 @pytest.mark.asyncio
-async def test_playground_timeout_maps_to_504(client: AsyncClient, db, monkeypatch):
+async def test_tryon_timeout_maps_to_504(client: AsyncClient, db, monkeypatch):
     from app.services.codex_image_service import CodexProxyTimeout
 
     signup_resp = await _signup(client, email="timeout@outfitter.dev")
@@ -749,10 +749,10 @@ async def test_playground_timeout_maps_to_504(client: AsyncClient, db, monkeypat
     async def slow(**_kwargs):
         raise CodexProxyTimeout("read timeout")
 
-    monkeypatch.setattr("app.routers.playground.generate_outfit_image", slow)
+    monkeypatch.setattr("app.routers.tryon.generate_outfit_image", slow)
 
     response = await client.post(
-        "/playground/generate-image",
+        "/tryon/generate-image",
         headers={"Authorization": f"Bearer {token}"},
         json={"catalog_item_ids": [str(item.id)], "prompt": "x"},
     )
@@ -762,7 +762,7 @@ async def test_playground_timeout_maps_to_504(client: AsyncClient, db, monkeypat
 
 - [ ] **Step 2: Run the new tests**
 
-Run: `cd backend && pytest tests/test_playground.py -v`
+Run: `cd backend && pytest tests/test_tryon.py -v`
 Expected: all 7 tests PASS (the router from Task 5 already implements these branches).
 
 - [ ] **Step 3: Run the full backend suite for regressions**
@@ -773,8 +773,8 @@ Expected: all tests PASS (no regressions in catalog/wardrobe/auth/storage suites
 - [ ] **Step 4: Commit**
 
 ```bash
-git add backend/tests/test_playground.py
-git commit -m "test(playground): cover 401/404/422/502/504 error paths"
+git add backend/tests/test_tryon.py
+git commit -m "test(tryon): cover 401/404/422/502/504 error paths"
 ```
 
 ---
@@ -789,12 +789,12 @@ git commit -m "test(playground): cover 401/404/422/502/504 error paths"
 Add at the bottom of the file:
 
 ```javascript
-// ── Playground ───────────────────────────────────────────────────────────────
+// ── TryOn ───────────────────────────────────────────────────────────────
 
-export async function generatePlaygroundImage(payload) {
+export async function generateTryOnImage(payload) {
   // payload: { catalog_item_ids: string[], prompt: string,
   //            size?: string, quality?: string, n?: number }
-  return apiFetch("/playground/generate-image", { method: "POST", body: payload });
+  return apiFetch("/tryon/generate-image", { method: "POST", body: payload });
 }
 ```
 
@@ -807,7 +807,7 @@ Expected: no parse errors. (Next will catch any anyway on dev start.)
 
 ```bash
 git add admin/src/lib/api.js
-git commit -m "feat(admin): generatePlaygroundImage api helper"
+git commit -m "feat(admin): generateTryOnImage api helper"
 ```
 
 ---
@@ -817,7 +817,7 @@ git commit -m "feat(admin): generatePlaygroundImage api helper"
 **Files:**
 - Modify: `admin/src/components/Sidebar.js`
 
-- [ ] **Step 1: Add the Playground nav entry**
+- [ ] **Step 1: Add the TryOn nav entry**
 
 In `admin/src/components/Sidebar.js`:
 
@@ -867,7 +867,7 @@ const navItems = [
     { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
     { href: "/outfits", label: "Outfits", icon: Layers },
     { href: "/tryon", label: "Try-On", icon: Camera },
-    { href: "/playground", label: "Playground", icon: Sparkles },
+    { href: "/tryon", label: "TryOn", icon: Sparkles },
 ];
 ```
 
@@ -875,23 +875,23 @@ const navItems = [
 
 ```bash
 git add admin/src/components/Sidebar.js
-git commit -m "feat(admin): add Playground entry to sidebar"
+git commit -m "feat(admin): add TryOn entry to sidebar"
 ```
 
 ---
 
-## Task 9: Playground page
+## Task 9: TryOn page
 
 **Files:**
-- Create: `admin/src/app/playground/page.js`
+- Create: `admin/src/app/tryon/page.js`
 
 - [ ] **Step 1: Create the directory and file**
 
-Run: `mkdir -p admin/src/app/playground`
+Run: `mkdir -p admin/src/app/tryon`
 
 - [ ] **Step 2: Write the page component**
 
-Create `admin/src/app/playground/page.js` with this full content:
+Create `admin/src/app/tryon/page.js` with this full content:
 
 ```javascript
 "use client";
@@ -900,7 +900,7 @@ import { useEffect, useState } from "react";
 import {
     searchCatalog,
     getCatalogFilterOptions,
-    generatePlaygroundImage,
+    generateTryOnImage,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -950,7 +950,7 @@ const QUALITY_OPTIONS = [
     { value: "low", label: "Low" },
 ];
 
-export default function PlaygroundPage() {
+export default function TryOnPage() {
     // catalog
     const [filters, setFilters] = useState({});
     const [filterOptions, setFilterOptions] = useState(null);
@@ -1024,7 +1024,7 @@ export default function PlaygroundPage() {
         }
         setGenerating(true);
         try {
-            const data = await generatePlaygroundImage({
+            const data = await generateTryOnImage({
                 catalog_item_ids: Array.from(selected.keys()),
                 prompt,
                 size,
@@ -1044,7 +1044,7 @@ export default function PlaygroundPage() {
     function downloadImage(dataUrl, index) {
         const link = document.createElement("a");
         link.href = dataUrl;
-        link.download = `playground-${Date.now()}-${index}.png`;
+        link.download = `tryon-${Date.now()}-${index}.png`;
         link.click();
     }
 
@@ -1058,7 +1058,7 @@ export default function PlaygroundPage() {
             <div>
                 <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-indigo-400" />
-                    Playground
+                    TryOn
                 </h1>
                 <p className="text-slate-400 mt-1">
                     Pick catalog items, write a prompt, and generate images via gpt-image-2.
@@ -1351,8 +1351,8 @@ export default function PlaygroundPage() {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add admin/src/app/playground/page.js
-git commit -m "feat(admin): playground page with item picker, prompt, and result grid"
+git add admin/src/app/tryon/page.js
+git commit -m "feat(admin): tryon page with item picker, prompt, and result grid"
 ```
 
 ---
@@ -1367,7 +1367,7 @@ In one terminal:
 ```bash
 cd backend && uvicorn app.main:app --reload --port 8000
 ```
-Expected: server starts; `/playground/generate-image` appears in the OpenAPI docs at `http://localhost:8000/docs`.
+Expected: server starts; `/tryon/generate-image` appears in the OpenAPI docs at `http://localhost:8000/docs`.
 
 - [ ] **Step 2: Start the admin dev server**
 
@@ -1386,8 +1386,8 @@ If the proxy isn't running, the test in step 6 will fail with a 502/504 — that
 
 - [ ] **Step 4: Visual checks (no generation)**
 
-In the browser, log in to the admin panel and click **Playground** in the sidebar.
-- Verify the new sidebar entry is present and active when on `/playground`.
+In the browser, log in to the admin panel and click **TryOn** in the sidebar.
+- Verify the new sidebar entry is present and active when on `/tryon`.
 - Verify the empty selection rail says "No items selected yet."
 - Verify the catalog grid loads with thumbnails.
 - Click 2-3 items: each gets the indigo ring + checkmark; each appears in the rail with an X to remove.
@@ -1414,7 +1414,7 @@ In a `psql` shell against the dev DB (or sqlite if local):
 ```sql
 SELECT count(*) FROM catalog_items;
 ```
-Expected: count is the same before and after a generation (no rows added by playground).
+Expected: count is the same before and after a generation (no rows added by tryon).
 
 - [ ] **Step 7: Run the full backend test suite again**
 
@@ -1425,8 +1425,8 @@ Expected: all tests PASS.
 
 If steps 4-6 surfaced a small UI fix, commit it now:
 ```bash
-git add admin/src/app/playground/page.js
-git commit -m "fix(admin/playground): <describe fix>"
+git add admin/src/app/tryon/page.js
+git commit -m "fix(admin/tryon): <describe fix>"
 ```
 Otherwise, no commit needed.
 
@@ -1455,8 +1455,8 @@ Otherwise, no commit needed.
 
 **No placeholders verified.** Every code block is concrete; no "TBD" / "implement later" / "similar to Task N".
 
-**Type / signature consistency.** `generate_outfit_image(reference_urls, prompt, size, quality, n)` is defined in Task 3, error-wrapped in Task 4, called by keyword in Task 5, and patched by keyword in Task 6 — names match. `PlaygroundGenerateRequest` and `PlaygroundGenerateResponse` defined in Task 1 are used in Task 5. `CodexProxyError` / `CodexProxyTimeout` / `ReferenceImageError` defined in Task 3 (re-tightened in Task 4) are caught by name in Task 5 and patched in Task 6.
+**Type / signature consistency.** `generate_outfit_image(reference_urls, prompt, size, quality, n)` is defined in Task 3, error-wrapped in Task 4, called by keyword in Task 5, and patched by keyword in Task 6 — names match. `TryOnGenerateRequest` and `TryOnGenerateResponse` defined in Task 1 are used in Task 5. `CodexProxyError` / `CodexProxyTimeout` / `ReferenceImageError` defined in Task 3 (re-tightened in Task 4) are caught by name in Task 5 and patched in Task 6.
 
-**Backend test count cross-check.** Spec §8.1 enumerates 8 tests; this plan creates 8 (3 in test_codex_image_service.py: happy + 2 errors via test ergonomics; plus 7 in test_playground.py: happy + 401 + 404 + 422×3 + 502 + 504 = 11 — meets and exceeds the spec list).
+**Backend test count cross-check.** Spec §8.1 enumerates 8 tests; this plan creates 8 (3 in test_codex_image_service.py: happy + 2 errors via test ergonomics; plus 7 in test_tryon.py: happy + 401 + 404 + 422×3 + 502 + 504 = 11 — meets and exceeds the spec list).
 
 **Order of operations.** Schemas → settings → service (with tests) → router (with tests) → frontend api → sidebar → page → smoke. No task depends on a later task.

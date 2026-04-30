@@ -6,7 +6,7 @@ import 'package:fashion_app/core/theme/app_colors.dart';
 import 'package:fashion_app/core/utils/error_helpers.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
 import 'package:fashion_app/features/assistant/data/outfit_repository.dart';
-import 'package:fashion_app/features/playground/providers/slot_builder_provider.dart';
+import 'package:fashion_app/features/tryon/providers/slot_builder_provider.dart';
 
 class TryOnResultView extends ConsumerWidget {
   final String imageUrl;
@@ -22,7 +22,7 @@ class TryOnResultView extends ConsumerWidget {
     final slots = ref.read(slotBuilderProvider);
     try {
       await ref.read(outfitRepositoryProvider).save(
-            source: 'playground',
+            source: 'tryon',
             slots: slots.slotIds,
             generatedImageUrl: imageUrl,
           );

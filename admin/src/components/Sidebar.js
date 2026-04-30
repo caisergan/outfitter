@@ -7,7 +7,6 @@ import {
     Search,
     Shirt,
     Layers,
-    Camera,
     Sparkles,
     Settings,
 } from "lucide-react";
@@ -18,8 +17,7 @@ const navItems = [
     { href: "/catalog", label: "Catalog", icon: Search },
     { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
     { href: "/outfits", label: "Outfits", icon: Layers },
-    { href: "/tryon", label: "Try-On", icon: Camera },
-    { href: "/playground", label: "Playground", icon: Sparkles },
+    { href: "/tryon", label: "Try-On Studio", icon: Sparkles },
     { href: "/admin/system-prompt", label: "Admin", icon: Settings },
 ];
 

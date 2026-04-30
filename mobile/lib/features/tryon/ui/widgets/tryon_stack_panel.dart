@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/core/models/catalog_item.dart';
 import 'package:fashion_app/core/widgets/shared_widgets.dart';
-import 'package:fashion_app/features/playground/providers/slot_builder_provider.dart';
+import 'package:fashion_app/features/tryon/providers/slot_builder_provider.dart';
 import 'item_browser_sheet.dart';
 
-class PlaygroundStackPanel extends ConsumerWidget {
-  const PlaygroundStackPanel({super.key});
+class TryOnStackPanel extends ConsumerWidget {
+  const TryOnStackPanel({super.key});
 
   void _openSlotBrowser(BuildContext context, WidgetRef ref, SlotType type) {
     showModalBottomSheet(

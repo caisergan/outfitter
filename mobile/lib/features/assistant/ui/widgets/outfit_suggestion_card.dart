@@ -53,7 +53,7 @@ class OutfitSuggestionCard extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => context.go('/playground', extra: {
+                        onPressed: () => context.go('/tryon', extra: {
                           'slots':
                               outfit.slots.map((k, v) => MapEntry(k, v.id)),
                         }),

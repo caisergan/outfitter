@@ -3,7 +3,7 @@ import 'package:fashion_app/core/models/catalog_filter_options.dart';
 import 'package:fashion_app/core/models/catalog_item.dart';
 import 'package:fashion_app/core/models/slot_type.dart';
 import 'package:fashion_app/features/discover/data/catalog_repository.dart';
-import 'package:fashion_app/features/playground/ui/widgets/item_browser_sheet.dart';
+import 'package:fashion_app/features/tryon/ui/widgets/item_browser_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,8 +50,8 @@ void main() {
           onItemSelected: (_) {},
         ),
       ),
-      );
-      await tester.pumpAndSettle();
+    );
+    await tester.pumpAndSettle();
 
     expect(repository.searchPageCalls, [(category: 'bag', offset: 0)]);
     expect(find.text('All'), findsNothing);

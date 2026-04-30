@@ -78,13 +78,13 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
-      final notifier = AuthNotifier(
-        ref.read(dioProvider),
-        ref.read(tokenStorageProvider),
-      );
-      ref.listen<int>(unauthorizedEventProvider, (previous, next) {
-        if (previous == next) return;
-        notifier.handleUnauthorized();
-      });
-      return notifier;
-    });
+  final notifier = AuthNotifier(
+    ref.read(dioProvider),
+    ref.read(tokenStorageProvider),
+  );
+  ref.listen<int>(unauthorizedEventProvider, (previous, next) {
+    if (previous == next) return;
+    notifier.handleUnauthorized();
+  });
+  return notifier;
+});

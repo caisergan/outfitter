@@ -8,8 +8,7 @@ class AssistantNotifier
   final OutfitRepository _repo;
   AssistantParams? _lastParams;
 
-  AssistantNotifier(this._repo)
-      : super(const AsyncValue.data([]));
+  AssistantNotifier(this._repo) : super(const AsyncValue.data([]));
 
   Future<void> suggest(AssistantParams params) async {
     _lastParams = params;
@@ -17,7 +16,7 @@ class AssistantNotifier
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard(
-          () => _repo.suggest(params),
+      () => _repo.suggest(params),
     );
 
     // ✅ FIX: prevent crash after dispose
@@ -33,13 +32,12 @@ class AssistantNotifier
   }
 }
 
-final assistantNotifierProvider =
-StateNotifierProvider<AssistantNotifier,
+final assistantNotifierProvider = StateNotifierProvider<AssistantNotifier,
     AsyncValue<List<OutfitSuggestion>>>(
-      (ref) => AssistantNotifier(ref.read(outfitRepositoryProvider)),
+  (ref) => AssistantNotifier(ref.read(outfitRepositoryProvider)),
 );
 
 final savedOutfitsProvider =
-FutureProvider.autoDispose<List<SavedOutfit>>((ref) {
+    FutureProvider.autoDispose<List<SavedOutfit>>((ref) {
   return ref.read(outfitRepositoryProvider).listSaved();
 });

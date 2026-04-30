@@ -21,6 +21,16 @@ class CatalogRepository {
     });
   }
 
+  Future<CatalogItem?> getItem(String id) async {
+    try {
+      final response = await _dio.get(ApiEndpoints.catalogItem(id));
+      return _catalogItemFromApi(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   Future<({List<CatalogItem> items, int total})> searchPage({
     String? category,
     String? subtype,
@@ -118,7 +128,9 @@ class CatalogRepository {
     }
 
     final remainingOffsets = <int>[];
-    for (var offset = items.length; offset < total; offset += _catalogPageSize) {
+    for (var offset = items.length;
+        offset < total;
+        offset += _catalogPageSize) {
       remainingOffsets.add(offset);
     }
 

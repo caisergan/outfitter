@@ -48,7 +48,7 @@ Has a large wardrobe and struggles to rediscover items. Wants to digitize her cl
 | Tab | Responsibility |
 |-----|---------------|
 | **Discover** | Curated outfit feed, seasonal edits, occasion collections |
-| **Playground** | Drag-and-drop outfit builder + AI photorealistic try-on |
+| **TryOn** | Drag-and-drop outfit builder + AI photorealistic try-on |
 | **Assistant** | Parameter-driven AI outfit suggestions |
 | **Wardrobe** | User's personal digital closet |
 
@@ -56,7 +56,7 @@ Has a large wardrobe and struggles to rediscover items. Wants to digitize her cl
 
 ### 2.3 User Stories & Acceptance Criteria
 
-#### Feature: Playground
+#### Feature: TryOn
 
 **US-1:** As a user, I want to assemble an outfit by selecting items for each clothing slot so that I can visualize a complete look before generating a try-on.
 
@@ -86,7 +86,7 @@ Has a large wardrobe and struggles to rediscover items. Wants to digitize her cl
 
 - All saved generations appear in a personal Lookbook grid
 - Each saved look retains its full item list (slots + items) for future reference
-- Tapping a look re-opens it in Playground with slots pre-filled
+- Tapping a look re-opens it in TryOn with slots pre-filled
 
 ---
 
@@ -108,16 +108,16 @@ Has a large wardrobe and struggles to rediscover items. Wants to digitize her cl
 - Each card shows stacked raw product images (Top → Bottom → Shoes → extras), item name, and brand
 - Tapping any item opens a detail sheet: product info, brand, and buy link
 - "Refresh" generates a new batch using the same parameters
-- "Try On" sends the full outfit to Playground with all slots pre-filled
+- "Try On" sends the full outfit to TryOn with all slots pre-filled
 - "Save Outfit" saves to Lookbook without generating a try-on image
 
-**US-6:** As a user, I want the "Try On" button to seamlessly hand off the suggested outfit to Playground so that I don't have to re-select items manually.
+**US-6:** As a user, I want the "Try On" button to seamlessly hand off the suggested outfit to TryOn so that I don't have to re-select items manually.
 
 *Acceptance Criteria:*
 
-- All slots in Playground are pre-filled with the suggested outfit items
+- All slots in TryOn are pre-filled with the suggested outfit items
 - User can swap individual items before tapping "Generate"
-- Navigation goes directly to Playground tab
+- Navigation goes directly to TryOn tab
 
 ---
 
@@ -130,7 +130,7 @@ Has a large wardrobe and struggles to rediscover items. Wants to digitize her cl
 - "+" triggers camera; supports flat-lay and hanging photos
 - AI detects: category, subtype, dominant colors, pattern, fit, style tags within 5 seconds of photo submission
 - Confirmation card shown before saving; user can correct any detected tag
-- Item saved and immediately available in Playground slot browser and Assistant
+- Item saved and immediately available in TryOn slot browser and Assistant
 
 **US-8:** As a user, I want to browse and filter my wardrobe so that I can find specific items quickly.
 
@@ -170,7 +170,7 @@ Has a large wardrobe and struggles to rediscover items. Wants to digitize her cl
 
 | Component | Model / API | Purpose |
 |-----------|-------------|---------|
-| Try-on generation | Kling API | Photorealistic outfit rendering in Playground |
+| Try-on generation | Kling API | Photorealistic outfit rendering in TryOn |
 | Semantic item matching | CLIP (OpenAI ViT-based) | Embedding catalog + wardrobe items for similarity search |
 | Outfit suggestion logic | Claude (Anthropic) | Generating outfit combos from parameters, style note generation |
 | Wardrobe auto-tagging | Claude (vision) | Classifying photographed clothing items |
@@ -252,7 +252,7 @@ created_at, updated_at
 **saved_outfits**
 
 ```
-id, user_id, source (playground | assistant), slots (JSONB),
+id, user_id, source (tryon | assistant), slots (JSONB),
 generated_image_url, created_at
 ```
 
@@ -294,7 +294,7 @@ generated_image_url, created_at
 
 #### MVP (Phase 1)
 
-- Playground: slot builder, Kling try-on with default model, Lookbook save
+- TryOn: slot builder, Kling try-on with default model, Lookbook save
 - Assistant: parameter screen + outfit card swiper, Try On handoff, Save Outfit
 - Wardrobe: camera add, Claude auto-tagging, category browsing, item detail
 - Discover tab: static curated feed (manually curated content, no personalization)
@@ -305,7 +305,7 @@ generated_image_url, created_at
 
 - "Use my photo" try-on (user selfie → Kling)
 - Catalog expanded: Stradivarius, Bershka
-- Playground: Regenerate with new pose/lighting
+- TryOn: Regenerate with new pose/lighting
 - Wardrobe: "Find matching items" → Assistant anchor piece
 - Discover: personalization based on saved outfit tags
 

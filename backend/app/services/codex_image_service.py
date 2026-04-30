@@ -135,7 +135,7 @@ async def generate_outfit_image_bytes(
 ) -> list[bytes]:
     """Generate via gpt-image-2 and return the raw decoded PNG bytes per result.
 
-    Used by the playground router so generated images can be uploaded to R2
+    Used by the tryon router so generated images can be uploaded to R2
     rather than round-tripped as base64 data URLs.
     """
     async with httpx.AsyncClient() as client:

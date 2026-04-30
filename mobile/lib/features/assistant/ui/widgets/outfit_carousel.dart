@@ -73,9 +73,8 @@ class _OutfitCarouselState extends State<OutfitCarousel> {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _currentPage == index
-                    ? AppColors.blush
-                    : AppColors.border,
+                color:
+                    _currentPage == index ? AppColors.blush : AppColors.border,
               ),
             ),
           ),

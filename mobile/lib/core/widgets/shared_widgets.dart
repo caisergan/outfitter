@@ -108,9 +108,7 @@ class FilterChipRow extends StatelessWidget {
               label: Text(
                 opt,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: isSelected
-                          ? AppColors.text
-                          : AppColors.textMuted,
+                      color: isSelected ? AppColors.text : AppColors.textMuted,
                     ),
               ),
               selected: isSelected,

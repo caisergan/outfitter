@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/models/outfit_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/shared_widgets.dart';
-import '/features/playground/ui/playground_screen.dart';
+import '/features/tryon/ui/tryon_screen.dart';
 
 class SwipeOutfitsScreen extends StatefulWidget {
   final List<OutfitSuggestion> outfits;
@@ -158,7 +158,8 @@ class _SwipeCardState extends State<SwipeCard> {
 
     return Positioned.fill(
       child: GestureDetector(
-        onPanUpdate: widget.isTop ? (d) => setState(() => position += d.delta) : null,
+        onPanUpdate:
+            widget.isTop ? (d) => setState(() => position += d.delta) : null,
         onPanEnd: (_) => _handleSwipe(),
         child: Transform.translate(
           offset: position,
@@ -176,49 +177,49 @@ class _SwipeCardState extends State<SwipeCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final h = constraints.maxHeight;
-                          final w = constraints.maxWidth;
-                          return Stack(
-                            children: [
-                              // BOTTOM (pants) — back layer
-                              Positioned(
-                                top: h * 0.30,
-                                left: 0,
-                                width: w,
-                                height: h * 0.65,
-                                child: CachedItemImage(
-                                  url: slots['bottom']!.imageUrl,
-                                  fit: BoxFit.contain,
-                                ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final h = constraints.maxHeight;
+                        final w = constraints.maxWidth;
+                        return Stack(
+                          children: [
+                            // Bottom layer.
+                            Positioned(
+                              top: h * 0.30,
+                              left: 0,
+                              width: w,
+                              height: h * 0.65,
+                              child: CachedItemImage(
+                                url: slots['bottom']!.imageUrl,
+                                fit: BoxFit.contain,
                               ),
-                              // TOP — middle layer
-                              Positioned(
-                                top: h * 0.00,
-                                left: 0,
-                                width: w,
-                                height: h * 0.70,
-                                child: CachedItemImage(
-                                  url: slots['top']!.imageUrl,
-                                  fit: BoxFit.contain,
-                                ),
+                            ),
+                            // Middle layer.
+                            Positioned(
+                              top: h * 0.00,
+                              left: 0,
+                              width: w,
+                              height: h * 0.70,
+                              child: CachedItemImage(
+                                url: slots['top']!.imageUrl,
+                                fit: BoxFit.contain,
                               ),
-                              // SHOES — front layer
-                              Positioned(
-                                top: h * 0.70,
-                                left: 0,
-                                width: w,
-                                height: h * 0.32,
-                                child: CachedItemImage(
-                                  url: slots['shoes']!.imageUrl,
-                                  fit: BoxFit.contain,
-                                ),
+                            ),
+                            // Front layer.
+                            Positioned(
+                              top: h * 0.70,
+                              left: 0,
+                              width: w,
+                              height: h * 0.32,
+                              child: CachedItemImage(
+                                url: slots['shoes']!.imageUrl,
+                                fit: BoxFit.contain,
                               ),
-                            ],
-                          );
-                        },
-                      ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Text(
@@ -283,23 +284,6 @@ class _SwipeCardState extends State<SwipeCard> {
 
     setState(() => position = Offset.zero);
   }
-
-  Widget _item(SlotItem? item) {
-    if (item == null) return const SizedBox();
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: AppColors.surfaceAlt,
-      ),
-      clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.all(12),
-      child: CachedItemImage(
-        url: item.imageUrl,
-        fit: BoxFit.contain,
-      ),
-    );
-  }
 }
 
 class _LikedCard extends StatelessWidget {
@@ -310,14 +294,6 @@ class _LikedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final slots = outfit.slots;
-
-    final accessories = slots.entries
-        .where((entry) =>
-            entry.key != 'top' &&
-            entry.key != 'bottom' &&
-            entry.key != 'shoes')
-        .map((entry) => entry.value)
-        .toList();
 
     return Material(
       color: AppColors.surface,
@@ -338,7 +314,7 @@ class _LikedCard extends StatelessWidget {
                   final w = constraints.maxWidth;
                   return Stack(
                     children: [
-                      // BOTTOM (pants) — back layer
+                      // Bottom layer.
                       Positioned(
                         top: h * 0.30,
                         left: 0,
@@ -349,7 +325,7 @@ class _LikedCard extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                       ),
-                      // TOP — middle layer
+                      // Middle layer.
                       Positioned(
                         top: h * 0.00,
                         left: 0,
@@ -360,7 +336,7 @@ class _LikedCard extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                       ),
-                      // SHOES — front layer
+                      // Front layer.
                       Positioned(
                         top: h * 0.65,
                         left: 0,
@@ -391,7 +367,7 @@ class _LikedCard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => PlaygroundScreen(
+                    builder: (_) => TryOnScreen(
                       prefilledSlots: {
                         'top': outfit.slots['top']?.imageUrl ?? '',
                         'bottom': outfit.slots['bottom']?.imageUrl ?? '',

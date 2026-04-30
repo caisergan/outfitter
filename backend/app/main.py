@@ -5,8 +5,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, catalog, wardrobe, outfits, tryon, storage
-from app.routers.playground import router as playground
+from app.routers import (
+    auth,
+    catalog,
+    outfits,
+    storage,
+    tryon_router,
+    wardrobe,
+)
 
 logging.basicConfig(level=settings.LOG_LEVEL.upper())
 logger = logging.getLogger(__name__)
@@ -40,9 +46,8 @@ app.include_router(auth)
 app.include_router(catalog)
 app.include_router(wardrobe)
 app.include_router(outfits)
-app.include_router(tryon)
+app.include_router(tryon_router)
 app.include_router(storage)
-app.include_router(playground)
 
 
 @app.get("/health", tags=["health"])

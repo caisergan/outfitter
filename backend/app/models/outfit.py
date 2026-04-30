@@ -11,7 +11,7 @@ from app.database import Base
 class SavedOutfit(Base):
     __tablename__ = "saved_outfits"
     __table_args__ = (
-        CheckConstraint("source IN ('playground', 'assistant')", name="ck_saved_outfits_source"),
+        CheckConstraint("source IN ('tryon', 'assistant')", name="ck_saved_outfits_source"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

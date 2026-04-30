@@ -71,14 +71,15 @@ class ModelPersona(Base, TimestampMixin):
     )
 
 
-class PlaygroundRun(Base):
-    __tablename__ = "playground_runs"
+class TryOnRun(Base):
+    __tablename__ = "tryon_runs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('success','failed')", name="ck_playground_runs_status"
+            "status IN ('pending','success','failed')",
+            name="ck_tryon_runs_status",
         ),
         Index(
-            "ix_playground_runs_user_id_created_at",
+            "ix_tryon_runs_user_id_created_at",
             "user_id",
             "created_at",
         ),

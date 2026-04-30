@@ -58,10 +58,10 @@ export default function AdminLayout({ children }) {
                             UPDATE users SET role = 'admin' WHERE email = '...';
                         </pre>
                         <Link
-                            href="/playground"
+                            href="/tryon"
                             className="text-xs text-indigo-400 hover:text-indigo-300 underline"
                         >
-                            Back to playground
+                            Back to try-on
                         </Link>
                     </div>
                 </div>

@@ -42,10 +42,11 @@ class ItemDetailSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(item.brand,
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: AppColors.textMuted,
-                              letterSpacing: 0.8,
-                            )),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: AppColors.textMuted,
+                                  letterSpacing: 0.8,
+                                )),
                     const SizedBox(height: 4),
                     Text(item.name,
                         style: Theme.of(context).textTheme.titleLarge),

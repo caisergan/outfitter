@@ -148,7 +148,7 @@ class ProfileScreen extends ConsumerWidget {
         .read(profileNotifierProvider.notifier)
         .markRecentlyViewed(outfit.id);
     if (!context.mounted) return;
-    context.go('/playground', extra: {'slots': outfit.slots});
+    context.go('/tryon', extra: {'slots': outfit.slots});
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {

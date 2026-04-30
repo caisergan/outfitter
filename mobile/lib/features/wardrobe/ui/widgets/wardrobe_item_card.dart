@@ -54,10 +54,11 @@ class WardrobeItemCard extends StatelessWidget {
                     if (colorLabel != null) ...[
                       Text(
                         colorLabel.toUpperCase(),
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: AppColors.textMuted,
-                              letterSpacing: 1.0,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: AppColors.textMuted,
+                                  letterSpacing: 1.0,
+                                ),
                       ),
                       const SizedBox(height: 6),
                     ],
@@ -83,9 +84,8 @@ class WardrobeItemCard extends StatelessWidget {
   String _titleCase(String value) {
     return value
         .split(' ')
-        .map((word) => word.isEmpty
-            ? word
-            : word[0].toUpperCase() + word.substring(1))
+        .map((word) =>
+            word.isEmpty ? word : word[0].toUpperCase() + word.substring(1))
         .join(' ');
   }
 }
