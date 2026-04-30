@@ -11,6 +11,8 @@ import {
     fetchPlaygroundRuns,
     fetchPlaygroundRun,
     getCatalogItem,
+    getMe,
+    createPlaygroundTemplate,
 } from "@/lib/api";
 import {
     GLOBAL_SYSTEM_PROMPT,
@@ -50,6 +52,8 @@ import {
     History,
     Eye,
     RefreshCw,
+    Bookmark,
+    Save,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -144,8 +148,27 @@ export default function PlaygroundPage() {
     const [viewingRun, setViewingRun] = useState(null);
     const [viewingRunLoading, setViewingRunLoading] = useState(false);
 
+    // current user (for admin gates)
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // save-as-template dialog
+    const [savingTemplate, setSavingTemplate] = useState(false);
+    const [saveAsOpen, setSaveAsOpen] = useState(false);
+    const [saveAsForm, setSaveAsForm] = useState({
+        slug: "",
+        label: "",
+        description: "",
+    });
+
     useEffect(() => {
         getCatalogFilterOptions().then(setFilterOptions).catch(() => {});
+    }, []);
+
+    // Mount-only: fetch the current user so we can gate admin-only affordances.
+    useEffect(() => {
+        getMe()
+            .then(setCurrentUser)
+            .catch(() => setCurrentUser(null));
     }, []);
 
     // Mount-only: load the user's recent runs.
@@ -450,6 +473,66 @@ export default function PlaygroundPage() {
             toast.error(`Reproduce failed: ${err.message}`);
         } finally {
             setReproducing(false);
+        }
+    }
+
+    function openSaveAsTemplate() {
+        // Auto-suggest a slug from the current template's slug if available, else
+        // a timestamped fallback. User can edit before submitting.
+        const baseSlug = template?.slug ?? "custom";
+        const suffix = Math.random().toString(36).slice(2, 6);
+        setSaveAsForm({
+            slug: `${baseSlug}_${suffix}`,
+            label: template?.label ? `${template.label} (custom)` : "Custom template",
+            description: "",
+        });
+        setSaveAsOpen(true);
+    }
+
+    async function submitSaveAsTemplate() {
+        const slug = saveAsForm.slug.trim();
+        if (!/^[a-z0-9_]+$/.test(slug)) {
+            toast.error("Slug must be lowercase letters, digits, or underscores");
+            return;
+        }
+        if (!saveAsForm.label.trim()) {
+            toast.error("Label required");
+            return;
+        }
+        if (!prompt.trim()) {
+            toast.error("Variation notes are empty");
+            return;
+        }
+        setSavingTemplate(true);
+        try {
+            const created = await createPlaygroundTemplate({
+                slug,
+                label: saveAsForm.label,
+                description: saveAsForm.description || null,
+                body: prompt,
+            });
+            // Refresh the templates list and switch the dropdown to the new row.
+            const fresh = await fetchPlaygroundTemplates();
+            setTemplates(fresh);
+            setTemplateId(created.id);
+            // The new template's body equals the current prompt, so the next
+            // sync useEffect will see lastApplied differing and won't overwrite.
+            // Force lastApplied to match so the dirty badge clears.
+            lastAppliedComposed.current = composeUserPrompt({
+                template: created,
+                persona,
+            });
+            setPrompt(lastAppliedComposed.current);
+            toast.success(`Saved as template "${created.slug}"`);
+            setSaveAsOpen(false);
+        } catch (err) {
+            if (err.status === 409) {
+                toast.error("Slug already exists; pick a different one");
+            } else {
+                toast.error(err.message);
+            }
+        } finally {
+            setSavingTemplate(false);
         }
     }
 
@@ -856,14 +939,26 @@ export default function PlaygroundPage() {
                         )}
                     </div>
                     {isUserPromptDirty && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={resetUserPrompt}
-                            className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
-                        >
-                            <RotateCcw className="w-3 h-3 mr-1" /> Reset
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            {currentUser?.role === "admin" && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={openSaveAsTemplate}
+                                    className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                                >
+                                    <Bookmark className="w-3 h-3 mr-1" /> Save as template
+                                </Button>
+                            )}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={resetUserPrompt}
+                                className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7"
+                            >
+                                <RotateCcw className="w-3 h-3 mr-1" /> Reset
+                            </Button>
+                        </div>
                     )}
                 </div>
                 <Textarea
@@ -1160,6 +1255,94 @@ export default function PlaygroundPage() {
                     </div>
                 )}
             </Card>
+
+            {/* Save as template — admin-only, opens from variation-notes card */}
+            <Dialog
+                open={saveAsOpen}
+                onOpenChange={(open) => !open && !savingTemplate && setSaveAsOpen(false)}
+            >
+                <DialogContent className="bg-slate-900 border-slate-800 max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-100 flex items-center gap-2">
+                            <Bookmark className="w-4 h-4" /> Save as template
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 text-xs">
+                            Persists the current variation notes as a new active template.
+                            The body is taken verbatim from the textarea — keep
+                            {" {{MODEL}}"} in the body so persona swaps still work.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Slug</Label>
+                            <Input
+                                value={saveAsForm.slug}
+                                onChange={(e) =>
+                                    setSaveAsForm((f) => ({ ...f, slug: e.target.value }))
+                                }
+                                placeholder="lowercase_with_underscores"
+                                className="bg-slate-800 border-slate-700 text-slate-100"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Label</Label>
+                            <Input
+                                value={saveAsForm.label}
+                                onChange={(e) =>
+                                    setSaveAsForm((f) => ({ ...f, label: e.target.value }))
+                                }
+                                className="bg-slate-800 border-slate-700 text-slate-100"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Description</Label>
+                            <Input
+                                value={saveAsForm.description}
+                                onChange={(e) =>
+                                    setSaveAsForm((f) => ({ ...f, description: e.target.value }))
+                                }
+                                placeholder="Optional one-line summary"
+                                className="bg-slate-800 border-slate-700 text-slate-100"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Body (from textarea)</Label>
+                            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-slate-950 border border-slate-800 rounded-md p-3 max-h-40 overflow-auto">
+                                {prompt || "(empty)"}
+                            </pre>
+                            {!prompt.includes("{{MODEL}}") && (
+                                <p className="text-[11px] text-amber-400">
+                                    Note: body has no {"{{MODEL}}"} placeholder; persona
+                                    swaps will not change this template's output.
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSaveAsOpen(false)}
+                                disabled={savingTemplate}
+                                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={submitSaveAsTemplate}
+                                disabled={savingTemplate}
+                                className="bg-indigo-600 hover:bg-indigo-700"
+                            >
+                                {savingTemplate ? (
+                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Saving…</>
+                                ) : (
+                                    <><Save className="w-3 h-3 mr-1" /> Create template</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* View full run modal — fetches fresh signed URLs each open */}
             <Dialog
