@@ -8,13 +8,15 @@ class CatalogItem with _$CatalogItem {
   const factory CatalogItem({
     required String id,
     required String brand,
-    required String category,
-    String? subtype,
+    required String slot,
+    String? category,
+    String? subcategory,
     required String name,
     required List<String> color,
-    String? pattern,
+    List<String>? pattern,
     String? fit,
     @JsonKey(name: 'style_tags') required List<String> styleTags,
+    @JsonKey(name: 'occasion_tags') List<String>? occasionTags,
     @JsonKey(name: 'image_url') required String imageUrl,
     @JsonKey(name: 'product_url') String? productUrl,
   }) = _CatalogItem;

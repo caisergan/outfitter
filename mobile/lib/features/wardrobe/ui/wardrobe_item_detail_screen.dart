@@ -72,7 +72,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              (resolvedItem.category).toUpperCase(),
+                              (resolvedItem.category ?? resolvedItem.slot).toUpperCase(),
                               style: Theme.of(context)
                                   .textTheme
                                   .labelMedium
@@ -84,7 +84,9 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                             const SizedBox(height: 8),
                             Text(
                               _titleCase(
-                                resolvedItem.subtype ?? resolvedItem.category,
+                                resolvedItem.subcategory ??
+                                    resolvedItem.category ??
+                                    resolvedItem.slot,
                               ),
                               style: Theme.of(context)
                                   .textTheme
@@ -128,19 +130,25 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 18),
                             _MetaField(
-                              label: 'Type',
-                              value: _titleCase(
-                                resolvedItem.subtype ?? resolvedItem.category,
+                              label: 'Slot',
+                              value: _titleCase(resolvedItem.slot),
+                            ),
+                            if (resolvedItem.category != null)
+                              _MetaField(
+                                label: 'Category',
+                                value: _titleCase(resolvedItem.category!),
                               ),
-                            ),
-                            _MetaField(
-                              label: 'Category',
-                              value: _titleCase(resolvedItem.category),
-                            ),
+                            if (resolvedItem.subcategory != null)
+                              _MetaField(
+                                label: 'Subcategory',
+                                value: _titleCase(resolvedItem.subcategory!),
+                              ),
                             if (resolvedItem.pattern?.isNotEmpty ?? false)
                               _MetaField(
                                 label: 'Pattern',
-                                value: _titleCase(resolvedItem.pattern!),
+                                value: resolvedItem.pattern!
+                                    .map(_titleCase)
+                                    .join(', '),
                               ),
                             if (resolvedItem.fit?.isNotEmpty ?? false)
                               _MetaField(
@@ -235,8 +243,7 @@ class WardrobeItemDetailScreen extends ConsumerWidget {
     WardrobeItem current,
   ) {
     final similar = items
-        .where((item) =>
-            item.id != current.id && item.category == current.category)
+        .where((item) => item.id != current.id && item.slot == current.slot)
         .take(4)
         .toList();
 

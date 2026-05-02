@@ -23,19 +23,25 @@ class TagConfirmationSheet extends ConsumerStatefulWidget {
 }
 
 class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
-  late String _category;
+  late String _slot;
   late List<String> _color;
-  String? _subtype;
+  String? _category;
+  String? _subcategory;
   late List<String> _styleTags;
+  List<String>? _occasionTags;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _category = widget.initialTags.category;
+    _slot = widget.initialTags.slot;
     _color = List.from(widget.initialTags.color);
-    _subtype = widget.initialTags.subtype;
+    _category = widget.initialTags.category;
+    _subcategory = widget.initialTags.subcategory;
     _styleTags = List.from(widget.initialTags.styleTags);
+    _occasionTags = widget.initialTags.occasionTags == null
+        ? null
+        : List.from(widget.initialTags.occasionTags!);
   }
 
   Future<void> _handleSave() async {
@@ -43,10 +49,12 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
     try {
       final request = CreateWardrobeItemRequest(
         imageUrl: widget.imageUrl,
+        slot: _slot,
         category: _category,
-        subtype: _subtype,
+        subcategory: _subcategory,
         color: _color,
         styleTags: _styleTags,
+        occasionTags: _occasionTags,
       );
       await ref.read(wardrobeNotifierProvider.notifier).addItem(request);
       if (mounted) Navigator.pop(context, true);
@@ -106,14 +114,20 @@ class _TagConfirmationSheetState extends ConsumerState<TagConfirmationSheet> {
                     child: Column(
                       children: [
                         _InfoRow(
-                          label: 'Category',
-                          value: _titleCase(_category),
+                          label: 'Slot',
+                          value: _titleCase(_slot),
                         ),
                         _InfoRow(
-                          label: 'Type',
-                          value: _subtype == null || _subtype!.isEmpty
+                          label: 'Category',
+                          value: _category == null || _category!.isEmpty
                               ? 'Not detected'
-                              : _titleCase(_subtype!),
+                              : _titleCase(_category!),
+                        ),
+                        _InfoRow(
+                          label: 'Subcategory',
+                          value: _subcategory == null || _subcategory!.isEmpty
+                              ? 'Not detected'
+                              : _titleCase(_subcategory!),
                         ),
                         _InfoRow(
                           label: 'Colors',

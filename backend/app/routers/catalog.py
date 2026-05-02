@@ -37,28 +37,13 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 # ---------------------------------------------------------------------------
 # CLIP embedding helper
 # TODO(clip): Implement this once embedding infrastructure is confirmed.
-#   - Import embed_image_async from app.services.clip_service
-#   - Fetch the image bytes via httpx before calling embed_image_async
-#   - Handle HTTP/timeout errors and raise HTTPException(502) on failure
-#   - Wire into create_catalog_item, bulk_create_catalog_items, update_catalog_item
 # ---------------------------------------------------------------------------
 async def _embed_catalog_image(image_front_url: str) -> list[float] | None:  # noqa: ARG001
     """Fetch image from ``image_front_url`` and return a CLIP embedding vector.
 
-    TODO(clip): Replace this stub with a real implementation:
-
-        import httpx
-        from app.services.clip_service import embed_image_async
-
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get(image_front_url)
-            response.raise_for_status()
-        return await embed_image_async(response.content)
-
     Returns None until the implementation is complete so existing create/update
     paths continue to work without raising errors.
     """
-    # TODO(clip): Remove this stub return once embedding is implemented.
     return None
 
 
@@ -81,15 +66,7 @@ async def get_catalog_image_upload_url(
     body: CatalogImageUploadRequest,
     _: CurrentUserDep,
 ) -> CatalogImageUploadResponse:
-    """Issue a presigned S3 PUT URL for a catalog image upload.
-
-    The admin client should:
-    1. Call this endpoint to get ``upload_url`` and ``image_url``.
-    2. PUT the image file directly to ``upload_url`` (with the correct Content-Type header).
-    3. Pass the returned ``image_url`` as any of the image columns
-       (image_front_url, image_back_url, image_front_no_bg_url, image_back_no_bg_url)
-       to POST /catalog/items or PATCH /catalog/items/{id}.
-    """
+    """Issue a presigned S3 PUT URL for a catalog image upload."""
     try:
         target = get_catalog_upload_target(
             brand=body.brand,
@@ -127,33 +104,53 @@ async def get_catalog_filter_options(db: DbDep, _: CurrentUserDep) -> dict:
         )
         return res.scalars().all()
 
+    slots = await scalar_distinct(CatalogItem.slot)
     categories = await scalar_distinct(CatalogItem.category)
+    subcategories = await scalar_distinct(CatalogItem.subcategory)
     brands = await scalar_distinct(CatalogItem.brand)
     genders = await scalar_distinct(CatalogItem.gender)
     fits = await scalar_distinct(CatalogItem.fit)
     colors = await array_distinct(CatalogItem.color)
     style_tags = await array_distinct(CatalogItem.style_tags)
-    subtypes = await scalar_distinct(CatalogItem.subtype)
+    occasion_tags = await array_distinct(CatalogItem.occasion_tags)
+    patterns = await array_distinct(CatalogItem.pattern)
 
-    subtype_pairs_result = await db.execute(
-        select(CatalogItem.category, CatalogItem.subtype)
-        .where(CatalogItem.subtype.is_not(None))
+    # categories_by_slot: slot → distinct categories observed in that slot.
+    cat_pairs = await db.execute(
+        select(CatalogItem.slot, CatalogItem.category)
+        .where(CatalogItem.category.is_not(None))
         .distinct()
-        .order_by(CatalogItem.category, CatalogItem.subtype)
+        .order_by(CatalogItem.slot, CatalogItem.category)
     )
-    subtypes_by_category: dict[str, list[str]] = {}
-    for cat, sub in subtype_pairs_result.all():
-        subtypes_by_category.setdefault(cat, []).append(sub)
+    categories_by_slot: dict[str, list[str]] = {}
+    for slot_v, category_v in cat_pairs.all():
+        categories_by_slot.setdefault(slot_v, []).append(category_v)
+
+    # subcategories_by_category: category → distinct subcategories observed.
+    subcat_pairs = await db.execute(
+        select(CatalogItem.category, CatalogItem.subcategory)
+        .where(CatalogItem.subcategory.is_not(None))
+        .where(CatalogItem.category.is_not(None))
+        .distinct()
+        .order_by(CatalogItem.category, CatalogItem.subcategory)
+    )
+    subcategories_by_category: dict[str, list[str]] = {}
+    for cat_v, sub_v in subcat_pairs.all():
+        subcategories_by_category.setdefault(cat_v, []).append(sub_v)
 
     return {
+        "slots": slots,
         "categories": categories,
+        "subcategories": subcategories,
         "brands": brands,
         "genders": genders,
         "fits": fits,
         "colors": colors,
+        "patterns": patterns,
         "style_tags": style_tags,
-        "subtypes": subtypes,
-        "subtypes_by_category": subtypes_by_category,
+        "occasion_tags": occasion_tags,
+        "categories_by_slot": categories_by_slot,
+        "subcategories_by_category": subcategories_by_category,
     }
 
 
@@ -161,12 +158,15 @@ async def get_catalog_filter_options(db: DbDep, _: CurrentUserDep) -> dict:
 async def search_catalog(
     db: DbDep,
     _: CurrentUserDep,
+    slot: Annotated[str | None, Query()] = None,
     category: Annotated[str | None, Query()] = None,
-    subtype: Annotated[str | None, Query()] = None,
+    subcategory: Annotated[str | None, Query()] = None,
     color: Annotated[str | None, Query()] = None,
     brand: Annotated[str | None, Query()] = None,
     gender: Annotated[str | None, Query()] = None,
     style: Annotated[str | None, Query()] = None,
+    occasion: Annotated[str | None, Query()] = None,
+    pattern: Annotated[str | None, Query()] = None,
     fit: Annotated[str | None, Query()] = None,
     q: Annotated[str | None, Query(description="Case-insensitive substring match on item name")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -175,10 +175,12 @@ async def search_catalog(
     query = select(CatalogItem)
     dialect_name = db.get_bind().dialect.name
 
+    if slot:
+        query = query.where(CatalogItem.slot == slot)
     if category:
         query = query.where(CatalogItem.category == category)
-    if subtype:
-        query = query.where(CatalogItem.subtype == subtype)
+    if subcategory:
+        query = query.where(CatalogItem.subcategory == subcategory)
     if brand:
         query = query.where(CatalogItem.brand == brand)
     if gender:
@@ -189,15 +191,23 @@ async def search_catalog(
         colors = [value.strip() for value in color.split(",") if value.strip()]
         if colors:
             query = query.where(_array_has_any(CatalogItem.color, colors, dialect_name))
+    if pattern:
+        patterns = [value.strip() for value in pattern.split(",") if value.strip()]
+        if patterns:
+            query = query.where(_array_has_any(CatalogItem.pattern, patterns, dialect_name))
     if style:
         styles = [value.strip() for value in style.split(",") if value.strip()]
         if styles:
             query = query.where(_array_has_any(CatalogItem.style_tags, styles, dialect_name))
+    if occasion:
+        occasions = [value.strip() for value in occasion.split(",") if value.strip()]
+        if occasions:
+            query = query.where(_array_has_any(CatalogItem.occasion_tags, occasions, dialect_name))
     if q:
         needle = q.strip()
         if needle:
-            pattern = f"%{needle}%"
-            query = query.where(CatalogItem.name.ilike(pattern))
+            ilike_pattern = f"%{needle}%"
+            query = query.where(CatalogItem.name.ilike(ilike_pattern))
 
     count_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = count_result.scalar_one()
@@ -227,7 +237,6 @@ async def similar_items(
         return SimilarItemsResponse(items=[], total=0)
 
     embedding = item.clip_embedding
-
     results: list[SimilarItemResponse] = []
 
     if source in ("catalog", "both"):
@@ -247,9 +256,11 @@ async def similar_items(
                     id=row.id,
                     brand=row.brand,
                     name=row.name,
+                    slot=row.slot,
                     category=row.category,
                     color=row.color,
                     style_tags=row.style_tags,
+                    occasion_tags=row.occasion_tags,
                     image_front_url=row.image_front_url,
                     similarity=round(1 - distance, 4),
                 )
@@ -269,14 +280,18 @@ async def similar_items(
             .limit(limit)
         )
         for row, distance in wardrobe_rows.all():
+            # Wardrobe items have no brand/name; synthesize a display name.
+            display_name = row.subcategory or row.category or row.slot
             results.append(
                 SimilarItemResponse(
                     id=row.id,
                     brand="",  # wardrobe items are not brand-tagged
-                    name=row.category,
+                    name=display_name,
+                    slot=row.slot,
                     category=row.category,
                     color=row.color,
                     style_tags=row.style_tags,
+                    occasion_tags=row.occasion_tags,
                     image_front_url=row.image_url,
                     similarity=round(1 - distance, 4),
                 )
@@ -294,9 +309,6 @@ async def create_catalog_item(
     _: CurrentUserDep,
 ) -> CatalogItemResponse:
     item = CatalogItem(**body.model_dump())
-    # TODO(clip): Compute and persist clip_embedding at write time when image_front_url is present.
-    #   embedding = await _embed_catalog_image(body.image_front_url)
-    #   item.clip_embedding = embedding
     db.add(item)
     await db.flush()
     await db.refresh(item)
@@ -315,10 +327,6 @@ async def bulk_create_catalog_items(
     for index, item_data in enumerate(body):
         try:
             item = CatalogItem(**item_data.model_dump())
-            # TODO(clip): Compute clip_embedding per item here and collect embedding errors
-            #   into the BulkInsertError list so callers can resubmit failing items.
-            #   embedding = await _embed_catalog_image(item_data.image_front_url)
-            #   item.clip_embedding = embedding
             db.add(item)
             await db.flush()
             await db.refresh(item)
@@ -364,15 +372,9 @@ async def update_catalog_item(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
     update_data = body.model_dump(exclude_unset=True)
-    image_front_url_changed = "image_front_url" in update_data
 
     for field, value in update_data.items():
         setattr(item, field, value)
-
-    # TODO(clip): Recompute clip_embedding only when image_front_url changed.
-    #   if image_front_url_changed and item.image_front_url:
-    #       item.clip_embedding = await _embed_catalog_image(item.image_front_url)
-    _ = image_front_url_changed  # remove once TODO(clip) is implemented
 
     await db.flush()
     await db.refresh(item)

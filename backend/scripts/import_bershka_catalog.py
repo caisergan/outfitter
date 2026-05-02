@@ -14,7 +14,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = PROJECT_ROOT / "backend"
 
-CANONICAL_CATEGORY_MAP = {
+# Source slug -> wardrobe slot. Slot drives outfit composition (10-value vocab
+# in scripts.taxonomy_maps.SLOTS). Garment-type `category` is resolved
+# separately via scripts.taxonomy_maps.resolve_category.
+SLUG_TO_SLOT_MAP = {
     "t-shirts": "top",
     "jeans": "bottom",
     "trousers": "bottom",
@@ -74,8 +77,11 @@ class PreparedCatalogRow:
     ref_code: str
     gender: str
     source_category: str
-    category: str
-    subtype: str | None
+    # Wardrobe slot — determines outfit slot composition.
+    slot: str
+    # New garment-type category. May be None for un-mappable source slugs.
+    category: str | None
+    subcategory: str | None
     name: str
     color: list[str] | None
     fit: str | None
@@ -139,23 +145,28 @@ def slug_to_words(slug: str) -> str:
     return " ".join(parts)
 
 
-def canonical_category(source_category: str) -> str:
-    mapped = CANONICAL_CATEGORY_MAP.get(source_category)
+def slot_for_slug(source_category: str) -> str:
+    """Map a Bershka source slug to a wardrobe slot."""
+    mapped = SLUG_TO_SLOT_MAP.get(source_category)
     if not mapped:
-        raise ValueError(f"No canonical category mapping for source category '{source_category}'")
+        raise ValueError(f"No slot mapping for Bershka source slug '{source_category}'")
     return mapped
 
 
-def derive_subtype(source_category: str) -> str | None:
-    subtype = titleize(slug_to_words(source_category))
-    return subtype or None
+def derive_category(source_category: str, gender: str, name: str) -> str | None:
+    """Resolve the new garment-type category via the central taxonomy map."""
+    from scripts.taxonomy_maps import resolve_category
+    return resolve_category(slug=source_category, gender=gender, name=name)
 
 
 def derive_fit(name: str) -> str | None:
+    """Extract a fit from the product name and normalize against the controlled vocab."""
     for pattern in FIT_PATTERNS:
         match = pattern.search(name)
         if match:
-            return match.group(1).lower().replace("-", " ")
+            from scripts.taxonomy_maps import _normalize_for_fit, FITS
+            normalized = _normalize_for_fit(match.group(1))
+            return normalized if normalized in FITS else None
     return None
 
 
@@ -267,8 +278,9 @@ def prepare_rows(records: list[RawBershkaRecord], images_root: Path) -> tuple[li
                 ref_code=ref_code,
                 gender=record.gender,
                 source_category=record.source_category,
-                category=canonical_category(record.source_category),
-                subtype=derive_subtype(record.source_category),
+                slot=slot_for_slug(record.source_category),
+                category=derive_category(record.source_category, record.gender, record.name),
+                subcategory=None,
                 name=record.name,
                 color=[record.color.strip()] if record.color else None,
                 fit=derive_fit(record.name),
@@ -291,8 +303,9 @@ def print_preview(rows: list[PreparedCatalogRow], missing_images: list[str], lim
                     "ref_code": row.ref_code,
                     "gender": row.gender,
                     "source_category": row.source_category,
+                    "slot": row.slot,
                     "category": row.category,
-                    "subtype": row.subtype,
+                    "subcategory": row.subcategory,
                     "name": row.name,
                     "color": row.color,
                     "fit": row.fit,
@@ -378,8 +391,9 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                     ref_code=row.ref_code,
                     brand=brand,
                     gender=row.gender,
+                    slot=row.slot,
                     category=row.category,
-                    subtype=row.subtype,
+                    subcategory=row.subcategory,
                     name=row.name,
                     color=row.color,
                     fit=row.fit,
@@ -392,8 +406,11 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                 created += 1
             else:
                 item.gender = row.gender
-                item.category = row.category
-                item.subtype = row.subtype
+                item.slot = row.slot
+                # Don't clobber a manually-set category from cleanup work.
+                if item.category is None:
+                    item.category = row.category
+                # subcategory left untouched (Phase 2 backfill owns cleanup).
                 item.name = row.name
                 item.color = row.color
                 item.fit = row.fit

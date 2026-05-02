@@ -21,7 +21,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final _categories = [
+  final _slots = [
     'All',
     'top',
     'bottom',
@@ -34,7 +34,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _categories.length, vsync: this);
+    _tabController = TabController(length: _slots.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) _refresh();
     });
@@ -47,9 +47,9 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
   }
 
   void _refresh() {
-    final category =
-        _tabController.index == 0 ? null : _categories[_tabController.index];
-    ref.read(wardrobeNotifierProvider.notifier).fetch(category: category);
+    final slot =
+        _tabController.index == 0 ? null : _slots[_tabController.index];
+    ref.read(wardrobeNotifierProvider.notifier).fetch(slot: slot);
   }
 
   Future<ImageSource?> _selectImageSource() {
@@ -166,11 +166,11 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
               labelPadding: const EdgeInsets.symmetric(horizontal: 6),
               dividerColor: Colors.transparent,
               indicatorPadding: const EdgeInsets.symmetric(vertical: 6),
-              tabs: _categories
+              tabs: _slots
                   .map(
-                    (category) => Tab(
+                    (slot) => Tab(
                       height: 36,
-                      text: category[0].toUpperCase() + category.substring(1),
+                      text: slot[0].toUpperCase() + slot.substring(1),
                     ),
                   )
                   .toList(),

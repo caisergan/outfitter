@@ -18,7 +18,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = PROJECT_ROOT / "backend"
 
 
-CANONICAL_CATEGORY_MAP = {
+# Source slug -> wardrobe slot. Slot drives outfit composition (10-value vocab
+# in scripts.taxonomy_maps.SLOTS). Garment-type `category` is resolved
+# separately via scripts.taxonomy_maps.resolve_category.
+SLUG_TO_SLOT_MAP = {
     "sweaters-and-cardigans": "top",
     "jackets": "outerwear",
     "pants": "bottom",
@@ -81,8 +84,14 @@ class PreparedCatalogRow:
     original_ref_code: str
     gender: str
     source_category: str
-    category: str
-    subtype: str | None
+    # Wardrobe slot — determines outfit slot composition.
+    slot: str
+    # New garment-type category (from taxonomy_maps.resolve_category). May be
+    # None if the source slug is out-of-vocab (e.g. pajamas, swimwear).
+    category: str | None
+    # Subcategory left None at import time. Phase 2 backfill cleans existing
+    # rows; new imports don't infer it.
+    subcategory: str | None
     name: str
     color: list[str] | None
     fit: str | None
@@ -162,29 +171,42 @@ def derive_name(record: RawMangoRecord) -> str:
     return titleize(slug_to_words(name_slug))
 
 
-def derive_subtype(record: RawMangoRecord) -> str | None:
-    path_parts = [part for part in urlparse(record.product_url).path.split("/") if part]
-    if len(path_parts) >= 2:
-        subtype = titleize(slug_to_words(path_parts[-2]))
-        return subtype or None
-    subtype = titleize(slug_to_words(record.source_category))
-    return subtype or None
+def derive_category(record: RawMangoRecord) -> str | None:
+    """Resolve the new garment-type category via the central taxonomy map.
+
+    Returns None for un-mappable source slugs (e.g. pajamas, swimwear) per
+    the locked-in Q3 decision — those rows go in with category=NULL for
+    manual cleanup.
+    """
+    # Lazy import — taxonomy_maps lives under backend/scripts and is on
+    # sys.path when this script runs from the backend directory.
+    from scripts.taxonomy_maps import resolve_category
+    name_for_rules = derive_name(record)
+    return resolve_category(
+        slug=record.source_category,
+        gender=record.gender,
+        name=name_for_rules,
+    )
 
 
 def derive_fit(description: str | None) -> str | None:
+    """Extract a fit value and normalize against the controlled FIT vocab."""
     if not description:
         return None
     for pattern in FIT_PATTERNS:
         match = pattern.search(description)
         if match:
-            return match.group(1).lower().replace("-", " ")
+            from scripts.taxonomy_maps import _normalize_for_fit, FITS
+            normalized = _normalize_for_fit(match.group(1))
+            return normalized if normalized in FITS else None
     return None
 
 
-def canonical_category(source_category: str) -> str:
-    mapped = CANONICAL_CATEGORY_MAP.get(source_category)
+def slot_for_slug(source_category: str) -> str:
+    """Map a Mango source slug to a wardrobe slot."""
+    mapped = SLUG_TO_SLOT_MAP.get(source_category)
     if not mapped:
-        raise ValueError(f"No canonical category mapping for source category '{source_category}'")
+        raise ValueError(f"No slot mapping for Mango source slug '{source_category}'")
     return mapped
 
 
@@ -314,8 +336,9 @@ def prepare_rows(records: list[RawMangoRecord], images_root: Path) -> tuple[list
                 original_ref_code=record.ref_code,
                 gender=record.gender,
                 source_category=record.source_category,
-                category=canonical_category(record.source_category),
-                subtype=derive_subtype(record),
+                slot=slot_for_slug(record.source_category),
+                category=derive_category(record),
+                subcategory=None,
                 name=derive_name(record),
                 color=[record.color.strip()] if record.color else None,
                 fit=derive_fit(record.description),
@@ -339,8 +362,9 @@ def print_preview(rows: list[PreparedCatalogRow], missing_images: list[str], lim
                     "original_ref_code": row.original_ref_code,
                     "gender": row.gender,
                     "source_category": row.source_category,
+                    "slot": row.slot,
                     "category": row.category,
-                    "subtype": row.subtype,
+                    "subcategory": row.subcategory,
                     "name": row.name,
                     "color": row.color,
                     "fit": row.fit,
@@ -429,8 +453,9 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                     ref_code=row.ref_code,
                     brand=brand,
                     gender=row.gender,
+                    slot=row.slot,
                     category=row.category,
-                    subtype=row.subtype,
+                    subcategory=row.subcategory,
                     name=row.name,
                     color=row.color,
                     fit=row.fit,
@@ -443,8 +468,12 @@ async def run_import(rows: list[PreparedCatalogRow], brand: str, commit_every: i
                 created += 1
             else:
                 item.gender = row.gender
-                item.category = row.category
-                item.subtype = row.subtype
+                item.slot = row.slot
+                # Only fill the new category column if currently NULL — don't
+                # clobber a manually-set category from prior cleanup work.
+                if item.category is None:
+                    item.category = row.category
+                # subcategory left untouched (Phase 2 backfill owns cleanup).
                 item.name = row.name
                 item.color = row.color
                 item.fit = row.fit

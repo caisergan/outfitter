@@ -58,10 +58,11 @@ async def _seed_item(db, **overrides) -> CatalogItem:
     defaults = dict(
         brand="Mango",
         gender="women",
-        category="top",
+        slot="top",
+        category="t-shirt",
         name="Test Tee",
         color=["black"],
-        style_tags=["casual"],
+        style_tags=["minimal"],
         image_front_url="https://cdn.example.com/test-tee.jpg",
     )
     defaults.update(overrides)

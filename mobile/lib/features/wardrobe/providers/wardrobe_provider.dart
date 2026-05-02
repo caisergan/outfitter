@@ -10,10 +10,10 @@ class WardrobeNotifier extends StateNotifier<AsyncValue<List<WardrobeItem>>> {
     fetch();
   }
 
-  Future<void> fetch({String? category, String sort = 'recent'}) async {
+  Future<void> fetch({String? slot, String? category, String sort = 'recent'}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-        () => _repo.fetchAll(category: category, sort: sort));
+        () => _repo.fetchAll(slot: slot, category: category, sort: sort));
   }
 
   Future<void> addItem(CreateWardrobeItemRequest body) async {

@@ -2,63 +2,63 @@ import 'package:fashion_app/core/models/slot_type.dart';
 
 class GarmentCategoryFilter {
   final String label;
-  final String? backendCategory;
+  final String? backendSlot;
 
   const GarmentCategoryFilter({
     required this.label,
-    required this.backendCategory,
+    required this.backendSlot,
   });
 }
 
 const allGarmentCategoryFilter = GarmentCategoryFilter(
   label: 'All',
-  backendCategory: null,
+  backendSlot: null,
 );
 
 const garmentCategoryFilters = [
-  GarmentCategoryFilter(label: 'Top', backendCategory: 'top'),
-  GarmentCategoryFilter(label: 'Bottom', backendCategory: 'bottom'),
-  GarmentCategoryFilter(label: 'Dress', backendCategory: 'dress'),
-  GarmentCategoryFilter(label: 'Outerwear', backendCategory: 'outerwear'),
-  GarmentCategoryFilter(label: 'Shoes', backendCategory: 'footwear'),
-  GarmentCategoryFilter(label: 'Bag', backendCategory: 'bag'),
-  GarmentCategoryFilter(label: 'Accessories', backendCategory: 'accessory'),
-  GarmentCategoryFilter(label: 'Swimwear', backendCategory: 'swimwear'),
-  GarmentCategoryFilter(label: 'Underwear', backendCategory: 'underwear'),
-  GarmentCategoryFilter(label: 'Activewear', backendCategory: 'activewear'),
+  GarmentCategoryFilter(label: 'Top', backendSlot: 'top'),
+  GarmentCategoryFilter(label: 'Bottom', backendSlot: 'bottom'),
+  GarmentCategoryFilter(label: 'Dress', backendSlot: 'dress'),
+  GarmentCategoryFilter(label: 'Outerwear', backendSlot: 'outerwear'),
+  GarmentCategoryFilter(label: 'Shoes', backendSlot: 'footwear'),
+  GarmentCategoryFilter(label: 'Bag', backendSlot: 'bag'),
+  GarmentCategoryFilter(label: 'Accessories', backendSlot: 'accessory'),
+  GarmentCategoryFilter(label: 'Swimwear', backendSlot: 'swimwear'),
+  GarmentCategoryFilter(label: 'Underwear', backendSlot: 'underwear'),
+  GarmentCategoryFilter(label: 'Activewear', backendSlot: 'activewear'),
 ];
 
 final garmentCategorySortOrder = {
   for (final entry in garmentCategoryFilters.indexed)
-    if (entry.$2.backendCategory != null) entry.$2.backendCategory!: entry.$1,
+    if (entry.$2.backendSlot != null) entry.$2.backendSlot!: entry.$1,
 };
 
-GarmentCategoryFilter garmentCategoryForBackendCategory(String category) {
+GarmentCategoryFilter garmentCategoryForBackendSlot(String slot) {
   for (final filter in garmentCategoryFilters) {
-    if (filter.backendCategory == category) return filter;
+    if (filter.backendSlot == slot) return filter;
   }
   return GarmentCategoryFilter(
-    label: _titleizeCategory(category),
-    backendCategory: category,
+    label: _titleizeSlot(slot),
+    backendSlot: slot,
   );
 }
 
 GarmentCategoryFilter garmentCategoryForSlotType(SlotType type) {
   return switch (type) {
-    SlotType.top => garmentCategoryForBackendCategory('top'),
-    SlotType.bottom => garmentCategoryForBackendCategory('bottom'),
-    SlotType.shoes => garmentCategoryForBackendCategory('footwear'),
-    SlotType.accessory => garmentCategoryForBackendCategory('accessory'),
-    SlotType.outerwear => garmentCategoryForBackendCategory('outerwear'),
+    SlotType.top => garmentCategoryForBackendSlot('top'),
+    SlotType.bottom => garmentCategoryForBackendSlot('bottom'),
+    SlotType.shoes => garmentCategoryForBackendSlot('footwear'),
+    SlotType.accessory => garmentCategoryForBackendSlot('accessory'),
+    SlotType.outerwear => garmentCategoryForBackendSlot('outerwear'),
     SlotType.bag => const GarmentCategoryFilter(
         label: 'Bag',
-        backendCategory: 'bag',
+        backendSlot: 'bag',
       ),
   };
 }
 
-String _titleizeCategory(String category) {
-  final words = category.replaceAll('_', ' ').split(' ');
+String _titleizeSlot(String slot) {
+  final words = slot.replaceAll('_', ' ').split(' ');
   return words
       .where((word) => word.isNotEmpty)
       .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')

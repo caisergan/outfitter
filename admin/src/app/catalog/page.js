@@ -20,19 +20,26 @@ const LIMIT = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 
 const FILTER_FIELDS = [
-    { key: "category", label: "Category", optionsKey: "categories" },
-    { key: "subtype",  label: "Subtype",  optionsKey: "__subtypes_by_category" },
-    { key: "brand",    label: "Brand",    optionsKey: "brands" },
-    { key: "gender",   label: "Gender",   optionsKey: "genders" },
-    { key: "color",    label: "Color",    optionsKey: "colors" },
-    { key: "style",    label: "Style",    optionsKey: "style_tags" },
-    { key: "fit",      label: "Fit",      optionsKey: "fits" },
+    { key: "slot",        label: "Slot",        optionsKey: "slots" },
+    { key: "category",    label: "Category",    optionsKey: "__categories_by_slot" },
+    { key: "subcategory", label: "Subcategory", optionsKey: "__subcategories_by_category" },
+    { key: "brand",       label: "Brand",       optionsKey: "brands" },
+    { key: "gender",      label: "Gender",      optionsKey: "genders" },
+    { key: "color",       label: "Color",       optionsKey: "colors" },
+    { key: "pattern",     label: "Pattern",     optionsKey: "patterns" },
+    { key: "style",       label: "Style",       optionsKey: "style_tags" },
+    { key: "occasion",    label: "Occasion",    optionsKey: "occasion_tags" },
+    { key: "fit",         label: "Fit",         optionsKey: "fits" },
 ];
 
 function CatalogFilters({ filters, onChange, searchQuery, onSearchQueryChange, loading, filterOptions }) {
     function handleFilterChange(key, value) {
+        if (key === "slot" && filters.slot !== value) {
+            onChange({ ...filters, slot: value, category: "", subcategory: "" });
+            return;
+        }
         if (key === "category" && filters.category !== value) {
-            onChange({ ...filters, category: value, subtype: "" });
+            onChange({ ...filters, category: value, subcategory: "" });
             return;
         }
         onChange({ ...filters, [key]: value });
@@ -53,14 +60,28 @@ function CatalogFilters({ filters, onChange, searchQuery, onSearchQueryChange, l
                     className="pl-9 pr-9 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-10"
                 />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {FILTER_FIELDS.map(({ key, label, optionsKey }) => {
-                    const options =
-                        optionsKey === "__subtypes_by_category"
-                            ? (filterOptions?.subtypes_by_category?.[filters.category] ?? [])
-                            : (filterOptions?.[optionsKey] ?? []);
-                    const isSubtype = key === "subtype";
-                    const isDisabled = isSubtype && !filters.category;
+                    let options = [];
+                    if (optionsKey === "__categories_by_slot") {
+                        options = filters.slot
+                            ? (filterOptions?.categories_by_slot?.[filters.slot] ?? [])
+                            : (filterOptions?.categories ?? []);
+                    } else if (optionsKey === "__subcategories_by_category") {
+                        options = filters.category
+                            ? (filterOptions?.subcategories_by_category?.[filters.category] ?? [])
+                            : (filterOptions?.subcategories ?? []);
+                    } else {
+                        options = filterOptions?.[optionsKey] ?? [];
+                    }
+                    const isCategoryField = key === "category";
+                    const isSubcategoryField = key === "subcategory";
+                    const isDisabled =
+                        (isCategoryField && !filters.slot) ||
+                        (isSubcategoryField && !filters.category);
+                    const placeholder = isDisabled
+                        ? (isCategoryField ? "Pick slot" : "Pick category")
+                        : "All";
                     return (
                         <div key={key} className="space-y-1">
                             <Label className="text-xs text-slate-400">{label}</Label>
@@ -70,7 +91,7 @@ function CatalogFilters({ filters, onChange, searchQuery, onSearchQueryChange, l
                                 disabled={isDisabled}
                                 className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <option value="">{isDisabled ? "Pick category" : "All"}</option>
+                                <option value="">{placeholder}</option>
                                 {options.map((opt) => (
                                     <option key={opt} value={opt}>{opt}</option>
                                 ))}
@@ -87,9 +108,9 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const EMPTY_FORM = {
-    ref_code: "", brand: "", gender: "", category: "", subtype: "",
+    ref_code: "", brand: "", gender: "", slot: "", category: "", subcategory: "",
     name: "", color: "", pattern: "", fit: "",
-    style_tags: "", product_url: "",
+    style_tags: "", occasion_tags: "", product_url: "",
 };
 
 function CreateCatalogForm({ onCreated }) {
@@ -189,6 +210,8 @@ function CreateCatalogForm({ onCreated }) {
         // Convert comma-separated fields to arrays
         if (payload.color) payload.color = payload.color.split(",").map((s) => s.trim()).filter(Boolean);
         if (payload.style_tags) payload.style_tags = payload.style_tags.split(",").map((s) => s.trim()).filter(Boolean);
+        if (payload.occasion_tags) payload.occasion_tags = payload.occasion_tags.split(",").map((s) => s.trim()).filter(Boolean);
+        if (payload.pattern) payload.pattern = payload.pattern.split(",").map((s) => s.trim()).filter(Boolean);
 
         try {
             await createCatalogItem(payload);
@@ -254,11 +277,12 @@ function CreateCatalogForm({ onCreated }) {
                     { name: "brand", label: "Brand *", required: true },
                     { name: "name", label: "Name *", required: true },
                     { name: "gender", label: "Gender *", required: true },
-                    { name: "category", label: "Category *", required: true },
-                    { name: "subtype", label: "Subtype" },
+                    { name: "slot", label: "Slot *", required: true },
+                    { name: "category", label: "Category" },
+                    { name: "subcategory", label: "Subcategory" },
                     { name: "ref_code", label: "Ref Code" },
                     { name: "fit", label: "Fit" },
-                    { name: "pattern", label: "Pattern" },
+                    { name: "pattern", label: "Pattern (comma-separated)" },
                     { name: "product_url", label: "Product URL" },
                 ].map(({ name, label, required }) => (
                     <div key={name} className="space-y-1">
@@ -303,6 +327,16 @@ function CreateCatalogForm({ onCreated }) {
                         value={form.style_tags}
                         onChange={handleField}
                         placeholder="casual, minimal"
+                        className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm"
+                    />
+                </div>
+                <div className="space-y-1">
+                    <Label className="text-xs text-slate-400">Occasion Tags (comma-separated)</Label>
+                    <Input
+                        name="occasion_tags"
+                        value={form.occasion_tags}
+                        onChange={handleField}
+                        placeholder="work, weekend"
                         className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm"
                     />
                 </div>
@@ -506,7 +540,14 @@ export default function CatalogPage() {
                                                 <TableCell className="text-slate-300 text-sm">{item.brand}</TableCell>
                                                 <TableCell className="text-slate-300 text-sm capitalize">{item.gender || "—"}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">{item.category}</Badge>
+                                                    <div>
+                                                        <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                                                            {item.category || item.slot || "—"}
+                                                        </Badge>
+                                                        {item.subcategory && (
+                                                            <p className="text-[10px] text-slate-500 mt-0.5">{item.subcategory}</p>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-slate-300 text-xs">{item.color?.join(", ") || "—"}</TableCell>
                                                 <TableCell className="text-slate-400 text-xs">{item.fit || "—"}</TableCell>
@@ -603,7 +644,9 @@ export default function CatalogPage() {
                                             </TableCell>
                                             <TableCell className="text-slate-100 text-sm">{item.name}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">{item.category}</Badge>
+                                                <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                                                    {item.category || item.slot || "—"}
+                                                </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Badge className={item.similarity > 0.8 ? "bg-emerald-700" : item.similarity > 0.6 ? "bg-amber-700" : "bg-slate-700"}>
