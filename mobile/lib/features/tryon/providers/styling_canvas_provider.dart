@@ -119,8 +119,9 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
     final item = CatalogItem(
       id: _uuid.v4(),
       brand: 'Prefilled',
-      category: slot,
-      subtype: slot,
+      slot: slot,
+      category: null,
+      subcategory: null,
       name: slot,
       color: const [],
       pattern: null,
@@ -155,13 +156,15 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
       CatalogItem(
         id: item.id,
         brand: 'My Wardrobe',
+        slot: item.slot,
         category: item.category,
-        subtype: item.subtype,
+        subcategory: item.subcategory,
         name: _wardrobeItemName(item),
         color: item.color,
         pattern: item.pattern,
         fit: item.fit,
         styleTags: item.styleTags,
+        occasionTags: item.occasionTags,
         imageUrl: item.imageUrl,
       ),
     );
@@ -389,8 +392,8 @@ class StylingCanvasNotifier extends StateNotifier<StylingCanvasState> {
 
   String _wardrobeItemName(WardrobeItem item) {
     final color = item.color.isEmpty ? null : item.color.join(', ');
-    final subtype = item.subtype ?? item.category;
-    return [color, subtype].whereType<String>().join(' ');
+    final label = item.subcategory ?? item.category ?? item.slot;
+    return [color, label].whereType<String>().join(' ');
   }
 }
 

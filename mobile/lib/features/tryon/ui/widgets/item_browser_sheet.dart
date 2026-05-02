@@ -14,13 +14,13 @@ class ItemBrowserSheet extends ConsumerStatefulWidget {
   final SlotType? type;
   final Function(CatalogItem) onItemSelected;
   final bool updateSlotOnSelect;
-  final String? initialCategory;
+  final String? initialSlot;
 
   const ItemBrowserSheet({
     this.type,
     required this.onItemSelected,
     this.updateSlotOnSelect = true,
-    this.initialCategory,
+    this.initialSlot,
     super.key,
   }) : assert(!updateSlotOnSelect || type != null);
 
@@ -31,7 +31,7 @@ class ItemBrowserSheet extends ConsumerStatefulWidget {
 class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   late GarmentCategoryFilter _selectedCategory;
   CatalogFilterOptions? _filterOptions;
-  List<GarmentCategoryFilter> _backendCategoryFilters = const [];
+  List<GarmentCategoryFilter> _backendSlotFilters = const [];
   final List<CatalogItem> _items = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isInitialLoading = true;
@@ -40,7 +40,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   int _totalItems = 0;
   String? _selectedBrand;
   String? _selectedGender;
-  String? _selectedSubtype;
+  String? _selectedSubcategory;
   String? _selectedFit;
   String? _selectedColor;
   String? _selectedStyleTag;
@@ -49,11 +49,11 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.initialCategory == null
+    _selectedCategory = widget.initialSlot == null
         ? widget.type == null
             ? allGarmentCategoryFilter
             : garmentCategoryForSlotType(widget.type!)
-        : garmentCategoryForBackendCategory(widget.initialCategory!);
+        : garmentCategoryForBackendSlot(widget.initialSlot!);
     _loadInitialItems();
     _loadFilterOptions();
   }
@@ -65,35 +65,35 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   }
 
   List<GarmentCategoryFilter> get _categoryFilters {
-    final availableFilters = _backendCategoryFilters.isEmpty
+    final availableFilters = _backendSlotFilters.isEmpty
         ? [
             if (widget.type == null) allGarmentCategoryFilter,
             ...garmentCategoryFilters,
           ]
-        : _backendCategoryFilters;
+        : _backendSlotFilters;
 
     final hasSelectedCategory = availableFilters.any(
-      (filter) => filter.backendCategory == _selectedCategory.backendCategory,
+      (filter) => filter.backendSlot == _selectedCategory.backendSlot,
     );
     if (hasSelectedCategory) return availableFilters;
     return [_selectedCategory, ...availableFilters];
   }
 
-  List<String> get _availableSubtypeOptions {
+  List<String> get _availableSubcategoryOptions {
     final options = _filterOptions;
     if (options == null) return const [];
-    final category = _selectedCategory.backendCategory;
+    final category = _selectedCategory.backendSlot;
     if (category == null) {
-      return options.subtypes;
+      return options.subcategories;
     }
-    return options.subtypesByCategory[category] ?? const [];
+    return options.subcategoriesByCategory[category] ?? const [];
   }
 
   int get _activeFilterCount {
     var count = 0;
     if (_selectedBrand != null) count++;
     if (_selectedGender != null) count++;
-    if (_selectedSubtype != null) count++;
+    if (_selectedSubcategory != null) count++;
     if (_selectedFit != null) count++;
     if (_selectedColor != null) count++;
     if (_selectedStyleTag != null) count++;
@@ -108,20 +108,20 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
       if (!mounted) return;
       setState(() {
         _filterOptions = options;
-        _backendCategoryFilters = _buildBackendCategoryFilters(
-          options.categories,
+        _backendSlotFilters = _buildBackendSlotFilters(
+          options.slots,
         );
-        _selectedSubtype = _normalizeSubtype(_selectedSubtype);
+        _selectedSubcategory = _normalizeSubcategory(_selectedSubcategory);
       });
     } catch (_) {
       // Keep local fallbacks when filter options fail.
     }
   }
 
-  List<GarmentCategoryFilter> _buildBackendCategoryFilters(
-    List<String> categories,
+  List<GarmentCategoryFilter> _buildBackendSlotFilters(
+    List<String> slots,
   ) {
-    final uniqueCategories = categories.toSet().toList()
+    final uniqueSlots = slots.toSet().toList()
       ..sort((left, right) {
         final leftOrder =
             garmentCategorySortOrder[left] ?? garmentCategorySortOrder.length;
@@ -133,13 +133,13 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
 
     return [
       if (widget.type == null) allGarmentCategoryFilter,
-      ...uniqueCategories.map(garmentCategoryForBackendCategory),
+      ...uniqueSlots.map(garmentCategoryForBackendSlot),
     ];
   }
 
-  String? _normalizeSubtype(String? subtype) {
-    if (subtype == null) return null;
-    return _availableSubtypeOptions.contains(subtype) ? subtype : null;
+  String? _normalizeSubcategory(String? subcategory) {
+    if (subcategory == null) return null;
+    return _availableSubcategoryOptions.contains(subcategory) ? subcategory : null;
   }
 
   Future<void> _loadInitialItems() async {
@@ -154,8 +154,8 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
     try {
       final repository = ref.read(catalogRepositoryProvider);
       final page = await repository.searchPage(
-        category: _selectedCategory.backendCategory,
-        subtype: _selectedSubtype,
+        slot: _selectedCategory.backendSlot,
+        subcategory: _selectedSubcategory,
         brand: _selectedBrand,
         gender: _selectedGender,
         fit: _selectedFit,
@@ -194,8 +194,8 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
     try {
       final repository = ref.read(catalogRepositoryProvider);
       final page = await repository.searchPage(
-        category: _selectedCategory.backendCategory,
-        subtype: _selectedSubtype,
+        slot: _selectedCategory.backendSlot,
+        subcategory: _selectedSubcategory,
         brand: _selectedBrand,
         gender: _selectedGender,
         fit: _selectedFit,
@@ -232,7 +232,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
   void _selectCategory(GarmentCategoryFilter filter) {
     setState(() {
       _selectedCategory = filter;
-      _selectedSubtype = _normalizeSubtype(_selectedSubtype);
+      _selectedSubcategory = _normalizeSubcategory(_selectedSubcategory);
     });
     _loadInitialItems();
   }
@@ -264,10 +264,10 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
       backgroundColor: Colors.transparent,
       builder: (_) => _CatalogFilterSheet(
         options: options,
-        currentCategory: _selectedCategory.backendCategory,
+        currentSlot: _selectedCategory.backendSlot,
         initialBrand: _selectedBrand,
         initialGender: _selectedGender,
-        initialSubtype: _selectedSubtype,
+        initialSubcategory: _selectedSubcategory,
         initialFit: _selectedFit,
         initialColor: _selectedColor,
         initialStyleTag: _selectedStyleTag,
@@ -279,7 +279,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
     setState(() {
       _selectedBrand = result.brand;
       _selectedGender = result.gender;
-      _selectedSubtype = _normalizeSubtype(result.subtype);
+      _selectedSubcategory = _normalizeSubcategory(result.subcategory);
       _selectedFit = result.fit;
       _selectedColor = result.color;
       _selectedStyleTag = result.styleTag;
@@ -294,8 +294,8 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
           _selectedBrand = null;
         case 'gender':
           _selectedGender = null;
-        case 'subtype':
-          _selectedSubtype = null;
+        case 'subcategory':
+          _selectedSubcategory = null;
         case 'fit':
           _selectedFit = null;
         case 'color':
@@ -454,7 +454,7 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
       child: Row(
         children: _categoryFilters.map((filter) {
           final isSelected =
-              _selectedCategory.backendCategory == filter.backendCategory;
+              _selectedCategory.backendSlot == filter.backendSlot;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
@@ -493,10 +493,10 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
           label: _selectedBrand!,
           onDeleted: () => _clearFilter('brand'),
         ),
-      if (_selectedSubtype != null)
+      if (_selectedSubcategory != null)
         _ActiveFilterChip(
-          label: _titleCase(_selectedSubtype!),
-          onDeleted: () => _clearFilter('subtype'),
+          label: _titleCase(_selectedSubcategory!),
+          onDeleted: () => _clearFilter('subcategory'),
         ),
       if (_selectedFit != null)
         _ActiveFilterChip(
@@ -634,20 +634,20 @@ class _ItemBrowserSheetState extends ConsumerState<ItemBrowserSheet> {
 class _CatalogFilterSheet extends StatefulWidget {
   const _CatalogFilterSheet({
     required this.options,
-    required this.currentCategory,
+    required this.currentSlot,
     required this.initialBrand,
     required this.initialGender,
-    required this.initialSubtype,
+    required this.initialSubcategory,
     required this.initialFit,
     required this.initialColor,
     required this.initialStyleTag,
   });
 
   final CatalogFilterOptions options;
-  final String? currentCategory;
+  final String? currentSlot;
   final String? initialBrand;
   final String? initialGender;
-  final String? initialSubtype;
+  final String? initialSubcategory;
   final String? initialFit;
   final String? initialColor;
   final String? initialStyleTag;
@@ -659,20 +659,18 @@ class _CatalogFilterSheet extends StatefulWidget {
 class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
   late String? _brand = widget.initialBrand;
   late String? _gender = widget.initialGender;
-  late String? _subtype = _resolveSubtype(widget.initialSubtype);
+  late String? _subcategory = _resolveSubcategory(widget.initialSubcategory);
   late String? _fit = widget.initialFit;
   late String? _color = widget.initialColor;
   late String? _styleTag = widget.initialStyleTag;
 
-  List<String> get _availableSubtypeOptions {
-    if (widget.currentCategory == null) return widget.options.subtypes;
-    return widget.options.subtypesByCategory[widget.currentCategory] ??
-        const [];
+  List<String> get _availableSubcategoryOptions {
+    return widget.options.subcategories;
   }
 
-  String? _resolveSubtype(String? value) {
+  String? _resolveSubcategory(String? value) {
     if (value == null) return null;
-    return _availableSubtypeOptions.contains(value) ? value : null;
+    return _availableSubcategoryOptions.contains(value) ? value : null;
   }
 
   @override
@@ -705,7 +703,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                       setState(() {
                         _brand = null;
                         _gender = null;
-                        _subtype = null;
+                        _subcategory = null;
                         _fit = null;
                         _color = null;
                         _styleTag = null;
@@ -717,7 +715,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Filter by fit, brand, gender, subtype, color, or style.',
+                'Filter by fit, brand, gender, subcategory, color, or style.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textMuted,
                     ),
@@ -741,10 +739,10 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                     ),
                     const SizedBox(height: 14),
                     _buildDropdown(
-                      label: 'Subtype',
-                      value: _subtype,
-                      options: _availableSubtypeOptions,
-                      onChanged: (value) => setState(() => _subtype = value),
+                      label: 'Subcategory',
+                      value: _subcategory,
+                      options: _availableSubcategoryOptions,
+                      onChanged: (value) => setState(() => _subcategory = value),
                     ),
                     const SizedBox(height: 14),
                     _buildDropdown(
@@ -780,7 +778,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                       _CatalogFilterSheetResult(
                         brand: _brand,
                         gender: _gender,
-                        subtype: _subtype,
+                        subcategory: _subcategory,
                         fit: _fit,
                         color: _color,
                         styleTag: _styleTag,
@@ -850,7 +848,7 @@ class _CatalogFilterSheetResult {
   const _CatalogFilterSheetResult({
     this.brand,
     this.gender,
-    this.subtype,
+    this.subcategory,
     this.fit,
     this.color,
     this.styleTag,
@@ -858,7 +856,7 @@ class _CatalogFilterSheetResult {
 
   final String? brand;
   final String? gender;
-  final String? subtype;
+  final String? subcategory;
   final String? fit;
   final String? color;
   final String? styleTag;

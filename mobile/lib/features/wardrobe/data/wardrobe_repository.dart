@@ -10,6 +10,7 @@ class WardrobeRepository {
   WardrobeRepository(this._dio);
 
   Future<List<WardrobeItem>> fetchAll({
+    String? slot,
     String? category,
     String sort = 'recent',
     int limit = 50,
@@ -18,6 +19,7 @@ class WardrobeRepository {
     final response = await _dio.get(
       ApiEndpoints.wardrobe,
       queryParameters: {
+        if (slot != null) 'slot': slot,
         if (category != null) 'category': category,
         'sort': sort,
         'limit': limit,

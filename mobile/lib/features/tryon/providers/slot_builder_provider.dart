@@ -19,7 +19,7 @@ class OutfitSlots {
 
   Map<String, String> get slotIds => {
         for (final entry in slots.entries)
-          if (entry.value != null) entry.key.categoryString: entry.value!.id,
+          if (entry.value != null) entry.key.slotString: entry.value!.id,
       };
 
   static OutfitSlots empty() => OutfitSlots({
@@ -40,7 +40,7 @@ class SlotBuilderNotifier extends StateNotifier<OutfitSlots> {
     for (final entry in itemIds.entries) {
       try {
         final slotType =
-            SlotType.values.firstWhere((t) => t.categoryString == entry.key);
+            SlotType.values.firstWhere((t) => t.slotString == entry.key);
         final item = itemMap[entry.value];
         if (item != null) current = current.copyWithSlot(slotType, item);
       } catch (_) {}

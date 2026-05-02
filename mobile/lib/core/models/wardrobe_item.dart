@@ -8,12 +8,14 @@ class WardrobeItem with _$WardrobeItem {
   const factory WardrobeItem({
     required String id,
     @JsonKey(name: 'user_id') required String userId,
-    required String category,
-    String? subtype,
+    required String slot,
+    String? category,
+    String? subcategory,
     required List<String> color,
-    String? pattern,
+    List<String>? pattern,
     String? fit,
     @JsonKey(name: 'style_tags') required List<String> styleTags,
+    @JsonKey(name: 'occasion_tags') List<String>? occasionTags,
     @JsonKey(name: 'image_url') required String imageUrl,
     @JsonKey(name: 'times_used') required int timesUsed,
     @JsonKey(name: 'created_at') required DateTime createdAt,
@@ -26,12 +28,14 @@ class WardrobeItem with _$WardrobeItem {
 @freezed
 class WardrobeTagResult with _$WardrobeTagResult {
   const factory WardrobeTagResult({
-    required String category,
-    String? subtype,
+    required String slot,
+    String? category,
+    String? subcategory,
     required List<String> color,
-    String? pattern,
+    List<String>? pattern,
     String? fit,
     @JsonKey(name: 'style_tags') required List<String> styleTags,
+    @JsonKey(name: 'occasion_tags') List<String>? occasionTags,
     required double confidence,
     @JsonKey(name: 'image_url') required String imageUrl,
   }) = _WardrobeTagResult;
@@ -43,12 +47,14 @@ class WardrobeTagResult with _$WardrobeTagResult {
 @freezed
 class CreateWardrobeItemRequest with _$CreateWardrobeItemRequest {
   const factory CreateWardrobeItemRequest({
-    required String category,
-    String? subtype,
+    required String slot,
+    String? category,
+    String? subcategory,
     required List<String> color,
-    String? pattern,
+    List<String>? pattern,
     String? fit,
     @JsonKey(name: 'style_tags') required List<String> styleTags,
+    @JsonKey(name: 'occasion_tags') List<String>? occasionTags,
     @JsonKey(name: 'image_url') required String imageUrl,
   }) = _CreateWardrobeItemRequest;
 

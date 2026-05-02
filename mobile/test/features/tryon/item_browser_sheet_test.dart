@@ -10,10 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
-    'Studio shop catalog loads the full backend catalog and categories',
+    'Studio shop catalog loads the full backend catalog and slots',
     (tester) async {
       final repository = _FakeCatalogRepository(
-        categories: const ['top', 'bag', 'activewear'],
+        slots: const ['top', 'bag', 'activewear'],
       );
 
       await tester.pumpWidget(
@@ -27,7 +27,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(repository.searchPageCalls, [(category: null, offset: 0)]);
+      expect(repository.searchPageCalls, [(slot: null, offset: 0)]);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Bag'), findsOneWidget);
@@ -35,11 +35,11 @@ void main() {
     },
   );
 
-  testWidgets('Slot browser still defaults to the slot category', (
+  testWidgets('Slot browser still defaults to the slot', (
     tester,
   ) async {
     final repository = _FakeCatalogRepository(
-      categories: const ['top', 'bag', 'activewear'],
+      slots: const ['top', 'bag', 'activewear'],
     );
 
     await tester.pumpWidget(
@@ -53,7 +53,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(repository.searchPageCalls, [(category: 'bag', offset: 0)]);
+    expect(repository.searchPageCalls, [(slot: 'bag', offset: 0)]);
     expect(find.text('All'), findsNothing);
     expect(find.text('Bag'), findsOneWidget);
   });
@@ -85,25 +85,31 @@ class _TestHarness extends StatelessWidget {
 
 class _FakeCatalogRepository extends CatalogRepository {
   _FakeCatalogRepository({
-    this.categories = const [],
+    this.slots = const [],
   }) : super(Dio());
 
-  final List<String> categories;
-  final List<({String? category, int offset})> searchPageCalls = [];
+  final List<String> slots;
+  final List<({String? slot, int offset})> searchPageCalls = [];
 
   @override
   Future<CatalogFilterOptions> fetchFilterOptions() async {
     return CatalogFilterOptions(
-      categories: categories,
+      slots: slots,
+      categories: const ['shirt'],
+      subcategories: const ['button-up'],
       brands: const ['Mango'],
       genders: const ['women', 'men'],
       fits: const ['regular'],
       colors: const ['Black'],
+      patterns: const ['plain'],
       styleTags: const ['minimal'],
-      subtypes: const ['shirt'],
-      subtypesByCategory: const {
+      occasionTags: const ['work'],
+      categoriesBySlot: const {
         'top': ['shirt'],
-        'bag': ['shoulder bag'],
+        'bag': ['bag'],
+      },
+      subcategoriesByCategory: const {
+        'shirt': ['button-up'],
       },
     );
   }
@@ -113,18 +119,21 @@ class _FakeCatalogRepository extends CatalogRepository {
 
   @override
   Future<({List<CatalogItem> items, int total})> searchPage({
+    String? slot,
     String? category,
-    String? subtype,
+    String? subcategory,
     String? color,
     String? brand,
     String? gender,
+    String? pattern,
     String? style,
+    String? occasion,
     String? fit,
     String? query,
     int limit = 20,
     int offset = 0,
   }) async {
-    searchPageCalls.add((category: category, offset: offset));
+    searchPageCalls.add((slot: slot, offset: offset));
     return (items: const <CatalogItem>[], total: 0);
   }
 }

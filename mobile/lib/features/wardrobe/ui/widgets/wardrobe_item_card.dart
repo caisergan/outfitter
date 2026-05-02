@@ -14,7 +14,7 @@ class WardrobeItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorLabel =
         item.color.isEmpty ? null : _titleCase(item.color.first).trim();
-    final title = _titleCase(item.subtype ?? item.category);
+    final title = _titleCase(item.subcategory ?? item.category ?? item.slot);
 
     return Material(
       color: AppColors.surface,

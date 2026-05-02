@@ -1,4 +1,4 @@
-/// All slot types in an outfit, mapped to backend category strings.
+/// All slot types in an outfit, mapped to backend slot strings.
 enum SlotType {
   top,
   bottom,
@@ -7,7 +7,7 @@ enum SlotType {
   outerwear,
   bag;
 
-  String get categoryString => name;
+  String get slotString => name;
 
   String get displayName => switch (this) {
         SlotType.top => 'Top',

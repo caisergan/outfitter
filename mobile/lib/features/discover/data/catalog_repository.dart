@@ -32,12 +32,15 @@ class CatalogRepository {
   }
 
   Future<({List<CatalogItem> items, int total})> searchPage({
+    String? slot,
     String? category,
-    String? subtype,
+    String? subcategory,
     String? color,
     String? brand,
     String? gender,
+    String? pattern,
     String? style,
+    String? occasion,
     String? fit,
     String? query,
     int limit = 20,
@@ -46,12 +49,15 @@ class CatalogRepository {
     final response = await _dio.get(
       ApiEndpoints.catalogSearch,
       queryParameters: {
+        if (slot != null) 'slot': slot,
         if (category != null) 'category': category,
-        if (subtype != null) 'subtype': subtype,
+        if (subcategory != null) 'subcategory': subcategory,
         if (color != null) 'color': color,
         if (brand != null) 'brand': brand,
         if (gender != null) 'gender': gender,
+        if (pattern != null) 'pattern': pattern,
         if (style != null) 'style': style,
+        if (occasion != null) 'occasion': occasion,
         if (fit != null) 'fit': fit,
         if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
         'limit': limit,
@@ -75,24 +81,30 @@ class CatalogRepository {
   }
 
   Future<List<CatalogItem>> search({
+    String? slot,
     String? category,
-    String? subtype,
+    String? subcategory,
     String? color,
     String? brand,
     String? gender,
+    String? pattern,
     String? style,
+    String? occasion,
     String? fit,
     String? query,
     int limit = 20,
     int offset = 0,
   }) async {
     final page = await searchPage(
+      slot: slot,
       category: category,
-      subtype: subtype,
+      subcategory: subcategory,
       color: color,
       brand: brand,
       gender: gender,
+      pattern: pattern,
       style: style,
+      occasion: occasion,
       fit: fit,
       query: query,
       limit: limit,
@@ -104,6 +116,7 @@ class CatalogRepository {
   int get catalogPageSize => _catalogPageSize;
 
   Future<List<CatalogItem>> searchAll({
+    String? slot,
     String? category,
     String? color,
     String? brand,
@@ -111,6 +124,7 @@ class CatalogRepository {
     String? fit,
   }) async {
     final firstPage = await searchPage(
+      slot: slot,
       category: category,
       color: color,
       brand: brand,
@@ -137,6 +151,7 @@ class CatalogRepository {
     final remainingPages = await Future.wait(
       remainingOffsets.map(
         (offset) => searchPage(
+          slot: slot,
           category: category,
           color: color,
           brand: brand,

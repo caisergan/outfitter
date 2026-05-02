@@ -167,7 +167,7 @@ class _WardrobeGridState extends ConsumerState<_WardrobeGrid> {
 
   String _wardrobeItemLabel(WardrobeItem item) {
     final color = item.color.isEmpty ? null : item.color.join(', ');
-    final subtype = item.subtype ?? item.category;
-    return [color, subtype].whereType<String>().join(' ');
+    final label = item.subcategory ?? item.category ?? item.slot;
+    return [color, label].whereType<String>().join(' ');
   }
 }
