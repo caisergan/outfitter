@@ -1,30 +1,64 @@
+"""Wardrobe tagging + outfit suggestion via Claude.
+
+`tag_wardrobe_item` is the legacy Claude-based wardrobe tagger. The active
+production path uses Gemini (see ``app/services/gemini_service.py`` and
+the ``POST /wardrobe/tag`` endpoint), but this Claude variant is kept as a
+fallback / A-B comparator.
+
+`suggest_outfits` is used by ``POST /outfits/suggest`` to compose outfits
+from available wardrobe + catalog items.
+"""
+
 import base64
 import json
 import logging
+from typing import Any
 
 import anthropic
 from PIL import Image
 import io
 
 from app.config import settings
+from app.schemas.catalog import (
+    CATALOG_CATEGORY,
+    CATALOG_FIT,
+    CATALOG_OCCASION_TAG,
+    CATALOG_PATTERN,
+    CATALOG_SLOT,
+    CATALOG_STYLE_TAG,
+)
 
 logger = logging.getLogger(__name__)
 
 client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-TAGGING_PROMPT = """You are a fashion AI. Analyze this clothing item and return a JSON object with exactly these fields:
-- category: one of [top, bottom, shoes, accessory, outerwear, bag]
-- subtype: specific garment type (e.g. "midi skirt", "sneaker", "blazer")
-- color: list of dominant colors as lowercase strings (e.g. ["black", "white"])
-- pattern: one of [solid, striped, floral, plaid, graphic, other]
-- fit: one of [fitted, relaxed, oversized, a-line, straight]
-- style_tags: list of 2-4 style descriptors (e.g. ["casual", "minimal"])
-- confidence: float between 0.0 and 1.0
 
-Return only valid JSON. No explanation, no markdown."""
+def _vocab_csv(literal_type) -> str:
+    return ", ".join(literal_type.__args__)
+
+
+# Built once at import. Vocabulary is enforced via prompt + post-validation.
+TAGGING_PROMPT = (
+    "You are a fashion AI. Analyze this clothing item and return a JSON object "
+    "with exactly these fields:\n"
+    f"- slot: REQUIRED. One of [{_vocab_csv(CATALOG_SLOT)}]\n"
+    f"- category: optional. One of [{_vocab_csv(CATALOG_CATEGORY)}], or omit if no clean match\n"
+    "- subcategory: optional free-text finer grain (oxford, midi, bomber); omit if not meaningful\n"
+    "- color: list of dominant colors as lowercase strings (e.g. ['black', 'white'])\n"
+    f"- pattern: optional list. Each value one of [{_vocab_csv(CATALOG_PATTERN)}]. Empty array OK\n"
+    f"- fit: optional. One of [{_vocab_csv(CATALOG_FIT)}]\n"
+    f"- style_tags: optional list. Each value one of [{_vocab_csv(CATALOG_STYLE_TAG)}]\n"
+    f"- occasion_tags: optional list. Each value one of [{_vocab_csv(CATALOG_OCCASION_TAG)}]\n"
+    "- confidence: float between 0.0 and 1.0\n\n"
+    "Return only valid JSON. No explanation, no markdown."
+)
+
 
 SUGGEST_PROMPT = """You are a personal fashion stylist. Given the user's parameters and available items, \
 suggest {count} complete outfits. Each outfit must include at minimum: top, bottom, shoes.
+
+Each available item carries a `slot` field (top/bottom/dress/outerwear/footwear/accessory/bag/...) — use
+this to decide which item fills each outfit slot.
 
 Parameters:
 - Occasion: {occasion}
@@ -59,8 +93,8 @@ def _strip_faces_and_crop(image_bytes: bytes) -> bytes:
         return image_bytes
 
 
-async def tag_wardrobe_item(image_bytes: bytes, media_type: str = "image/jpeg") -> dict:
-    """Send a clothing photo to Claude and return structured tags."""
+async def tag_wardrobe_item(image_bytes: bytes, media_type: str = "image/jpeg") -> dict[str, Any]:
+    """Legacy Claude wardrobe tagger. Production path uses gemini_service."""
     safe_bytes = _strip_faces_and_crop(image_bytes)
     image_b64 = base64.standard_b64encode(safe_bytes).decode("utf-8")
 
@@ -69,7 +103,7 @@ async def tag_wardrobe_item(image_bytes: bytes, media_type: str = "image/jpeg") 
         try:
             response = client.messages.create(
                 model="claude-opus-4-6",
-                max_tokens=300,
+                max_tokens=400,
                 messages=[
                     {
                         "role": "user",
@@ -91,8 +125,8 @@ async def tag_wardrobe_item(image_bytes: bytes, media_type: str = "image/jpeg") 
         except json.JSONDecodeError:
             logger.warning("Claude returned non-JSON on attempt %d", attempt + 1)
             if attempt == 1:
-                return {"category": "unknown", "confidence": 0.0}
-    return {"category": "unknown", "confidence": 0.0}
+                return {"slot": "top", "confidence": 0.0}
+    return {"slot": "top", "confidence": 0.0}
 
 
 # In-memory cache: keyed by param hash, value: (outfits, expires_at)

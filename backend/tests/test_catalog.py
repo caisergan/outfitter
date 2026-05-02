@@ -22,13 +22,15 @@ def test_catalog_item_response_serializes_uuid_without_mutating_model():
         id=uuid.uuid4(),
         brand="Mango",
         gender="women",
-        category="top",
-        subtype="shirt",
+        slot="top",
+        category="shirt",
+        subcategory="oxford",
         name="Linen Shirt",
         color=["blue"],
         pattern=None,
         fit="regular",
-        style_tags=["casual"],
+        style_tags=["classic"],
+        occasion_tags=["casual"],
         image_front_url="https://example.com/catalog/linen-shirt.jpg",
         product_url="https://example.com/products/linen-shirt",
         created_at=datetime.now(timezone.utc),
@@ -40,6 +42,13 @@ def test_catalog_item_response_serializes_uuid_without_mutating_model():
     assert isinstance(item.id, uuid.UUID)
     assert payload["id"] == str(item.id)
     assert payload["gender"] == "women"
+    assert payload["slot"] == "top"
+    assert payload["category"] == "shirt"
+    assert payload["subcategory"] == "oxford"
+    # Array normalization: None pattern → empty list at the API boundary.
+    assert payload["pattern"] == []
+    assert payload["occasion_tags"] == ["casual"]
+    assert payload["style_tags"] == ["classic"]
 
 
 @pytest.mark.asyncio
@@ -50,13 +59,15 @@ async def test_catalog_search_returns_items_with_string_ids(client: AsyncClient,
     item = CatalogItem(
         brand="Mango",
         gender="women",
-        category="top",
-        subtype="shirt",
+        slot="top",
+        category="shirt",
+        subcategory=None,
         name="Linen Shirt",
         color=["blue"],
         pattern=None,
         fit="regular",
-        style_tags=["casual"],
+        style_tags=["classic"],
+        occasion_tags=["office"],
         image_front_url="https://example.com/catalog/linen-shirt.jpg",
         product_url="https://example.com/products/linen-shirt",
     )
@@ -74,8 +85,11 @@ async def test_catalog_search_returns_items_with_string_ids(client: AsyncClient,
     assert body["total"] == 1
     assert body["items"][0]["id"] == str(item.id)
     assert body["items"][0]["gender"] == "women"
+    assert body["items"][0]["slot"] == "top"
+    assert body["items"][0]["category"] == "shirt"
     assert body["items"][0]["color"] == ["blue"]
-    assert body["items"][0]["style_tags"] == ["casual"]
+    assert body["items"][0]["style_tags"] == ["classic"]
+    assert body["items"][0]["occasion_tags"] == ["office"]
 
 
 @pytest.mark.asyncio
@@ -86,26 +100,26 @@ async def test_catalog_search_filters_by_color_array_members(client: AsyncClient
     matching_item = CatalogItem(
         brand="Mango",
         gender="women",
+        slot="dress",
         category="dress",
-        subtype="dress",
         name="Aqua Slip Dress",
         color=["Aqua Green", "White"],
         pattern=None,
         fit="regular",
-        style_tags=["occasion"],
+        style_tags=["glam"],
         image_front_url="https://example.com/catalog/aqua-slip-dress.jpg",
         product_url="https://example.com/products/aqua-slip-dress",
     )
     other_item = CatalogItem(
         brand="Mango",
         gender="women",
+        slot="dress",
         category="dress",
-        subtype="dress",
         name="Black Slip Dress",
         color=["Black"],
         pattern=None,
         fit="regular",
-        style_tags=["occasion"],
+        style_tags=["glam"],
         image_front_url="https://example.com/catalog/black-slip-dress.jpg",
         product_url="https://example.com/products/black-slip-dress",
     )
@@ -127,33 +141,51 @@ async def test_catalog_search_filters_by_color_array_members(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_catalog_search_filters_by_subtype(client: AsyncClient, db):
-    signup_resp = await _signup(client, email="catalog-subtype-filter@outfitter.dev")
+async def test_catalog_search_filters_by_slot(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-slot-filter@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    top_item = CatalogItem(
+        brand="Mango", slot="top", category="shirt",
+        name="Linen Shirt",
+        image_front_url="https://example.com/catalog/linen-shirt.jpg",
+    )
+    bottom_item = CatalogItem(
+        brand="Mango", slot="bottom", category="jeans",
+        name="Slim Jeans",
+        image_front_url="https://example.com/catalog/slim-jeans.jpg",
+    )
+    db.add_all([top_item, bottom_item])
+    await db.commit()
+    await db.refresh(top_item)
+    await db.refresh(bottom_item)
+
+    response = await client.get(
+        "/catalog/search?slot=bottom",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(bottom_item.id)
+    assert body["items"][0]["slot"] == "bottom"
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_filters_by_category(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-category-filter@outfitter.dev")
     token = signup_resp.json()["access_token"]
 
     shirt = CatalogItem(
-        brand="Mango",
-        gender="women",
-        category="top",
-        subtype="shirt",
-        name="Linen Shirt",
-        color=["white"],
-        fit="regular",
-        style_tags=["casual"],
-        image_front_url="https://example.com/catalog/linen-shirt.jpg",
-        product_url="https://example.com/products/linen-shirt",
+        brand="Mango", slot="top", category="shirt",
+        name="Oxford Shirt",
+        image_front_url="https://example.com/catalog/oxford-shirt.jpg",
     )
     tee = CatalogItem(
-        brand="Mango",
-        gender="women",
-        category="top",
-        subtype="t-shirt",
+        brand="Mango", slot="top", category="t-shirt",
         name="Cotton Tee",
-        color=["white"],
-        fit="regular",
-        style_tags=["casual"],
         image_front_url="https://example.com/catalog/cotton-tee.jpg",
-        product_url="https://example.com/products/cotton-tee",
     )
     db.add_all([shirt, tee])
     await db.commit()
@@ -161,7 +193,7 @@ async def test_catalog_search_filters_by_subtype(client: AsyncClient, db):
     await db.refresh(tee)
 
     response = await client.get(
-        "/catalog/search?subtype=shirt",
+        "/catalog/search?category=shirt",
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -169,7 +201,39 @@ async def test_catalog_search_filters_by_subtype(client: AsyncClient, db):
     body = response.json()
     assert body["total"] == 1
     assert body["items"][0]["id"] == str(shirt.id)
-    assert body["items"][0]["subtype"] == "shirt"
+    assert body["items"][0]["category"] == "shirt"
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_filters_by_subcategory(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-subcategory-filter@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    oxford = CatalogItem(
+        brand="Mango", slot="top", category="shirt", subcategory="oxford",
+        name="Oxford Shirt",
+        image_front_url="https://example.com/catalog/oxford-shirt.jpg",
+    )
+    flannel = CatalogItem(
+        brand="Mango", slot="top", category="shirt", subcategory="flannel",
+        name="Flannel Shirt",
+        image_front_url="https://example.com/catalog/flannel-shirt.jpg",
+    )
+    db.add_all([oxford, flannel])
+    await db.commit()
+    await db.refresh(oxford)
+    await db.refresh(flannel)
+
+    response = await client.get(
+        "/catalog/search?subcategory=oxford",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(oxford.id)
+    assert body["items"][0]["subcategory"] == "oxford"
 
 
 @pytest.mark.asyncio
@@ -178,28 +242,14 @@ async def test_catalog_search_filters_by_name_query_case_insensitive(client: Asy
     token = signup_resp.json()["access_token"]
 
     linen = CatalogItem(
-        brand="Mango",
-        gender="women",
-        category="top",
-        subtype="shirt",
+        brand="Mango", slot="top", category="shirt",
         name="Linen Shirt",
-        color=["white"],
-        fit="regular",
-        style_tags=["casual"],
         image_front_url="https://example.com/catalog/linen-shirt.jpg",
-        product_url="https://example.com/products/linen-shirt",
     )
     cotton = CatalogItem(
-        brand="Mango",
-        gender="women",
-        category="top",
-        subtype="t-shirt",
+        brand="Mango", slot="top", category="t-shirt",
         name="Cotton Tee",
-        color=["white"],
-        fit="regular",
-        style_tags=["casual"],
         image_front_url="https://example.com/catalog/cotton-tee.jpg",
-        product_url="https://example.com/products/cotton-tee",
     )
     db.add_all([linen, cotton])
     await db.commit()
@@ -223,30 +273,18 @@ async def test_catalog_search_filters_by_style_tag_array_members(client: AsyncCl
     token = signup_resp.json()["access_token"]
 
     matching_item = CatalogItem(
-        brand="Mango",
-        gender="women",
-        category="top",
-        subtype="shirt",
+        brand="Mango", slot="top", category="shirt",
         name="Minimal Shirt",
         color=["White"],
-        pattern=None,
-        fit="regular",
-        style_tags=["minimal", "office"],
+        style_tags=["minimal", "classic"],
         image_front_url="https://example.com/catalog/minimal-shirt.jpg",
-        product_url="https://example.com/products/minimal-shirt",
     )
     other_item = CatalogItem(
-        brand="Mango",
-        gender="women",
-        category="top",
-        subtype="shirt",
+        brand="Mango", slot="top", category="shirt",
         name="Boho Shirt",
         color=["Blue"],
-        pattern=None,
-        fit="regular",
-        style_tags=["boho"],
+        style_tags=["bohemian"],
         image_front_url="https://example.com/catalog/boho-shirt.jpg",
-        product_url="https://example.com/products/boho-shirt",
     )
     db.add_all([matching_item, other_item])
     await db.commit()
@@ -262,7 +300,63 @@ async def test_catalog_search_filters_by_style_tag_array_members(client: AsyncCl
     body = response.json()
     assert body["total"] == 1
     assert body["items"][0]["id"] == str(matching_item.id)
-    assert body["items"][0]["style_tags"] == ["minimal", "office"]
+    assert body["items"][0]["style_tags"] == ["minimal", "classic"]
+
+
+@pytest.mark.asyncio
+async def test_catalog_search_filters_by_occasion_array_members(client: AsyncClient, db):
+    signup_resp = await _signup(client, email="catalog-occasion-filter@outfitter.dev")
+    token = signup_resp.json()["access_token"]
+
+    office_item = CatalogItem(
+        brand="Mango", slot="outerwear", category="blazer",
+        name="Tailored Blazer",
+        occasion_tags=["office", "interview"],
+        image_front_url="https://example.com/catalog/tailored-blazer.jpg",
+    )
+    casual_item = CatalogItem(
+        brand="Mango", slot="top", category="t-shirt",
+        name="Cotton Tee",
+        occasion_tags=["casual"],
+        image_front_url="https://example.com/catalog/cotton-tee.jpg",
+    )
+    db.add_all([office_item, casual_item])
+    await db.commit()
+    await db.refresh(office_item)
+    await db.refresh(casual_item)
+
+    response = await client.get(
+        "/catalog/search?occasion=office",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(office_item.id)
+
+
+# ---------------------------------------------------------------------------
+# Vocabulary sync — schema Literals must match scripts.taxonomy_maps frozensets
+# ---------------------------------------------------------------------------
+
+
+def test_schema_vocab_in_sync_with_taxonomy_maps():
+    """Detect drift between app.schemas.catalog Literals and scripts.taxonomy_maps."""
+    from app.schemas.catalog import (
+        CATALOG_SLOT, CATALOG_CATEGORY, CATALOG_PATTERN, CATALOG_FIT,
+        CATALOG_STYLE_TAG, CATALOG_OCCASION_TAG,
+    )
+    from scripts.taxonomy_maps import (
+        SLOTS, CATEGORIES, PATTERNS, FITS, STYLE_TAGS, OCCASION_TAGS,
+    )
+
+    assert frozenset(CATALOG_SLOT.__args__) == SLOTS
+    assert frozenset(CATALOG_CATEGORY.__args__) == CATEGORIES
+    assert frozenset(CATALOG_PATTERN.__args__) == PATTERNS
+    assert frozenset(CATALOG_FIT.__args__) == FITS
+    assert frozenset(CATALOG_STYLE_TAG.__args__) == STYLE_TAGS
+    assert frozenset(CATALOG_OCCASION_TAG.__args__) == OCCASION_TAGS
 
 
 # ---------------------------------------------------------------------------
@@ -381,14 +475,18 @@ class TestCatalogImageFrontUrlPersistence:
                 "brand": "Nike",
                 "gender": "women",
                 "name": "Air Max 90",
-                "category": "footwear",
+                "slot": "footwear",
+                "category": "sneakers",
                 "image_front_url": image_url,
             },
         )
 
         assert response.status_code == 201
-        assert response.json()["image_front_url"] == image_url
-        assert response.json()["gender"] == "women"
+        body = response.json()
+        assert body["image_front_url"] == image_url
+        assert body["gender"] == "women"
+        assert body["slot"] == "footwear"
+        assert body["category"] == "sneakers"
 
     @pytest.mark.asyncio
     async def test_update_item_replaces_image_front_url(self, client: AsyncClient, db) -> None:
@@ -402,7 +500,8 @@ class TestCatalogImageFrontUrlPersistence:
                 "brand": "Nike",
                 "gender": "men",
                 "name": "Air Max 90",
-                "category": "footwear",
+                "slot": "footwear",
+                "category": "sneakers",
                 "image_front_url": "https://cdn.example.com/catalog/nike/old.jpg",
             },
         )
@@ -432,7 +531,8 @@ class TestCatalogImageFrontUrlPersistence:
                 "brand": "Nike",
                 "gender": "women",
                 "name": "Air Max 90",
-                "category": "footwear",
+                "slot": "footwear",
+                "category": "sneakers",
                 "image_front_url": image_url,
             },
         )
@@ -460,7 +560,8 @@ class TestCatalogImageFrontUrlPersistence:
                 "brand": "Adidas",
                 "gender": "men",
                 "name": "Stan Smith",
-                "category": "footwear",
+                "slot": "footwear",
+                "category": "sneakers",
                 "image_front_url": image_url,
             },
         )

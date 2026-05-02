@@ -39,13 +39,17 @@ async def suggest_outfits(
         for item in result.scalars().all():
             available_items.append(
                 {
-                    "id": item.id,
+                    "id": str(item.id),
                     "source": "catalog",
                     "brand": item.brand,
+                    "slot": item.slot,
                     "category": item.category,
+                    "subcategory": item.subcategory,
                     "name": item.name,
                     "color": item.color,
+                    "pattern": item.pattern,
                     "style_tags": item.style_tags,
+                    "occasion_tags": item.occasion_tags,
                     "fit": item.fit,
                     "image_url": item.image_front_url,
                 }
@@ -61,13 +65,17 @@ async def suggest_outfits(
         for item in result.scalars().all():
             available_items.append(
                 {
-                    "id": item.id,
+                    "id": str(item.id),
                     "source": "wardrobe",
                     "brand": None,
+                    "slot": item.slot,
                     "category": item.category,
-                    "name": item.subtype or item.category,
+                    "subcategory": item.subcategory,
+                    "name": item.subcategory or item.category or item.slot,
                     "color": item.color,
+                    "pattern": item.pattern,
                     "style_tags": item.style_tags,
+                    "occasion_tags": item.occasion_tags,
                     "fit": item.fit,
                     "image_url": item.image_url,
                 }

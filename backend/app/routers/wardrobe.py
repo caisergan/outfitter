@@ -1,5 +1,4 @@
 import asyncio
-import io
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -30,6 +29,7 @@ MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
 async def list_wardrobe(
     db: DbDep,
     current_user: CurrentUserDep,
+    slot: Annotated[str | None, Query()] = None,
     category: Annotated[str | None, Query()] = None,
     sort: Annotated[str, Query()] = "recent",
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -40,6 +40,8 @@ async def list_wardrobe(
         .where(WardrobeItem.user_id == current_user.id)
         .where(WardrobeItem.deleted_at.is_(None))
     )
+    if slot:
+        q = q.where(WardrobeItem.slot == slot)
     if category:
         q = q.where(WardrobeItem.category == category)
 
@@ -78,7 +80,6 @@ async def tag_wardrobe_item(
             detail="File exceeds 10 MB limit",
         )
 
-    import asyncio
     from uuid import uuid4
     from app.services.image_service import clean_and_crop_image
     from app.services.gemini_service import tag_wardrobe_item_with_gemini
@@ -89,13 +90,12 @@ async def tag_wardrobe_item(
 
     # 2. Extract tags using Gemini AI using the clean garment
     tags = await tag_wardrobe_item_with_gemini(cleaned_bytes, "image/png")
-    
+
     # 3. Upload the cleaned image to S3 immediately
-    # We use a UUID since the database item hasn't been created yet.
     image_id = str(uuid4())
     key = f"wardrobe/{current_user.id}/{image_id}.png"
     await asyncio.to_thread(upload_bytes, key, cleaned_bytes, "image/png")
-    
+
     # 4. Return the public URL so the frontend can display it
     tags["image_url"] = get_public_url(key)
 
@@ -109,9 +109,10 @@ async def create_wardrobe_item(
     current_user: CurrentUserDep,
 ) -> WardrobeItemResponse:
     """
-    Creates a new wardrobe item. Fetches the image from the provided URL 
+    Creates a new wardrobe item. Fetches the image from the provided URL
     (or storage key) to compute its CLIP embedding for visual search.
     """
+    import logging
     from app.services.storage_service import download_bytes
     from app.services.clip_service import embed_image_async
     import httpx
@@ -119,42 +120,39 @@ async def create_wardrobe_item(
 
     # 1. Fetch image bytes to compute embedding
     image_bytes = None
+    embedding = None
     try:
-        # Check if the URL is an R2 URL and we can extract a key
-        # Key format: wardrobe/{user_id}/{item_id}.jpg
         parsed_url = urlparse(body.image_url)
         path = parsed_url.path.lstrip('/')
-        
+
         if "wardrobe" in path:
             # Try downloading directly from R2 via key
             image_bytes = await asyncio.to_thread(download_bytes, path)
         else:
-            # Fallback to HTTP download
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(body.image_url)
                 resp.raise_for_status()
                 image_bytes = resp.content
-        
-        # 2. Compute CLIP embedding
+
         if image_bytes:
             embedding = await embed_image_async(image_bytes)
         else:
             logging.getLogger(__name__).warning(f"No image bytes found for {body.image_url}")
-            embedding = None
     except Exception as e:
-        import logging
         logging.getLogger(__name__).exception(f"Could not compute embedding for {body.image_url}: {e}")
         embedding = None
 
-    # 3. Save to database
+    # 2. Save to database
     item = WardrobeItem(
         user_id=current_user.id,
+        slot=body.slot,
         category=body.category,
-        subtype=body.subtype,
+        subcategory=body.subcategory,
         color=body.color,
         pattern=body.pattern,
         fit=body.fit,
         style_tags=body.style_tags,
+        occasion_tags=body.occasion_tags,
         image_url=body.image_url,
         clip_embedding=embedding,
         times_used=0,
