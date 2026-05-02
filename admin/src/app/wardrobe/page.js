@@ -25,7 +25,8 @@ export default function WardrobePage() {
     const [items, setItems] = useState(null);
     const [totalItems, setTotalItems] = useState(0);
     const [offset, setOffset] = useState(0);
-    const [catFilter, setCatFilter] = useState("");
+    const [slotFilter, setSlotFilter] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("");
     const [sortFilter, setSortFilter] = useState("recent");
     const [browseLoading, setBrowseLoading] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -37,14 +38,15 @@ export default function WardrobePage() {
     const [tagLoading, setTagLoading] = useState(false);
 
     // Create tab state
-    const [createForm, setCreateForm] = useState({ category: "", image_url: "" });
+    const [createForm, setCreateForm] = useState({ slot: "", image_url: "" });
     const [createLoading, setCreateLoading] = useState(false);
 
     async function loadWardrobe(newOffset = 0) {
         setBrowseLoading(true);
         try {
             const data = await listWardrobe({
-                category: catFilter || undefined,
+                slot: slotFilter || undefined,
+                category: categoryFilter || undefined,
                 sort: sortFilter,
                 limit: LIMIT,
                 offset: newOffset,
@@ -92,25 +94,29 @@ export default function WardrobePage() {
 
     async function handleCreate(e) {
         e.preventDefault();
-        if (!createForm.category || !createForm.image_url) {
-            toast.error("Category and image URL are required");
+        if (!createForm.slot || !createForm.image_url) {
+            toast.error("Slot and image URL are required");
             return;
         }
         setCreateLoading(true);
         try {
-            const colorVal = createForm.color ? createForm.color.split(",").map(c => c.trim()) : undefined;
-            const tagsVal = createForm.style_tags ? createForm.style_tags.split(",").map(t => t.trim()) : undefined;
+            const colorVal = createForm.color ? createForm.color.split(",").map(c => c.trim()).filter(Boolean) : undefined;
+            const tagsVal = createForm.style_tags ? createForm.style_tags.split(",").map(t => t.trim()).filter(Boolean) : undefined;
+            const occasionVal = createForm.occasion_tags ? createForm.occasion_tags.split(",").map(t => t.trim()).filter(Boolean) : undefined;
+            const patternVal = createForm.pattern ? createForm.pattern.split(",").map(p => p.trim()).filter(Boolean) : undefined;
             await createWardrobeItem({
-                category: createForm.category,
-                subtype: createForm.subtype || undefined,
+                slot: createForm.slot,
+                category: createForm.category || undefined,
+                subcategory: createForm.subcategory || undefined,
                 color: colorVal,
-                pattern: createForm.pattern || undefined,
+                pattern: patternVal,
                 fit: createForm.fit || undefined,
                 style_tags: tagsVal,
+                occasion_tags: occasionVal,
                 image_url: createForm.image_url,
             });
             toast.success("Wardrobe item created");
-            setCreateForm({ category: "", image_url: "" });
+            setCreateForm({ slot: "", image_url: "" });
             await loadWardrobe(0);
         } catch (err) {
             toast.error(err.message);
@@ -140,12 +146,21 @@ export default function WardrobePage() {
                 <TabsContent value="browse" className="mt-4 space-y-4">
                     <div className="flex flex-wrap gap-3">
                         <div className="flex items-center gap-2">
+                            <Label className="text-xs text-slate-400 whitespace-nowrap">Slot</Label>
+                            <Input
+                                placeholder="e.g. top"
+                                value={slotFilter}
+                                onChange={(e) => setSlotFilter(e.target.value)}
+                                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm w-32"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
                             <Label className="text-xs text-slate-400 whitespace-nowrap">Category</Label>
                             <Input
-                                placeholder="e.g. tops"
-                                value={catFilter}
-                                onChange={(e) => setCatFilter(e.target.value)}
-                                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm w-36"
+                                placeholder="e.g. blouse"
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value)}
+                                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-8 text-sm w-32"
                             />
                         </div>
                         <div className="flex items-center gap-2">
@@ -193,7 +208,7 @@ export default function WardrobePage() {
                                     <TableHeader>
                                         <TableRow className="border-slate-800 hover:bg-transparent">
                                             <TableHead className="text-slate-400 w-16">Image</TableHead>
-                                            <TableHead className="text-slate-400">Category</TableHead>
+                                            <TableHead className="text-slate-400">Slot / Category</TableHead>
                                             <TableHead className="text-slate-400">Color</TableHead>
                                             <TableHead className="text-slate-400">Pattern</TableHead>
                                             <TableHead className="text-slate-400">Fit</TableHead>
@@ -211,7 +226,7 @@ export default function WardrobePage() {
                                             <TableRow key={item.id} className="border-slate-800 hover:bg-slate-800/50">
                                                 <TableCell>
                                                     {item.image_url ? (
-                                                        <img src={item.image_url} alt={item.category} className="w-10 h-10 object-cover rounded border border-slate-700" />
+                                                        <img src={item.image_url} alt={item.category || item.slot} className="w-10 h-10 object-cover rounded border border-slate-700" />
                                                     ) : (
                                                         <div className="w-10 h-10 bg-slate-800 rounded border border-slate-700 flex items-center justify-center">
                                                             <Image className="w-4 h-4 text-slate-600" />
@@ -220,12 +235,13 @@ export default function WardrobePage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div>
-                                                        <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">{item.category}</Badge>
-                                                        {item.subtype && <p className="text-[10px] text-slate-500 mt-0.5">{item.subtype}</p>}
+                                                        <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">{item.slot || "—"}</Badge>
+                                                        {item.category && <p className="text-[11px] text-slate-300 mt-0.5">{item.category}</p>}
+                                                        {item.subcategory && <p className="text-[10px] text-slate-500">{item.subcategory}</p>}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-slate-300 text-xs">{item.color?.join(", ") || "—"}</TableCell>
-                                                <TableCell className="text-slate-400 text-xs">{item.pattern || "—"}</TableCell>
+                                                <TableCell className="text-slate-400 text-xs">{Array.isArray(item.pattern) ? item.pattern.join(", ") : (item.pattern || "—")}</TableCell>
                                                 <TableCell className="text-slate-400 text-xs">{item.fit || "—"}</TableCell>
                                                 <TableCell className="text-slate-400 text-xs">{item.times_used}</TableCell>
                                                 <TableCell className="text-slate-500 text-xs">{new Date(item.created_at).toLocaleDateString()}</TableCell>
@@ -280,16 +296,16 @@ export default function WardrobePage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div>
+                                            <p className="text-slate-500 text-xs">Slot</p>
+                                            <p className="text-slate-100">{tagResult.slot || "—"}</p>
+                                        </div>
+                                        <div>
                                             <p className="text-slate-500 text-xs">Category</p>
                                             <p className="text-slate-100">{tagResult.category || "—"}</p>
                                         </div>
                                         <div>
-                                            <p className="text-slate-500 text-xs">Subtype</p>
-                                            <p className="text-slate-100">{tagResult.subtype || "—"}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-500 text-xs">Pattern</p>
-                                            <p className="text-slate-100">{tagResult.pattern || "—"}</p>
+                                            <p className="text-slate-500 text-xs">Subcategory</p>
+                                            <p className="text-slate-100">{tagResult.subcategory || "—"}</p>
                                         </div>
                                         <div>
                                             <p className="text-slate-500 text-xs">Fit</p>
@@ -303,9 +319,23 @@ export default function WardrobePage() {
                                         </div>
                                     </div>
                                     <div>
+                                        <p className="text-slate-500 text-xs mb-1">Pattern</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {Array.isArray(tagResult.pattern)
+                                                ? tagResult.pattern.map((p) => <Badge key={p} variant="outline" className="border-slate-600 text-slate-300 text-xs">{p}</Badge>)
+                                                : (tagResult.pattern ? <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">{tagResult.pattern}</Badge> : "—")}
+                                        </div>
+                                    </div>
+                                    <div>
                                         <p className="text-slate-500 text-xs mb-1">Style Tags</p>
                                         <div className="flex flex-wrap gap-1">
                                             {tagResult.style_tags?.map((t) => <Badge key={t} variant="secondary" className="bg-slate-700 text-slate-300 text-xs">{t}</Badge>) || "—"}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs mb-1">Occasion Tags</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {tagResult.occasion_tags?.map((o) => <Badge key={o} variant="secondary" className="bg-slate-700 text-slate-300 text-xs">{o}</Badge>) || "—"}
                                         </div>
                                     </div>
                                 </div>
@@ -323,12 +353,14 @@ export default function WardrobePage() {
                         <CardContent>
                             <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {[
-                                    { key: "category", label: "Category *", placeholder: "e.g. tops" },
-                                    { key: "subtype", label: "Subtype", placeholder: "e.g. t-shirt" },
+                                    { key: "slot", label: "Slot *", placeholder: "e.g. top" },
+                                    { key: "category", label: "Category", placeholder: "e.g. blouse" },
+                                    { key: "subcategory", label: "Subcategory", placeholder: "e.g. button-up" },
                                     { key: "color", label: "Colors (comma-separated)", placeholder: "e.g. black, white" },
-                                    { key: "pattern", label: "Pattern", placeholder: "e.g. solid" },
+                                    { key: "pattern", label: "Pattern (comma-separated)", placeholder: "e.g. striped, plain" },
                                     { key: "fit", label: "Fit", placeholder: "e.g. slim" },
                                     { key: "style_tags", label: "Style Tags (comma-separated)", placeholder: "e.g. casual, minimalist" },
+                                    { key: "occasion_tags", label: "Occasion Tags (comma-separated)", placeholder: "e.g. work, weekend" },
                                 ].map(({ key, label, placeholder }) => (
                                     <div key={key} className="space-y-1">
                                         <Label className="text-xs text-slate-400">{label}</Label>

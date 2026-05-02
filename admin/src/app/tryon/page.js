@@ -63,13 +63,16 @@ const PROMPT_CAP = 32000;
 const SEARCH_DEBOUNCE_MS = 300;
 
 const FILTER_FIELDS = [
-    { key: "category", label: "Category", optionsKey: "categories" },
-    { key: "subtype",  label: "Subtype",  optionsKey: "__subtypes_by_category" },
-    { key: "brand", label: "Brand", optionsKey: "brands" },
-    { key: "gender", label: "Gender", optionsKey: "genders" },
-    { key: "color", label: "Color", optionsKey: "colors" },
-    { key: "style", label: "Style", optionsKey: "style_tags" },
-    { key: "fit", label: "Fit", optionsKey: "fits" },
+    { key: "slot",        label: "Slot",        optionsKey: "slots" },
+    { key: "category",    label: "Category",    optionsKey: "__categories_by_slot" },
+    { key: "subcategory", label: "Subcategory", optionsKey: "__subcategories_by_category" },
+    { key: "brand",       label: "Brand",       optionsKey: "brands" },
+    { key: "gender",      label: "Gender",      optionsKey: "genders" },
+    { key: "color",       label: "Color",       optionsKey: "colors" },
+    { key: "pattern",     label: "Pattern",     optionsKey: "patterns" },
+    { key: "style",       label: "Style",       optionsKey: "style_tags" },
+    { key: "occasion",    label: "Occasion",    optionsKey: "occasion_tags" },
+    { key: "fit",         label: "Fit",         optionsKey: "fits" },
 ];
 
 const SIZE_OPTIONS = [
@@ -300,8 +303,11 @@ export default function TryOnPage() {
 
     function handleFilterChange(key, value) {
         setFilters((prev) => {
+            if (key === "slot" && prev.slot !== value) {
+                return { ...prev, slot: value, category: "", subcategory: "" };
+            }
             if (key === "category" && prev.category !== value) {
-                return { ...prev, category: value, subtype: "" };
+                return { ...prev, category: value, subcategory: "" };
             }
             return { ...prev, [key]: value };
         });
@@ -711,14 +717,28 @@ export default function TryOnPage() {
                         className="pl-9 pr-9 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 h-10"
                     />
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {FILTER_FIELDS.map(({ key, label, optionsKey }) => {
-                        const options =
-                            optionsKey === "__subtypes_by_category"
-                                ? (filterOptions?.subtypes_by_category?.[filters.category] ?? [])
-                                : (filterOptions?.[optionsKey] ?? []);
-                        const isSubtype = key === "subtype";
-                        const isDisabled = isSubtype && !filters.category;
+                        let options = [];
+                        if (optionsKey === "__categories_by_slot") {
+                            options = filters.slot
+                                ? (filterOptions?.categories_by_slot?.[filters.slot] ?? [])
+                                : (filterOptions?.categories ?? []);
+                        } else if (optionsKey === "__subcategories_by_category") {
+                            options = filters.category
+                                ? (filterOptions?.subcategories_by_category?.[filters.category] ?? [])
+                                : (filterOptions?.subcategories ?? []);
+                        } else {
+                            options = filterOptions?.[optionsKey] ?? [];
+                        }
+                        const isCategoryField = key === "category";
+                        const isSubcategoryField = key === "subcategory";
+                        const isDisabled =
+                            (isCategoryField && !filters.slot) ||
+                            (isSubcategoryField && !filters.category);
+                        const placeholder = isDisabled
+                            ? (isCategoryField ? "Pick slot" : "Pick category")
+                            : "All";
                         return (
                             <div key={key} className="space-y-1">
                                 <Label className="text-xs text-slate-400">{label}</Label>
@@ -728,7 +748,7 @@ export default function TryOnPage() {
                                     disabled={isDisabled}
                                     className="w-full h-8 px-2 text-sm rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <option value="">{isDisabled ? "Pick category" : "All"}</option>
+                                    <option value="">{placeholder}</option>
                                     {options.map((opt) => (
                                         <option key={opt} value={opt}>{opt}</option>
                                     ))}
