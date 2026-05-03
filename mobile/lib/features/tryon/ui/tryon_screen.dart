@@ -232,7 +232,7 @@ class _TryOnScreenState extends ConsumerState<TryOnScreen> {
             ),
             Text(
               canvas.activeOutfitId == null
-                  ? 'Compose a look with wardrobe and catalog pieces.'
+                  ? 'Build and refine your look.'
                   : canvas.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -286,7 +286,7 @@ class _TryOnScreenState extends ConsumerState<TryOnScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
               child: Row(
                 children: [
                   Expanded(
@@ -294,6 +294,10 @@ class _TryOnScreenState extends ConsumerState<TryOnScreen> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Piece'),
                       onPressed: _openGarmentSourcePicker,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(46),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -308,14 +312,15 @@ class _TryOnScreenState extends ConsumerState<TryOnScreen> {
                         foregroundColor: AppColors.surface,
                         disabledBackgroundColor: AppColors.surfaceMuted,
                         disabledForegroundColor: AppColors.textMuted,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        minimumSize: const Size.fromHeight(46),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   _ToolbarIconButton(
                     icon: Icons.layers_outlined,
                     tooltip: 'Layers',
@@ -326,7 +331,7 @@ class _TryOnScreenState extends ConsumerState<TryOnScreen> {
             ),
             const Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
                 child: _StylingCanvasSurface(),
               ),
             ),
@@ -1483,7 +1488,7 @@ class _CanvasGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.border.withValues(alpha: 0.45)
+      ..color = AppColors.borderStrong.withValues(alpha: 0.4)
       ..strokeWidth = 1;
     const spacing = 40.0;
 

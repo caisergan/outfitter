@@ -183,16 +183,19 @@ class _ParameterScreenState extends State<ParameterScreen> {
           label: Text(
             _titleCase(opt),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: isSelected ? AppColors.text : AppColors.textMuted,
+                  color: isSelected ? AppColors.text : AppColors.text,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 ),
           ),
           selected: isSelected,
           onSelected: (val) => onSelected(val ? opt : null),
           side: BorderSide(
-            color: isSelected ? AppColors.borderStrong : AppColors.border,
+            color: isSelected
+                ? AppColors.borderStrong
+                : AppColors.borderStrong.withValues(alpha: 0.72),
           ),
           selectedColor: AppColors.surfaceAlt,
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.glassStrong.withValues(alpha: 0.88),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),

@@ -10,8 +10,8 @@ class AppColors {
   static const blush = Color(0xFF5E748E);
   static const text = Color(0xFF14202E);
   static const textMuted = Color(0xFF627287);
-  static const border = Color(0x80FFFFFF);
-  static const borderStrong = Color(0xFFA5B6CA);
+  static const border = Color(0xCCFFFFFF);
+  static const borderStrong = Color(0xFF93A8C0);
   static const success = Color(0xFF5E8A7B);
   static const danger = Color(0xFF9A6470);
 

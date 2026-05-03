@@ -160,16 +160,16 @@ class AppTheme {
         focusedErrorBorder: inputBorder(AppColors.danger),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.glass.withValues(alpha: 0.75),
+        backgroundColor: AppColors.glassStrong.withValues(alpha: 0.78),
         selectedColor: AppColors.glassStrong,
         secondarySelectedColor: AppColors.glassStrong,
         disabledColor: AppColors.surfaceMuted,
-        side: const BorderSide(color: AppColors.border),
+        side: const BorderSide(color: AppColors.borderStrong),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
         ),
         labelStyle: textTheme.labelMedium?.copyWith(
-          color: AppColors.textMuted,
+          color: AppColors.text,
           fontWeight: FontWeight.w600,
         ),
         secondaryLabelStyle: textTheme.labelMedium?.copyWith(
@@ -206,8 +206,8 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.text,
-          backgroundColor: AppColors.glass.withValues(alpha: 0.58),
-          side: const BorderSide(color: AppColors.border),
+          backgroundColor: AppColors.glassStrong.withValues(alpha: 0.82),
+          side: const BorderSide(color: AppColors.borderStrong),
           minimumSize: const Size.fromHeight(52),
           shape: largeShape,
           textStyle: textTheme.labelLarge,
@@ -222,7 +222,8 @@ class AppTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: AppColors.text,
-          backgroundColor: AppColors.glassStrong.withValues(alpha: 0.65),
+          backgroundColor: AppColors.glassStrong.withValues(alpha: 0.8),
+          side: const BorderSide(color: AppColors.borderStrong),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -253,7 +254,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: AppColors.border),
+          side: const BorderSide(color: AppColors.borderStrong),
         ),
       ),
       listTileTheme: ListTileThemeData(
