@@ -23,9 +23,15 @@ class OutfitRepository {
         return buildMockOutfits();
       }
 
-      return (data['outfits'] as List)
+      final outfits = (data['outfits'] as List)
           .map((e) => OutfitSuggestion.fromJson(e))
           .toList();
+
+      if (outfits.isEmpty) {
+        return buildMockOutfits();
+      }
+
+      return outfits;
     } catch (e) {
       // fallback when API fails
       return buildMockOutfits();

@@ -154,7 +154,7 @@ class _SwipeCardState extends State<SwipeCard> {
 
   @override
   Widget build(BuildContext context) {
-    final slots = widget.outfit.slots;
+    final slotItems = _orderedSlotItems(widget.outfit);
 
     return Positioned.fill(
       child: GestureDetector(
@@ -179,45 +179,7 @@ class _SwipeCardState extends State<SwipeCard> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final h = constraints.maxHeight;
-                        final w = constraints.maxWidth;
-                        return Stack(
-                          children: [
-                            // Bottom layer.
-                            Positioned(
-                              top: h * 0.30,
-                              left: 0,
-                              width: w,
-                              height: h * 0.65,
-                              child: CachedItemImage(
-                                url: slots['bottom']!.imageUrl,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            // Middle layer.
-                            Positioned(
-                              top: h * 0.00,
-                              left: 0,
-                              width: w,
-                              height: h * 0.70,
-                              child: CachedItemImage(
-                                url: slots['top']!.imageUrl,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            // Front layer.
-                            Positioned(
-                              top: h * 0.70,
-                              left: 0,
-                              width: w,
-                              height: h * 0.32,
-                              child: CachedItemImage(
-                                url: slots['shoes']!.imageUrl,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ],
-                        );
+                        return _OutfitPreviewStack(items: slotItems);
                       },
                     ),
                   ),
@@ -293,7 +255,7 @@ class _LikedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final slots = outfit.slots;
+    final slotItems = _orderedSlotItems(outfit);
 
     return Material(
       color: AppColors.surface,
@@ -310,45 +272,7 @@ class _LikedCard extends StatelessWidget {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final h = constraints.maxHeight;
-                  final w = constraints.maxWidth;
-                  return Stack(
-                    children: [
-                      // Bottom layer.
-                      Positioned(
-                        top: h * 0.30,
-                        left: 0,
-                        width: w,
-                        height: h * 0.65,
-                        child: CachedItemImage(
-                          url: slots['bottom']!.imageUrl,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      // Middle layer.
-                      Positioned(
-                        top: h * 0.00,
-                        left: 0,
-                        width: w,
-                        height: h * 0.70,
-                        child: CachedItemImage(
-                          url: slots['top']!.imageUrl,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      // Front layer.
-                      Positioned(
-                        top: h * 0.65,
-                        left: 0,
-                        width: w,
-                        height: h * 0.32,
-                        child: CachedItemImage(
-                          url: slots['shoes']!.imageUrl,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ],
-                  );
+                  return _OutfitPreviewStack(items: slotItems);
                 },
               ),
             ),
@@ -369,9 +293,9 @@ class _LikedCard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => TryOnScreen(
                       prefilledSlots: {
-                        'top': outfit.slots['top']?.imageUrl ?? '',
-                        'bottom': outfit.slots['bottom']?.imageUrl ?? '',
-                        'shoes': outfit.slots['shoes']?.imageUrl ?? '',
+                        for (final entry in outfit.slots.entries)
+                          if (entry.value.imageUrl.isNotEmpty)
+                            entry.key: entry.value.imageUrl,
                       },
                     ),
                   ),
@@ -383,6 +307,92 @@ class _LikedCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+List<SlotItem> _orderedSlotItems(OutfitSuggestion outfit) {
+  const preferredOrder = ['bottom', 'top', 'outerwear', 'shoes'];
+  final items = <SlotItem>[];
+
+  for (final key in preferredOrder) {
+    final item = outfit.slots[key];
+    if (item != null) items.add(item);
+  }
+
+  for (final entry in outfit.slots.entries) {
+    if (!preferredOrder.contains(entry.key)) {
+      items.add(entry.value);
+    }
+  }
+
+  return items;
+}
+
+class _OutfitPreviewStack extends StatelessWidget {
+  final List<SlotItem> items;
+
+  const _OutfitPreviewStack({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const Center(
+        child: Icon(
+          Icons.checkroom_outlined,
+          color: AppColors.textMuted,
+          size: 40,
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final h = constraints.maxHeight;
+        final w = constraints.maxWidth;
+
+        double topForIndex(int index) {
+          switch (index) {
+            case 0:
+              return h * 0.28;
+            case 1:
+              return 0;
+            case 2:
+              return h * 0.12;
+            default:
+              return h * 0.62;
+          }
+        }
+
+        double heightForIndex(int index) {
+          switch (index) {
+            case 0:
+              return h * 0.68;
+            case 1:
+              return h * 0.72;
+            case 2:
+              return h * 0.56;
+            default:
+              return h * 0.34;
+          }
+        }
+
+        return Stack(
+          children: [
+            for (final entry in items.take(4).toList().asMap().entries)
+              Positioned(
+                top: topForIndex(entry.key),
+                left: 0,
+                width: w,
+                height: heightForIndex(entry.key),
+                child: CachedItemImage(
+                  url: entry.value.imageUrl,
+                  fit: BoxFit.contain,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

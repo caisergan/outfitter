@@ -10,7 +10,7 @@ class AssistantNotifier
 
   AssistantNotifier(this._repo) : super(const AsyncValue.data([]));
 
-  Future<void> suggest(AssistantParams params) async {
+  Future<List<OutfitSuggestion>> suggest(AssistantParams params) async {
     _lastParams = params;
 
     state = const AsyncValue.loading();
@@ -20,9 +20,10 @@ class AssistantNotifier
     );
 
     // ✅ FIX: prevent crash after dispose
-    if (!mounted) return;
+    if (!mounted) return result.valueOrNull ?? const [];
 
     state = result;
+    return result.valueOrNull ?? const [];
   }
 
   Future<void> refresh() async {

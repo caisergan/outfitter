@@ -58,8 +58,11 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
       context: context,
       useSafeArea: true,
       builder: (_) => SafeArea(
-        child: Padding(
+        child: FrostedGlass(
           padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+          blur: 28,
+          backgroundColor: AppColors.glass.withValues(alpha: 0.92),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,10 +203,9 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
           onRetry: _refresh,
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
-        icon: const Icon(Icons.add_a_photo_outlined),
-        label: const Text('Add Piece'),
+        child: const Icon(Icons.add_a_photo_outlined),
       ),
     );
   }

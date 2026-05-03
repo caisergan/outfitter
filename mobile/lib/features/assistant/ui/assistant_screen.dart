@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/outfit_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/glass_widgets.dart';
+import '../data/outfit_repository.dart';
 import '../providers/assistant_provider.dart';
 import 'swipe_outfits_screen.dart';
 import 'widgets/parameter_screen.dart';
@@ -23,22 +24,30 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   Future<void> _handleFindOutfits(AssistantParams params) async {
     setState(() => _loading = true);
 
-    await ref.read(assistantNotifierProvider.notifier).suggest(params);
+    final outfits = await ref.read(outfitRepositoryProvider).suggest(params);
 
-    final state = ref.read(assistantNotifierProvider);
+    if (mounted) {
+      ref.read(assistantNotifierProvider.notifier).suggest(params);
+    }
 
-    state.whenData((outfits) {
-      if (mounted && outfits.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SwipeOutfitsScreen(outfits: outfits),
-          ),
-        );
-      }
-    });
+    if (mounted && outfits.isNotEmpty) {
+      setState(() => _loading = false);
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SwipeOutfitsScreen(outfits: outfits),
+        ),
+      );
+      return;
+    }
 
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No outfits found right now.'),
+        ),
+      );
+    }
   }
 
   @override
