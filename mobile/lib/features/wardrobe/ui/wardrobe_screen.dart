@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:fashion_app/core/utils/error_helpers.dart';
 import 'package:fashion_app/core/widgets/error_view.dart';
+import 'package:fashion_app/core/widgets/glass_widgets.dart';
 import 'package:fashion_app/features/wardrobe/data/wardrobe_repository.dart';
 import 'package:fashion_app/features/wardrobe/providers/wardrobe_provider.dart';
 import '/core/theme/app_colors.dart';
@@ -214,18 +215,9 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceAlt,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.checkroom_outlined,
-                size: 36,
-                color: AppColors.blush,
-              ),
+            const GlassIconOrb(
+              icon: Icons.checkroom_outlined,
+              size: 88,
             ),
             const SizedBox(height: 20),
             Text(
@@ -272,28 +264,18 @@ class _SourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        child: Ink(
+        child: FrostedGlass(
+          borderRadius: BorderRadius.circular(22),
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border),
-          ),
+          backgroundColor: AppColors.glass.withValues(alpha: 0.84),
           child: Row(
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceAlt,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: AppColors.blush),
-              ),
+              GlassIconOrb(icon: icon, size: 46),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

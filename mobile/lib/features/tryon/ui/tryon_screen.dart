@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/tryon_models.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/glass_widgets.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../discover/data/catalog_repository.dart';
 import '../data/tryon_repository.dart';
@@ -434,18 +435,18 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.94,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: FrostedGlass(
+        blur: 30,
+        backgroundColor: AppColors.glass.withValues(alpha: 0.9),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                 children: [
                   Expanded(
                     child: Column(
@@ -477,8 +478,8 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              libraryAsync.when(
+                const SizedBox(height: 12),
+                libraryAsync.when(
                 loading: () => const SizedBox(
                   height: 36,
                   child: Center(child: LinearProgressIndicator()),
@@ -490,8 +491,8 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                   onTap: _openStylePicker,
                 ),
               ),
-              const SizedBox(height: 12),
-              Expanded(
+                const SizedBox(height: 12),
+                Expanded(
                 child: _TryOnPreview(
                   generating: _generating,
                   result: _result,
@@ -499,10 +500,10 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                   error: _error,
                 ),
               ),
-              const SizedBox(height: 14),
-              _TryOnLookStrip(garments: widget.garments),
-              const SizedBox(height: 14),
-              FilledButton.icon(
+                const SizedBox(height: 14),
+                _TryOnLookStrip(garments: widget.garments),
+                const SizedBox(height: 14),
+                FilledButton.icon(
                 icon: _generating
                     ? const SizedBox.square(
                         dimension: 16,
@@ -526,7 +527,8 @@ class _StudioTryOnSheetState extends ConsumerState<_StudioTryOnSheet> {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -576,7 +578,7 @@ class _StylePillRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
+          color: AppColors.glassStrong.withValues(alpha: 0.72),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: AppColors.border),
         ),
@@ -978,118 +980,117 @@ class _SelectionInspector extends ConsumerWidget {
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+        child: FrostedGlass(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: selected == null
-            ? Row(
-                children: [
-                  const Icon(
-                    Icons.touch_app_outlined,
-                    color: AppColors.blush,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '${canvas.garments.length} pieces on canvas',
-                      style: Theme.of(context).textTheme.titleMedium,
+          backgroundColor: AppColors.glass.withValues(alpha: 0.86),
+          child: selected == null
+              ? Row(
+                  children: [
+                    const Icon(
+                      Icons.touch_app_outlined,
+                      color: AppColors.blush,
                     ),
-                  ),
-                  _ToolbarIconButton(
-                    icon: Icons.layers_outlined,
-                    tooltip: 'Layers',
-                    onPressed: canvas.garments.isEmpty ? null : onOpenLayers,
-                  ),
-                ],
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: CachedItemImage(
-                          url: selected.item.imageUrl,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.contain,
-                        ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${canvas.garments.length} pieces on canvas',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          selected.item.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontSize: 15,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
+                    ),
+                    _ToolbarIconButton(
+                      icon: Icons.layers_outlined,
+                      tooltip: 'Layers',
+                      onPressed: canvas.garments.isEmpty ? null : onOpenLayers,
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
-                        _InspectorIconButton(
-                          icon: Icons.remove,
-                          tooltip: 'Smaller',
-                          onPressed: () => notifier.scaleSelected(-0.08),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: CachedItemImage(
+                            url: selected.item.imageUrl,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                        _InspectorIconButton(
-                          icon: Icons.add,
-                          tooltip: 'Larger',
-                          onPressed: () => notifier.scaleSelected(0.08),
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.rotate_left,
-                          tooltip: 'Rotate left',
-                          onPressed: () =>
-                              notifier.rotateSelected(-math.pi / 24),
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.rotate_right,
-                          tooltip: 'Rotate right',
-                          onPressed: () =>
-                              notifier.rotateSelected(math.pi / 24),
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.layers_outlined,
-                          tooltip: 'Layers',
-                          onPressed: onOpenLayers,
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.flip_to_back,
-                          tooltip: 'Send backward',
-                          onPressed: notifier.sendSelectedBackward,
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.flip_to_front,
-                          tooltip: 'Bring forward',
-                          onPressed: notifier.bringSelectedForward,
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.copy,
-                          tooltip: 'Duplicate',
-                          onPressed: notifier.duplicateSelected,
-                        ),
-                        _InspectorIconButton(
-                          icon: Icons.delete_outline,
-                          tooltip: 'Delete',
-                          onPressed: notifier.deleteSelected,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            selected.item.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontSize: 15),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _InspectorIconButton(
+                            icon: Icons.remove,
+                            tooltip: 'Smaller',
+                            onPressed: () => notifier.scaleSelected(-0.08),
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.add,
+                            tooltip: 'Larger',
+                            onPressed: () => notifier.scaleSelected(0.08),
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.rotate_left,
+                            tooltip: 'Rotate left',
+                            onPressed: () =>
+                                notifier.rotateSelected(-math.pi / 24),
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.rotate_right,
+                            tooltip: 'Rotate right',
+                            onPressed: () =>
+                                notifier.rotateSelected(math.pi / 24),
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.layers_outlined,
+                            tooltip: 'Layers',
+                            onPressed: onOpenLayers,
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.flip_to_back,
+                            tooltip: 'Send backward',
+                            onPressed: notifier.sendSelectedBackward,
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.flip_to_front,
+                            tooltip: 'Bring forward',
+                            onPressed: notifier.bringSelectedForward,
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.copy,
+                            tooltip: 'Duplicate',
+                            onPressed: notifier.duplicateSelected,
+                          ),
+                          _InspectorIconButton(
+                            icon: Icons.delete_outline,
+                            tooltip: 'Delete',
+                            onPressed: notifier.deleteSelected,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -1102,12 +1103,11 @@ class _GarmentSourceSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return FrostedGlass(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
+      blur: 28,
+      backgroundColor: AppColors.glass.withValues(alpha: 0.9),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1157,24 +1157,13 @@ class _GarmentSourceTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: onTap,
-      child: Ink(
+      child: FrostedGlass(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.border),
-        ),
+        borderRadius: BorderRadius.circular(22),
+        backgroundColor: AppColors.glass.withValues(alpha: 0.84),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceAlt,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.blush),
-            ),
+            GlassIconOrb(icon: icon, size: 44),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
@@ -1198,16 +1187,16 @@ class _LayerOrderSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final canvas = ref.watch(stylingCanvasProvider);
 
-    return Container(
+    return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.62,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      child: Column(
-        children: [
-          Row(
+      child: FrostedGlass(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        blur: 28,
+        backgroundColor: AppColors.glass.withValues(alpha: 0.9),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: Column(
+          children: [
+            Row(
             children: [
               const Icon(Icons.layers_outlined, color: AppColors.blush),
               const SizedBox(width: 10),
@@ -1217,8 +1206,8 @@ class _LayerOrderSheet extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Expanded(
+            const SizedBox(height: 12),
+            Expanded(
             child: ReorderableListView.builder(
               itemCount: canvas.garments.length,
               onReorder: (oldIndex, newIndex) {
@@ -1266,8 +1255,9 @@ class _LayerOrderSheet extends ConsumerWidget {
                 );
               },
             ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1281,16 +1271,16 @@ class _SavedOutfitsSheet extends ConsumerWidget {
     final canvas = ref.watch(stylingCanvasProvider);
     final notifier = ref.read(stylingCanvasProvider.notifier);
 
-    return Container(
+    return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.62,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      child: Column(
-        children: [
-          Row(
+      child: FrostedGlass(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        blur: 28,
+        backgroundColor: AppColors.glass.withValues(alpha: 0.9),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: Column(
+          children: [
+            Row(
             children: [
               const Icon(Icons.folder_open_outlined, color: AppColors.blush),
               const SizedBox(width: 10),
@@ -1300,8 +1290,8 @@ class _SavedOutfitsSheet extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Expanded(
+            const SizedBox(height: 12),
+            Expanded(
             child: canvas.isLoadingSaved
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.blush),
@@ -1347,8 +1337,9 @@ class _SavedOutfitsSheet extends ConsumerWidget {
                           );
                         },
                       ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1437,7 +1428,7 @@ class _ToolbarIconButton extends StatelessWidget {
         dimension: 48,
         child: IconButton.filledTonal(
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.glassStrong.withValues(alpha: 0.78),
             foregroundColor: AppColors.text,
             disabledBackgroundColor: AppColors.surfaceAlt,
             side: const BorderSide(color: AppColors.border),
@@ -1472,7 +1463,7 @@ class _InspectorIconButton extends StatelessWidget {
         dimension: 40,
         child: IconButton.filledTonal(
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.surfaceAlt,
+            backgroundColor: AppColors.glassStrong.withValues(alpha: 0.72),
             foregroundColor: AppColors.text,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),

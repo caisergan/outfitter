@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'glass_widgets.dart';
 
 /// Consistent cached image with a loading placeholder and broken-image fallback.
 class CachedItemImage extends StatelessWidget {
@@ -104,20 +105,31 @@ class FilterChipRow extends StatelessWidget {
           final isSelected = selected.contains(opt);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(
-                opt,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: isSelected ? AppColors.text : AppColors.textMuted,
-                    ),
+            child: FrostedGlass(
+              blur: 16,
+              backgroundColor: isSelected
+                  ? AppColors.glassStrong.withValues(alpha: 0.92)
+                  : AppColors.glass.withValues(alpha: 0.76),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: const [],
+              child: FilterChip(
+                label: Text(
+                  opt,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color:
+                            isSelected ? AppColors.text : AppColors.textMuted,
+                      ),
+                ),
+                selected: isSelected,
+                onSelected: (val) => onChanged(opt, val),
+                showCheckmark: false,
+                side: BorderSide(
+                  color:
+                      isSelected ? AppColors.borderStrong : AppColors.border,
+                ),
+                selectedColor: Colors.transparent,
+                backgroundColor: Colors.transparent,
               ),
-              selected: isSelected,
-              onSelected: (val) => onChanged(opt, val),
-              showCheckmark: false,
-              side: BorderSide(
-                color: isSelected ? AppColors.borderStrong : AppColors.border,
-              ),
-              selectedColor: AppColors.surfaceAlt,
             ),
           );
         }).toList(),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import 'app_colors.dart';
 
@@ -17,32 +18,30 @@ class AppTheme {
       surfaceContainerHighest: AppColors.surfaceAlt,
       outline: AppColors.border,
       outlineVariant: AppColors.surfaceMuted,
-      shadow: Colors.black.withValues(alpha: 0.10),
-      scrim: Colors.black.withValues(alpha: 0.32),
+      shadow: AppColors.shadow,
+      scrim: AppColors.glassOverlay,
       error: AppColors.danger,
       onError: Colors.white,
     );
 
-    final baseTextTheme = ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-    ).textTheme;
+    final baseTextTheme = Typography.blackCupertino;
 
     TextStyle displayStyle(TextStyle? style, {double? size}) {
       return (style ?? const TextStyle()).copyWith(
-        fontFamily: 'serif',
         fontSize: size,
         color: AppColors.text,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.8,
-        height: 1.05,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.9,
+        height: 1.0,
       );
     }
 
     TextStyle bodyStyle(TextStyle? style) {
       return (style ?? const TextStyle()).copyWith(
         color: AppColors.text,
-        height: 1.45,
+        fontWeight: FontWeight.w500,
+        letterSpacing: -0.15,
+        height: 1.35,
       );
     }
 
@@ -55,13 +54,13 @@ class AppTheme {
       headlineSmall: displayStyle(baseTextTheme.headlineSmall, size: 22),
       titleLarge: displayStyle(baseTextTheme.titleLarge, size: 20),
       titleMedium: bodyStyle(baseTextTheme.titleMedium).copyWith(
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
+        letterSpacing: -0.35,
       ),
       titleSmall: bodyStyle(baseTextTheme.titleSmall).copyWith(
         fontWeight: FontWeight.w700,
-        letterSpacing: 0.1,
+        letterSpacing: -0.1,
       ),
       bodyLarge: bodyStyle(baseTextTheme.bodyLarge).copyWith(fontSize: 16),
       bodyMedium: bodyStyle(baseTextTheme.bodyMedium).copyWith(fontSize: 14),
@@ -72,12 +71,12 @@ class AppTheme {
       labelLarge: bodyStyle(baseTextTheme.labelLarge).copyWith(
         fontSize: 14,
         fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
+        letterSpacing: -0.1,
       ),
       labelMedium: bodyStyle(baseTextTheme.labelMedium).copyWith(
         fontSize: 12,
         fontWeight: FontWeight.w700,
-        letterSpacing: 0.3,
+        letterSpacing: 0.4,
       ),
     );
 
@@ -89,28 +88,33 @@ class AppTheme {
     }
 
     RoundedRectangleBorder largeShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(24),
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      cupertinoOverrideTheme: const CupertinoThemeData(
+        brightness: Brightness.light,
+        primaryColor: AppColors.blush,
+        scaffoldBackgroundColor: AppColors.cream,
+      ),
       scaffoldBackgroundColor: AppColors.cream,
       canvasColor: AppColors.surface,
       textTheme: textTheme,
-      splashColor: AppColors.blush.withValues(alpha: 0.05),
+      splashColor: AppColors.blush.withValues(alpha: 0.06),
       highlightColor: Colors.transparent,
       dividerColor: AppColors.border,
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.cream,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.text,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: textTheme.headlineSmall?.copyWith(
-          fontSize: 21,
-          fontWeight: FontWeight.w600,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
         ),
         iconTheme: const IconThemeData(
           color: AppColors.text,
@@ -118,15 +122,16 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        height: 64,
-        indicatorColor: AppColors.surfaceAlt,
+        height: 72,
+        indicatorColor: AppColors.glassStrong,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
           return textTheme.labelMedium?.copyWith(
             color: isSelected ? AppColors.text : AppColors.textMuted,
-            letterSpacing: 0.35,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            letterSpacing: 0.45,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -139,7 +144,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: AppColors.glassStrong.withValues(alpha: 0.72),
         hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
         labelStyle: textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
         prefixIconColor: AppColors.textMuted,
@@ -155,9 +160,9 @@ class AppTheme {
         focusedErrorBorder: inputBorder(AppColors.danger),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.surface,
-        selectedColor: AppColors.surfaceAlt,
-        secondarySelectedColor: AppColors.surfaceAlt,
+        backgroundColor: AppColors.glass.withValues(alpha: 0.75),
+        selectedColor: AppColors.glassStrong,
+        secondarySelectedColor: AppColors.glassStrong,
         disabledColor: AppColors.surfaceMuted,
         side: const BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(
@@ -201,6 +206,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.text,
+          backgroundColor: AppColors.glass.withValues(alpha: 0.58),
           side: const BorderSide(color: AppColors.border),
           minimumSize: const Size.fromHeight(52),
           shape: largeShape,
@@ -216,32 +222,33 @@ class AppTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: AppColors.text,
-          backgroundColor: AppColors.surfaceAlt.withValues(alpha: 0.4),
+          backgroundColor: AppColors.glassStrong.withValues(alpha: 0.65),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.blush,
-        foregroundColor: AppColors.surface,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.glassStrong,
+        foregroundColor: AppColors.text,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(18)),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(22)),
         ),
+        extendedTextStyle: textTheme.labelLarge,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.surface,
-        modalBackgroundColor: AppColors.surface,
+        backgroundColor: Colors.transparent,
+        modalBackgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
         dragHandleColor: AppColors.borderStrong,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.surface,
+        color: AppColors.glass,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -258,14 +265,14 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.glassStrong,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.text,
+        backgroundColor: AppColors.text.withValues(alpha: 0.94),
         contentTextStyle: textTheme.bodyMedium?.copyWith(
           color: AppColors.surface,
         ),
@@ -287,7 +294,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
         indicator: BoxDecoration(
-          color: AppColors.surfaceAlt,
+          color: AppColors.glassStrong,
           borderRadius: BorderRadius.circular(999),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
@@ -296,13 +303,13 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.blush;
+            return AppColors.glassStrong;
           }
           return AppColors.surface;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.mint;
+            return AppColors.blush;
           }
           return AppColors.surfaceMuted;
         }),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/glass_widgets.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../assistant/providers/assistant_provider.dart';
 
@@ -211,18 +212,18 @@ class _DiscoverHero extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
+                  FrostedGlass(
+                    blur: 18,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.18),
-                      ),
+                    borderRadius: BorderRadius.circular(999),
+                    backgroundColor: Colors.white.withValues(alpha: 0.16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.24),
                     ),
+                    boxShadow: const [],
                     child: Text(
                       'APRIL CURATION',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -481,13 +482,9 @@ class _SavedOutfitsSection extends StatelessWidget {
     return savedOutfits.when(
       data: (outfits) {
         if (outfits.isEmpty) {
-          return Container(
+          return FrostedGlass(
             padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: AppColors.border),
-            ),
+            borderRadius: BorderRadius.circular(26),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -603,13 +600,9 @@ class _SavedOutfitsSection extends StatelessWidget {
         height: 220,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => Container(
+      error: (_, __) => FrostedGlass(
         padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: AppColors.border),
-        ),
+        borderRadius: BorderRadius.circular(26),
         child: Text(
           'Could not load saved outfits right now.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

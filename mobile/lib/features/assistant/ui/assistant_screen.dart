@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/outfit_models.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/glass_widgets.dart';
 import '../providers/assistant_provider.dart';
 import 'swipe_outfits_screen.dart';
 import 'widgets/parameter_screen.dart';
@@ -70,29 +71,28 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ),
           if (_loading)
             ColoredBox(
-              color: Colors.black.withValues(alpha: 0.22),
+              color: AppColors.glassOverlay,
               child: Center(
-                child: Container(
-                  width: 180,
+                child: FrostedGlass(
+                  blur: 28,
+                  borderRadius: BorderRadius.circular(28),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 20,
+                    horizontal: 24,
+                    vertical: 22,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Creating looks...',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
+                  child: SizedBox(
+                    width: 180,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Creating looks...',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

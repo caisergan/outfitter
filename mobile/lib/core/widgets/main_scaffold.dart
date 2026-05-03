@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '/core/theme/app_colors.dart';
+import 'glass_widgets.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -16,31 +17,71 @@ class MainScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.cream,
-      body: child,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFF7FAFF),
+              Color(0xFFE6EDF5),
+              Color(0xFFDCE4EF),
+            ],
+            stops: [0, 0.52, 1],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -80,
+              left: -30,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.38),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 120,
+              right: -50,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surface.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            child,
+          ],
+        ),
+      ),
       bottomNavigationBar: showBottomNav
           ? ColoredBox(
-              color: AppColors.cream,
+              color: Colors.transparent,
               child: SafeArea(
                 top: false,
-                minimum: const EdgeInsets.fromLTRB(12, 4, 12, 14),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
+                minimum: const EdgeInsets.fromLTRB(14, 6, 14, 16),
+                child: FrostedGlass(
+                  blur: 26,
+                  backgroundColor: AppColors.glass.withValues(alpha: 0.82),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.shadowStrong,
+                      blurRadius: 36,
+                      offset: Offset(0, 14),
+                    ),
+                  ],
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(30),
                     child: NavigationBar(
                       backgroundColor: Colors.transparent,
-                      indicatorColor: AppColors.surfaceAlt,
+                      indicatorColor: AppColors.glassStrong,
                       labelBehavior:
                           NavigationDestinationLabelBehavior.alwaysShow,
                       selectedIndex: currentIndex,
