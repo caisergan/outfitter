@@ -159,25 +159,52 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
           ],
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-              dividerColor: Colors.transparent,
-              indicatorPadding: const EdgeInsets.symmetric(vertical: 6),
-              tabs: _slots
-                  .map(
-                    (slot) => Tab(
-                      height: 36,
-                      text: slot[0].toUpperCase() + slot.substring(1),
+          preferredSize: const Size.fromHeight(58),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surface.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.borderStrong.withValues(alpha: 0.32),
+                ),
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: EdgeInsets.zero,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  dividerColor: Colors.transparent,
+                  indicatorPadding: EdgeInsets.zero,
+                  indicator: BoxDecoration(
+                    color: AppColors.glassStrong.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.85),
                     ),
-                  )
-                  .toList(),
+                  ),
+                  overlayColor: WidgetStateProperty.all(Colors.transparent),
+                  splashFactory: NoSplash.splashFactory,
+                  tabs: _slots
+                      .map(
+                        (slot) => Tab(
+                          height: 32,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              slot[0].toUpperCase() + slot.substring(1),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
             ),
           ),
         ),
@@ -217,9 +244,21 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const GlassIconOrb(
-              icon: Icons.checkroom_outlined,
-              size: 88,
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceAlt.withValues(alpha: 0.72),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.borderStrong.withValues(alpha: 0.5),
+                ),
+              ),
+              child: const Icon(
+                Icons.checkroom_outlined,
+                size: 36,
+                color: AppColors.blush,
+              ),
             ),
             const SizedBox(height: 20),
             Text(

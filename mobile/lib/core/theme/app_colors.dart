@@ -17,8 +17,12 @@ class AppColors {
 
   static const glass = Color(0xBFF8FBFF);
   static const glassStrong = Color(0xD9FFFFFF);
+  static const glassUltra = Color(0xA6F8FBFF);
+  static const glassEdge = Color(0xE8FFFFFF);
+  static const glassGlow = Color(0x66FFFFFF);
   static const glassOverlay = Color(0x66142235);
   static const shadow = Color(0x22091A2D);
   static const shadowStrong = Color(0x33101F33);
+  static const shadowSoft = Color(0x1A091A2D);
   static const icyHighlight = Color(0xCCFFFFFF);
 }

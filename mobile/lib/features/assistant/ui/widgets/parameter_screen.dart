@@ -23,6 +23,20 @@ class _ParameterScreenState extends State<ParameterScreen> {
   String? _colorPreference = 'neutral';
   String _source = 'mix';
 
+  static final BorderRadius _cardRadius = BorderRadius.circular(28);
+  static const List<BoxShadow> _cardShadow = [
+    BoxShadow(
+      color: AppColors.shadowSoft,
+      blurRadius: 18,
+      offset: Offset(0, 6),
+    ),
+    BoxShadow(
+      color: AppColors.shadow,
+      blurRadius: 28,
+      offset: Offset(0, 12),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -30,14 +44,8 @@ class _ParameterScreenState extends State<ParameterScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
+          _StylistCard(
             padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppColors.border),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -70,8 +78,11 @@ class _ParameterScreenState extends State<ParameterScreen> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceAlt,
+                      color: AppColors.glassStrong.withValues(alpha: 0.72),
                       borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.borderStrong.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -225,14 +236,8 @@ class _FilterSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return _StylistCard(
       padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -254,6 +259,33 @@ class _FilterSection extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+class _StylistCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _StylistCard({
+    required this.child,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: AppColors.glass.withValues(alpha: 0.84),
+        borderRadius: _ParameterScreenState._cardRadius,
+        border: Border.all(
+          color: AppColors.glassEdge.withValues(alpha: 0.88),
+        ),
+        boxShadow: _ParameterScreenState._cardShadow,
+      ),
+      child: child,
     );
   }
 }

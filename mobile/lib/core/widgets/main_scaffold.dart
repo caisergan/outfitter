@@ -56,6 +56,18 @@ class MainScaffold extends StatelessWidget {
                 ),
               ),
             ),
+            Positioned(
+              bottom: 120,
+              left: -40,
+              child: Container(
+                width: 170,
+                height: 170,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.16),
+                ),
+              ),
+            ),
             child,
           ],
         ),
@@ -67,14 +79,19 @@ class MainScaffold extends StatelessWidget {
                 top: false,
                 minimum: const EdgeInsets.fromLTRB(14, 6, 14, 16),
                 child: FrostedGlass(
-                  blur: 26,
-                  backgroundColor: AppColors.glass.withValues(alpha: 0.82),
+                  blur: 30,
+                  backgroundColor: AppColors.glassUltra.withValues(alpha: 0.78),
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: const [
                     BoxShadow(
+                      color: AppColors.shadowSoft,
+                      blurRadius: 18,
+                      offset: Offset(0, 6),
+                    ),
+                    BoxShadow(
                       color: AppColors.shadowStrong,
-                      blurRadius: 36,
-                      offset: Offset(0, 14),
+                      blurRadius: 40,
+                      offset: Offset(0, 16),
                     ),
                   ],
                   child: ClipRRect(
